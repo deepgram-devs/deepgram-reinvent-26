@@ -1,0 +1,18 @@
+Tri-County Insurance - Claim Record
+
+Claim ID 5
+Claim number: 5
+Policyholder: Linda Park
+Policy number: TCI-AUTO-60022
+Claim type: Auto theft
+Date of loss: 2026-09-30
+Status: Open
+Estimated amount: $22,000
+Approved amount: Pending
+Deductible: $1,000
+Assigned adjuster: Luis Romero
+
+Adjuster notes for claim ID 5:
+- 2021 Honda CR-V stolen from a grocery store parking lot.
+- Police report #PD-2026-88341 on file.
+- Standard 30-day waiting period before total-loss valuation; vehicle not yet recovered.

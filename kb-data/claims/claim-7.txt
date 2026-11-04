@@ -1,0 +1,18 @@
+Tri-County Insurance - Claim Record
+
+Claim ID 7
+Claim number: 7
+Policyholder: Sofia Marino
+Policy number: TCI-AUTO-71733
+Claim type: Auto comprehensive (deer)
+Date of loss: 2026-10-12
+Status: In review
+Estimated amount: $6,300
+Approved amount: Pending
+Deductible: $250
+Assigned adjuster: Janet Okafor
+
+Adjuster notes for claim ID 7:
+- Struck a deer on County Road 12 at dusk.
+- Initial estimate: $6,300 for hood, grille, radiator, and headlight assembly.
+- Supplement expected after teardown at Valley Collision.

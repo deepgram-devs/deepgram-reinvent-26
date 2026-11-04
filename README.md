@@ -13,7 +13,6 @@ Let's build the `agent.py` file that contains your agent.
 You'll need these imports at the top of `agent.py`. You can add them now, or refer back to this list as you add other code to the file.
 
 ```python
-import argparse
 import os
 from datetime import datetime
 
@@ -21,27 +20,27 @@ import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from loguru import logger
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
+from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.aws.llm import AWSBedrockLLMService
-from pipecat.services.aws.stt import AWSTranscribeSTTService
-from pipecat.services.aws.tts import AWSPollyTTSService
-from pipecat.services.aws_nova_sonic import AWSNovaSonicLLMService
-from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
 from strands.models import BedrockModel
 ```
@@ -88,11 +87,11 @@ The heart of your botfile is the **Pipeline**. This is where you define the seri
         [
             transport.input(),
             stt,
-            context_aggregator.user(),
+            user_aggregator,
             llm,
             tts,
             transport.output(),
-            context_aggregator.assistant(),
+            assistant_aggregator,
         ]
     )
 ```
@@ -103,7 +102,7 @@ The `transport.input()` is receiving media from the user and sending it through 
 
 The `stt` processor is a speech-to-text service that receives the user's audio frames, sends them to a transcription service, and outputs the received transcription as TextFrames.
 
-The `context_aggregator.user()` processor is collecting text frames from the STT processor and user started/stopped speaking frames from the transport in order to determine when the user has completed a 'turn'. Once it makes that determination, this processor emits an LLM context frame to prompt a completion from the LLM processor.
+The `user_aggregator` processor is collecting text frames from the STT processor and using voice activity detection (VAD) to determine when the user has completed a 'turn'. Once it makes that determination, this processor emits an LLM context frame to prompt a completion from the LLM processor.
 
 The `llm` sends LLM context frames to an LLM service and returns the responses as a stream of text frames.
 
@@ -111,7 +110,7 @@ The `tts` service collects text frames from the LLM and sends them to a text-to-
 
 The `transport.output()` receives the audio frames from the TTS service and plays them for the user.
 
-Finally, the `context_aggregator.assistant()` sees the audio and text frames after the transport has 'played' them, and aggregates them to store the bot's responses. The user and assistant context aggregators are part of the same `context_aggregator` object, which is how the user and bot turns are stored together.
+Finally, the `assistant_aggregator` sees the audio and text frames after the transport has 'played' them, and aggregates them to store the bot's responses. The user and assistant aggregators are created as a pair that shares one `LLMContext`, which is how the user and bot turns are stored together.
 
 If you try to run this botfile right now, you'd get an error, because none of those processors are actually defined yet. Let's add code just above here to define a few of these processors.
 
@@ -121,24 +120,41 @@ If you try to run this botfile right now, you'd get an error, because none of th
 
     stt = DeepgramSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        live_options=LiveOptions(
+        settings=DeepgramSTTService.Settings(
             model="nova-3-general", language=Language.EN, smart_format=True
         ),
     )
 
     tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-arcas-en",
         sample_rate=24000,
         encoding="linear16",
+        settings=DeepgramTTSService.Settings(voice="aura-2-arcas-en"),
+    )
+
+    # System instruction for knowledge base integration
+    system_instruction = (
+        "You are a helpful AI assistant that can help with claim lookups and general questions. "
+        "For claim-related queries, use the search_knowledge_base function. "
+        "When users mention numbers, treat them as claim IDs and search for them directly. "
+        "Search for EXACT claim IDs only: "
+        "- If they say 'claim ID 1', search for 'claim ID 1' specifically "
+        "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
+        "For general questions not related to specific claims, you can answer directly without using the search function. "
+        "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
+        "Keep your responses very brief. Don't add extra information the user didn't ask for."
     )
 
     llm = AWSBedrockLLMService(
         aws_region="us-east-1",
-        model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        settings=AWSBedrockLLMService.Settings(
+            model="us.anthropic.claude-haiku-5-5",
+            system_instruction=system_instruction,
+        ),
     )
-
 ```
+
+Each service takes its configuration through a `Settings` object. The LLM's `system_instruction` is the system prompt that tells the bot how to behave.
 
 Our main LLM, the one in the pipeline, is the one that interacts with the user. We need to give it a way to pass queries to the Strands agent. We'll do that with a tool call. Define a `search_knowledge_base` function, and register it with the LLM:
 
@@ -183,34 +199,22 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
     llm.register_function("search_knowledge_base", search_knowledge_base)
 ```
 
-Next, let's create the context aggregators. They share a `messages` list that stores the user and bot turns. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
+Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call. The user aggregator also gets the Silero VAD analyzer, which it uses to detect when the user starts and stops speaking. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
 
 ```python
-    # System instruction for knowledge base integration
-    system_instruction = (
-        "You are a helpful AI assistant that can help with claim lookups and general questions. "
-        "For claim-related queries, use the search_knowledge_base function. "
-        "When users mention numbers, treat them as claim IDs and search for them directly. "
-        "Search for EXACT claim IDs only: "
-        "- If they say 'claim ID 1', search for 'claim ID 1' specifically "
-        "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
-        "For general questions not related to specific claims, you can answer directly without using the search function."
-        "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
-        "Keep your responses very brief. Don't add extra information the user didn't ask for. "
-        f"{AWSNovaSonicLLMService.AWAIT_TRIGGER_ASSISTANT_RESPONSE_INSTRUCTION}"
-    )
-
-    context = OpenAILLMContext(
+    context = LLMContext(
         messages=[
-            {"role": "system", "content": system_instruction},
             {
                 "role": "user",
-                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?",
+                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?'",
             },
         ],
         tools=tools,
     )
-    context_aggregator = llm.create_context_aggregator(context)
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+    )
 ```
 
 ### Configuring the Strands agent
@@ -221,8 +225,6 @@ We created an instance of a StrandsAgent in the `run_bot` function, but we haven
 class StrandsAgent:
     def __init__(self):
         self.session = boto3.Session(
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "us-east-1"),
         )
 
@@ -287,15 +289,37 @@ class BedrockKnowledgeBaseClient:
 
     def __init__(self, knowledge_base_id: str):
         self.knowledge_base_id = knowledge_base_id
+        # Credentials come from boto3's default chain: AWS_ACCESS_KEY_ID,
+        # AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN in .env, or AWS_PROFILE.
         self.bedrock_agent_runtime = boto3.client(
             "bedrock-agent-runtime",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "us-east-1"),
         )
         logger.info(
             f"Initialized Bedrock Knowledge Base client for KB: {knowledge_base_id}"
         )
+
+    def _retrieve(self, text: str, search_type: str, max_results: int) -> dict:
+        try:
+            return self.bedrock_agent_runtime.retrieve(
+                knowledgeBaseId=self.knowledge_base_id,
+                retrievalQuery={"text": text},
+                retrievalConfiguration={
+                    "vectorSearchConfiguration": {
+                        "numberOfResults": max_results,
+                        "overrideSearchType": search_type,
+                    }
+                },
+            )
+        except ClientError as e:
+            # Managed knowledge bases reject vectorSearchConfiguration,
+            # so retry with the knowledge base's default search settings.
+            if "vectorSearchConfiguration is not supported" not in str(e):
+                raise
+            return self.bedrock_agent_runtime.retrieve(
+                knowledgeBaseId=self.knowledge_base_id,
+                retrievalQuery={"text": text},
+            )
 
     async def query_knowledge_base(self, query: str, max_results: int = 10) -> str:
         """Query the Bedrock Knowledge Base and return formatted response"""
@@ -310,16 +334,8 @@ class BedrockKnowledgeBaseClient:
             ):
                 enhanced_query = f"claim ID {query}"
 
-            response = self.bedrock_agent_runtime.retrieve(
-                knowledgeBaseId=self.knowledge_base_id,
-                retrievalQuery={"text": enhanced_query},
-                retrievalConfiguration={
-                    "vectorSearchConfiguration": {
-                        "numberOfResults": max_results,
-                        "overrideSearchType": "HYBRID",  # Use both semantic and keyword search
-                    }
-                },
-            )
+            # HYBRID uses both semantic and keyword search
+            response = self._retrieve(enhanced_query, "HYBRID", max_results)
 
             # Extract and format the results
             results = response.get("retrievalResults", [])
@@ -327,16 +343,7 @@ class BedrockKnowledgeBaseClient:
             if not results:
                 # Try alternative query if no results found
                 logger.info(f"No results found, trying alternative query: {query}")
-                alt_response = self.bedrock_agent_runtime.retrieve(
-                    knowledgeBaseId=self.knowledge_base_id,
-                    retrievalQuery={"text": query},
-                    retrievalConfiguration={
-                        "vectorSearchConfiguration": {
-                            "numberOfResults": max_results,
-                            "overrideSearchType": "SEMANTIC",
-                        }
-                    },
-                )
+                alt_response = self._retrieve(query, "SEMANTIC", max_results)
                 results = alt_response.get("retrievalResults", [])
 
             if not results:
@@ -387,31 +394,29 @@ You can refer to the Amazon Knowledge Base documentation to learn more about thi
 
 That takes care of everything except for the `transport` object in the pipeline. We'll come back to that later.
 
-Next, we need to define a pipeline task. This is how `asyncio` runs the pipeline. Do this right after you've defined your pipeline:
+Next, we need to define a pipeline worker. This is what runs the pipeline. Do this right after you've defined your pipeline:
 
 ```python
-	# pipeline = Pipeline(...)
-	
-	task = PipelineTask(
+    # pipeline = Pipeline(...)
+
+    task = PipelineWorker(
         pipeline,
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
-        observers=[RTVIObserver(rtvi)],
     )
 ```
 
-We've added a special [observer](https://docs.pipecat.ai/server/utilities/observers/observer-pattern#observer-pattern) that allows the RTVI processor to send certain events to the frontend, as well as enabled metrics reporting in the `PipelineParams`.
+The `PipelineParams` enable metrics reporting, so you can see latency and token usage in the logs.
 
-Next, we need to add some event handlers so the pipeline knows how to handle the user connecting and disconnecting. First, when the user connects, we'll push a frame that tells the LLM to run.
+Next, we need to add some event handlers so the pipeline knows how to handle the user connecting and disconnecting. First, when the user connects, we'll push a frame that tells the LLM to run. The LLM responds to the greeting instruction we put in the context.
 
 ```python
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info(f"Client connected")
+        logger.info("Client connected")
         # Kick off the conversation.
-        messages.append({"role": "system", "content": "Say hello and briefly introduce yourself."})
         await task.queue_frames([LLMRunFrame()])
 ```
 
@@ -424,12 +429,12 @@ And when the user disconnects, we'll tell the bot to stop.
         await task.cancel()
 ```
 
-Finally, we can create a `PipelineRunner` object and actually run the pipeline.
+Finally, we can create a `WorkerRunner`, add our pipeline worker to it, and actually run the pipeline.
 
 ```python
-    runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
-
-    await runner.run(task)
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
+    await runner.add_workers(task)
+    await runner.run()
 ```
 
 That's all the code we need for the `run_bot` function. But in order to run that function, we need to define an entrypoint function called `bot` that configures the transport and calls `run_bot`. Add this function at the bottom of your botfile, making sure it's at the top level of indentation so it's not inside the `run_bot` function.
@@ -442,12 +447,10 @@ async def bot(runner_args: RunnerArguments):
         "daily": lambda: DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
         ),
         "webrtc": lambda: TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
         ),
     }
 

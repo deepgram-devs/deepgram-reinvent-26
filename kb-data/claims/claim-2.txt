@@ -1,0 +1,18 @@
+Tri-County Insurance - Claim Record
+
+Claim ID 2
+Claim number: 2
+Policyholder: Kevin Brooks
+Policy number: TCI-HOME-10377
+Claim type: Home water damage
+Date of loss: 2026-08-02
+Status: In review
+Estimated amount: $12,400
+Approved amount: Pending
+Deductible: $1,000
+Assigned adjuster: Luis Romero
+
+Adjuster notes for claim ID 2:
+- Burst supply line under the kitchen sink while the homeowner was traveling.
+- Mitigation company invoice: $3,200. Contractor estimate for cabinets and flooring: $9,200.
+- Adjuster inspection completed 2026-08-09; waiting on plumber's report confirming sudden failure.

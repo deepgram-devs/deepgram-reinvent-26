@@ -1,0 +1,18 @@
+Tri-County Insurance - Claim Record
+
+Claim ID 5678
+Claim number: 5678
+Policyholder: Omar Haddad
+Policy number: TCI-HOME-56780
+Claim type: Home liability (dog bite)
+Date of loss: 2026-09-03
+Status: In review
+Estimated amount: $15,000
+Approved amount: Pending
+Deductible: $0
+Assigned adjuster: Priya Shah
+
+Adjuster notes for claim ID 5678:
+- Neighbor's child bitten by the policyholder's dog; treated at urgent care.
+- Medical bills submitted to date: $2,150. Demand letter from claimant's attorney requests $15,000.
+- Liability coverage confirmed; no deductible applies to liability claims.

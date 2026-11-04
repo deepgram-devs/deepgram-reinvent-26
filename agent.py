@@ -1,4 +1,3 @@
-import argparse
 import os
 from datetime import datetime
 
@@ -6,27 +5,27 @@ import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from loguru import logger
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
+from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.aws.llm import AWSBedrockLLMService
-from pipecat.services.aws.stt import AWSTranscribeSTTService
-from pipecat.services.aws.tts import AWSPollyTTSService
-from pipecat.services.aws_nova_sonic import AWSNovaSonicLLMService
-from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
 from strands.models import BedrockModel
 
@@ -42,15 +41,37 @@ class BedrockKnowledgeBaseClient:
 
     def __init__(self, knowledge_base_id: str):
         self.knowledge_base_id = knowledge_base_id
+        # Credentials come from boto3's default chain: AWS_ACCESS_KEY_ID,
+        # AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN in .env, or AWS_PROFILE.
         self.bedrock_agent_runtime = boto3.client(
             "bedrock-agent-runtime",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "us-east-1"),
         )
         logger.info(
             f"Initialized Bedrock Knowledge Base client for KB: {knowledge_base_id}"
         )
+
+    def _retrieve(self, text: str, search_type: str, max_results: int) -> dict:
+        try:
+            return self.bedrock_agent_runtime.retrieve(
+                knowledgeBaseId=self.knowledge_base_id,
+                retrievalQuery={"text": text},
+                retrievalConfiguration={
+                    "vectorSearchConfiguration": {
+                        "numberOfResults": max_results,
+                        "overrideSearchType": search_type,
+                    }
+                },
+            )
+        except ClientError as e:
+            # Managed knowledge bases reject vectorSearchConfiguration,
+            # so retry with the knowledge base's default search settings.
+            if "vectorSearchConfiguration is not supported" not in str(e):
+                raise
+            return self.bedrock_agent_runtime.retrieve(
+                knowledgeBaseId=self.knowledge_base_id,
+                retrievalQuery={"text": text},
+            )
 
     async def query_knowledge_base(self, query: str, max_results: int = 10) -> str:
         """Query the Bedrock Knowledge Base and return formatted response"""
@@ -65,16 +86,8 @@ class BedrockKnowledgeBaseClient:
             ):
                 enhanced_query = f"claim ID {query}"
 
-            response = self.bedrock_agent_runtime.retrieve(
-                knowledgeBaseId=self.knowledge_base_id,
-                retrievalQuery={"text": enhanced_query},
-                retrievalConfiguration={
-                    "vectorSearchConfiguration": {
-                        "numberOfResults": max_results,
-                        "overrideSearchType": "HYBRID",  # Use both semantic and keyword search
-                    }
-                },
-            )
+            # HYBRID uses both semantic and keyword search
+            response = self._retrieve(enhanced_query, "HYBRID", max_results)
 
             # Extract and format the results
             results = response.get("retrievalResults", [])
@@ -82,16 +95,7 @@ class BedrockKnowledgeBaseClient:
             if not results:
                 # Try alternative query if no results found
                 logger.info(f"No results found, trying alternative query: {query}")
-                alt_response = self.bedrock_agent_runtime.retrieve(
-                    knowledgeBaseId=self.knowledge_base_id,
-                    retrievalQuery={"text": query},
-                    retrievalConfiguration={
-                        "vectorSearchConfiguration": {
-                            "numberOfResults": max_results,
-                            "overrideSearchType": "SEMANTIC",
-                        }
-                    },
-                )
+                alt_response = self._retrieve(query, "SEMANTIC", max_results)
                 results = alt_response.get("retrievalResults", [])
 
             if not results:
@@ -138,8 +142,6 @@ class BedrockKnowledgeBaseClient:
 class StrandsAgent:
     def __init__(self):
         self.session = boto3.Session(
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "us-east-1"),
         )
 
@@ -201,21 +203,37 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     stt = DeepgramSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        live_options=LiveOptions(
+        settings=DeepgramSTTService.Settings(
             model="nova-3-general", language=Language.EN, smart_format=True
         ),
     )
 
     tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        voice="aura-2-arcas-en",
         sample_rate=24000,
         encoding="linear16",
+        settings=DeepgramTTSService.Settings(voice="aura-2-arcas-en"),
+    )
+
+    # System instruction for knowledge base integration
+    system_instruction = (
+        "You are a helpful AI assistant that can help with claim lookups and general questions. "
+        "For claim-related queries, use the search_knowledge_base function. "
+        "When users mention numbers, treat them as claim IDs and search for them directly. "
+        "Search for EXACT claim IDs only: "
+        "- If they say 'claim ID 1', search for 'claim ID 1' specifically "
+        "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
+        "For general questions not related to specific claims, you can answer directly without using the search function. "
+        "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
+        "Keep your responses very brief. Don't add extra information the user didn't ask for."
     )
 
     llm = AWSBedrockLLMService(
         aws_region="us-east-1",
-        model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        settings=AWSBedrockLLMService.Settings(
+            model="us.anthropic.claude-haiku-5-5",
+            system_instruction=system_instruction,
+        ),
     )
 
     async def search_knowledge_base(params: FunctionCallParams):
@@ -257,50 +275,37 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     llm.register_function("search_knowledge_base", search_knowledge_base)
 
-    # System instruction for knowledge base integration
-    system_instruction = (
-        "You are a helpful AI assistant that can help with claim lookups and general questions. "
-        "For claim-related queries, use the search_knowledge_base function. "
-        "When users mention numbers, treat them as claim IDs and search for them directly. "
-        "Search for EXACT claim IDs only: "
-        "- If they say 'claim ID 1', search for 'claim ID 1' specifically "
-        "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
-        "For general questions not related to specific claims, you can answer directly without using the search function."
-        "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
-        "Keep your responses very brief. Don't add extra information the user didn't ask for. "
-        f"{AWSNovaSonicLLMService.AWAIT_TRIGGER_ASSISTANT_RESPONSE_INSTRUCTION}"
-    )
-
-    context = OpenAILLMContext(
+    context = LLMContext(
         messages=[
-            {"role": "system", "content": system_instruction},
             {
                 "role": "user",
-                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?",
+                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?'",
             },
         ],
         tools=tools,
     )
-    context_aggregator = llm.create_context_aggregator(context)
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+    )
 
     # Build the pipeline
     pipeline = Pipeline(
         [
             transport.input(),
             stt,
-            context_aggregator.user(),
+            user_aggregator,
             llm,
             tts,
             transport.output(),
-            context_aggregator.assistant(),
+            assistant_aggregator,
         ]
     )
 
-    # Configure the pipeline task
-    task = PipelineTask(
+    # Configure the pipeline worker
+    task = PipelineWorker(
         pipeline,
         params=PipelineParams(
-            allow_interruptions=True,
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
@@ -312,22 +317,17 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info("Client connected to Bedrock Knowledge Base Voice Agent")
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
-        # Trigger the first assistant response
-        #await llm.trigger_assistant_response()
 
-    # Handle client disconnection events
+    # Handle client disconnection event
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
         logger.info("Client disconnected from Bedrock Knowledge Base Voice Agent")
-
-    @transport.event_handler("on_client_closed")
-    async def on_client_closed(transport, client):
-        logger.info("Client closed connection to Bedrock Knowledge Base Voice Agent")
         await task.cancel()
 
     # Run the pipeline
-    runner = PipelineRunner(handle_sigint=False)
-    await runner.run(task)
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
+    await runner.add_workers(task)
+    await runner.run()
 
 
 async def bot(runner_args: RunnerArguments):
@@ -337,12 +337,10 @@ async def bot(runner_args: RunnerArguments):
         "daily": lambda: DailyParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
         ),
         "webrtc": lambda: TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(),
         ),
     }
 
