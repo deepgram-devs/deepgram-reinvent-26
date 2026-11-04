@@ -14,7 +14,8 @@ You'll need these imports at the top of `agent.py`. You can add them now, or ref
 
 ```python
 import os
-from datetime import datetime
+import re
+from datetime import date, datetime
 
 import boto3
 from botocore.exceptions import ClientError
@@ -35,6 +36,7 @@ from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.utils.text.transforms import expand_currency
 from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
 from strands.models import BedrockModel
@@ -122,19 +124,47 @@ If you try to run this botfile right now, you'd get an error, because none of th
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         sample_rate=24000,
         settings=DeepgramFluxTTSService.Settings(voice="flux-heather-en"),
+        # The prompt asks for no markdown; this guarantees it is never spoken
+        text_transforms=[("*", strip_markup_symbols)],
     )
 
-    # System instruction for knowledge base integration
+    # The model has no calendar, so tell it what day it is
+    now = datetime.now()
+    today = f"{now:%A, %B} {now.day}, {now.year}"
+
+    # System instruction, written for the ear: the agent is heard, not read
     system_instruction = (
-        "You are a helpful AI assistant that can help with claim lookups and general questions. "
-        "For claim-related queries, use the search_knowledge_base function. "
-        "When users mention numbers, treat them as claim IDs and search for them directly. "
-        "Search for EXACT claim IDs only: "
-        "- If they say 'claim ID 1', search for 'claim ID 1' specifically "
-        "- If they say 'claim ID 1234', search for 'claim ID 1234' specifically "
-        "For general questions not related to specific claims, you can answer directly without using the search function. "
-        "For claim estimates, costs, amounts, or any other information, always search for that specific information. "
-        "Keep your responses very brief. Don't add extra information the user didn't ask for."
+        "You are the claims line voice agent for Tri-County Insurance. You help "
+        "callers look up existing claims: status, amounts, dates, and adjuster notes.\n"
+        f"Today is {today}.\n"
+        "\n"
+        "HOW TO SPEAK:\n"
+        "- You are being heard, not read. Never use markdown, bullet points, "
+        "numbered lists, headings, or emoji.\n"
+        "- Keep replies to one or two sentences, and ask one question at a time.\n"
+        "- Say dollar amounts in words and dates with their weekday, e.g. "
+        "'Monday, September 14th'.\n"
+        "- When you repeat a claim ID back, say the digits one at a time, e.g. "
+        "'one two three four'.\n"
+        "- If you do not know something, say so plainly. Never guess.\n"
+        "\n"
+        "CLAIM LOOKUPS:\n"
+        "- For any question about a specific claim, call search_knowledge_base. "
+        "Never answer claim details from memory.\n"
+        "- Treat a number the caller gives as a claim ID and search for that exact "
+        "ID: 'claim 1' is claim ID 1, not 1234.\n"
+        "- If you did not catch the number, ask for it again.\n"
+        "- You may answer general insurance questions, like what a deductible is, "
+        "briefly and in general terms.\n"
+        "- Never invent a claim, amount, date, or status. If the search finds "
+        "nothing, say so and ask the caller to check the number.\n"
+        "\n"
+        "ESCALATION:\n"
+        "- If the caller wants to file a new claim, dispute a decision, or asks for "
+        "a person, say this line can only look up existing claims and their "
+        "assigned adjuster can help.\n"
+        "- If the caller describes an emergency or says someone is hurt, tell them "
+        "to hang up and call 911."
     )
 
     llm = AWSBedrockLLMService(
@@ -146,7 +176,7 @@ If you try to run this botfile right now, you'd get an error, because none of th
     )
 ```
 
-Each service takes its configuration through a `Settings` object. The LLM's `system_instruction` is the system prompt that tells the bot how to behave.
+Each service takes its configuration through a `Settings` object. The LLM's `system_instruction` is the system prompt that tells the bot how to behave. It's written for a caller who hears every word, and the [Prompting for the ear](#prompting-for-the-ear) section below explains each rule in it.
 
 Our main LLM, the one in the pipeline, is the one that interacts with the user. We need to give it a way to pass queries to the Strands agent. We'll do that with a tool call. Define a `search_knowledge_base` function, and register it with the LLM:
 
@@ -198,13 +228,52 @@ Next, let's create the context and its aggregators. The `LLMContext` stores the 
         messages=[
             {
                 "role": "user",
-                "content": "Start by saying exactly this: 'Thanks for contacting tri-county insurance. How can I help you?'",
+                "content": (
+                    "Start by saying exactly this: 'Thanks for calling Tri-County "
+                    "Insurance. I can look up the status, amounts, or adjuster notes "
+                    "on an existing claim. What's your claim number?'"
+                ),
             },
         ],
         tools=tools,
     )
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 ```
+
+### Prompting for the ear
+
+Your agent is heard, not read, and that changes how you write its prompts. LLMs default to writing for a screen. Leave that unchecked and every answer comes back in markdown, which Flux TTS faithfully pronounces: `**Status:**` comes out as "star star status star star." The `system_instruction` you added to `run_bot` follows the five rules for voice prompts from the [Deepgram Builder Essentials course](https://github.com/deepgram-devs/deepgram-essentials-course/tree/main/steps/10-final):
+
+| Rule | Why it matters out loud |
+|---|---|
+| **No markup.** "Never use markdown, bullet points, numbered lists, headings, or emoji." | Otherwise the caller hears every asterisk. Telling the model it's being heard is the instruction that changes its output. "Be conversational" doesn't. |
+| **Short turns.** One or two sentences, one question at a time. | A caller can't skim. Ask two questions in one breath and you get one answer, and you won't know which question it answers. |
+| **Data for the ear.** Amounts in words, dates with their weekday, claim IDs digit by digit. | A misheard "claim fifty" could be claim 15 or claim 50. Reading the digits back, "five zero," gives the caller a chance to catch it, and a weekday does the same for a date. |
+| **Confident phrasing.** Say what you know, and say plainly when you don't. | Hedging sounds evasive in speech. "Never guess" is the line that stops the agent inventing a claim status. |
+| **Named escalation triggers.** Spell out the situations the agent hands off. | "Use your judgement" isn't a trigger. "If the caller wants to file a new claim" is. |
+
+The prompt stays short because Pipecat re-sends it on every turn, and a long prompt slows the first reply. The hard constraints sit at the end, where they're least likely to fade after a few turns. The prompt also tells the model today's date, since the model has no calendar of its own.
+
+The greeting follows the same thinking. It's the only thing the agent says before it knows anything about the caller, so it names what the agent can do and asks for the one piece of information it needs: the claim number.
+
+A prompt is a request, not a guarantee. To make sure markdown never reaches the caller, the TTS service runs its text through `strip_markup_symbols` before synthesis. Add it to `agent.py` just below `KNOWLEDGE_BASE_ID`:
+
+```python
+_MARKUP_SYMBOLS = re.compile(r"[*#`]")
+
+
+async def strip_markup_symbols(text: str, text_type: str) -> str:
+    """Drop markdown symbols before speech synthesis.
+
+    Flux TTS receives the LLM's output token by token, so this has to work on a
+    lone "**" as well as on whole sentences.
+    """
+    return _MARKUP_SYMBOLS.sub("", text)
+```
+
+Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in values like `TCI-AUTO-48213`.
+
+With the main LLM speaking for the ear, the Strands agent that feeds it needs the same treatment.
 
 ### Configuring the Strands agent
 
@@ -225,23 +294,32 @@ class StrandsAgent:
         self.agent = Agent(
             tools=[self.search_knowledge_base, self.general_query],
             model=self.bedrock_model,
-            system_prompt="You are a claim assistant. Search for EXACT claim IDs only. When users say 'claim ID 1', search for 'claim ID 1' specifically, not '1234'. When they say 'claim ID 1234', search for 'claim ID 1234' specifically. Use general_query for non-claim questions.",
+            system_prompt=(
+                "You look up insurance claims for a voice agent. Another assistant "
+                "speaks your answer to the caller, so write plain sentences: no "
+                "markdown, bullet points, headings, or emoji. "
+                "Search for the exact claim ID you are given: 'claim ID 1' means "
+                "claim 1, not 1234. "
+                "Report only what the search returns, and say plainly when it "
+                "returns nothing. Never invent an amount, date, or status. "
+                "Use general_query only for questions that are not about a specific claim."
+            ),
         )
 
     @tool
     async def search_knowledge_base(self, query: str) -> str:
-        """Search for specific claim information in knowledge base"""
+        """Look up a claim record by its exact claim ID, e.g. 'claim ID 1'. Use for any question about a specific claim."""
         logger.info(f"Searching KnowledgeBase: {query}")
         return await self.bedrock_client.query_knowledge_base(query)
 
     @tool
     def general_query(self, question: str) -> str:
-        """Handle general questions that aren't about a specific claim"""
+        """Use for general insurance questions that are not about a specific claim, such as what a deductible is."""
         logger.info(f"Answering general question: {question}")
         # No lookup is needed, so hand the question back to the agent's own model
         return (
             "This is a general question, not a claim lookup. "
-            f"Answer it briefly from your own knowledge: {question}"
+            f"Answer it briefly, in plain sentences, from your own knowledge: {question}"
         )
 
     def process_query(self, user_input: str) -> str:
@@ -256,8 +334,17 @@ class StrandsAgent:
 
 search_function = FunctionSchema(
     name="search_knowledge_base",
-    description="Search the knowledge base",
-    properties={"query": {"type": "string"}},
+    description=(
+        "Look up an existing Tri-County Insurance claim by its claim ID. Use this "
+        "whenever the caller asks about a specific claim: its status, estimated or "
+        "approved amount, deductible, date of loss, adjuster, or adjuster notes."
+    ),
+    properties={
+        "query": {
+            "type": "string",
+            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 1 approved amount'.",
+        }
+    },
     required=["query"],
 )
 
@@ -265,6 +352,10 @@ tools = ToolsSchema(standard_tools=[search_function])
 ```
 
 In the `search_knowledge_base` function in the main LLM, we called `strands_agent.process_query()` to give the user's request to the Strands agent. In the StrandsAgent class, the `process_query` function is passing that input to an instance of the Strands library's `Agent` class. We're also defining some different tools that the Strands agent can use with the `@tool` decorator on the `general_query` and `search_knowledge_base` functions.
+
+The Strands agent never talks to the caller directly, but its answer becomes the tool result the main LLM reads aloud. Any markdown it writes ends up in the caller's ear, so its `system_prompt` asks for plain sentences too.
+
+The tool descriptions are prompts as well. A description is the only thing an LLM reads when it decides whether to call a tool, so each one says *when* to use the tool, not only what it does. "Search the knowledge base" tells the model what `search_knowledge_base` is. The `search_function` description above tells the model when to reach for it. The `@tool` docstrings play the same role for the Strands agent.
 
 Speaking of `search_knowledge_base`, we're using a `BedrockKnowledgeBaseClient` in that function. We should define that class right above the `StrandsAgent` class:
 
@@ -334,14 +425,15 @@ class BedrockKnowledgeBaseClient:
             if not results:
                 return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
 
-            # Format the response with more detail
-            formatted_response = f"Found {len(results)} result(s) for your query:\n\n"
-
-            for i, result in enumerate(results[:5], 1):  # Show top 5 results
+            # Format the results for the ear: dates and amounts ready to speak,
+            # and no scores or headers, because what the LLM never receives it can't say
+            passages = []
+            for result in results[:5]:  # Use the top 5 results
                 content = result.get("content", {}).get("text", "")
-                score = result.get("score", 0)
 
                 if content:
+                    content = await expand_currency(speak_dates(content), "*")
+
                     # Show full content for claim-related queries to include all notes
                     content_length = (
                         1000
@@ -352,10 +444,12 @@ class BedrockKnowledgeBaseClient:
                     if len(content) > content_length:
                         truncated_content += "..."
 
-                    formatted_response += f"{i}. {truncated_content}\n"
-                    formatted_response += f"   (Relevance: {score:.2f})\n\n"
+                    passages.append(truncated_content)
 
-            return formatted_response.strip()
+            if not passages:
+                return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
+
+            return "\n\n".join(passages)
 
         except ClientError as e:
             error_msg = f"Error querying knowledge base: {e}"
@@ -367,7 +461,35 @@ class BedrockKnowledgeBaseClient:
             return "I'm sorry, something went wrong while processing your request."
 ```
 
-You can refer to the Amazon Knowledge Base documentation to learn more about this code.
+The knowledge base stores dates as `2026-09-14` and amounts as `$4,850`. Instead of asking the LLM to reformat them, `query_knowledge_base` hands back text that's already shaped for speech. Pipecat's `expand_currency` transform turns `$4,850` into "four thousand, eight hundred and fifty dollars," and `speak_dates` turns `2026-09-14` into "Monday, September 14th." Pre-formatted values also keep the LLM's paraphrase close to the source. Add these helpers below `KNOWLEDGE_BASE_ID`, next to `strip_markup_symbols`:
+
+```python
+_ORDINAL = {1: "st", 2: "nd", 3: "rd", 21: "st", 22: "nd", 23: "rd", 31: "st"}
+_ISO_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+
+
+def spoken_date(iso: str) -> str:
+    """Format an ISO date the way a person says it, e.g. 'Monday, September 14th'.
+
+    The weekday gives the caller a free second chance to catch a misheard date.
+    """
+    day = date.fromisoformat(iso)
+    return f"{day:%A, %B} {day.day}{_ORDINAL.get(day.day, 'th')}"
+
+
+def speak_dates(text: str) -> str:
+    """Rewrite every ISO date in the text as a spoken date."""
+
+    def replace(match: re.Match) -> str:
+        try:
+            return spoken_date(match.group())
+        except ValueError:
+            return match.group()
+
+    return _ISO_DATE.sub(replace, text)
+```
+
+The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud. You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 
 
 ### Finishing the Botfile
