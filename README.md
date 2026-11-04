@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import LLMRunFrame, TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -156,8 +156,17 @@ If you try to run this botfile right now, you'd get an error, because none of th
         "- If you did not catch the number, ask for it again.\n"
         "- You may answer general insurance questions, like what a deductible is, "
         "briefly and in general terms.\n"
-        "- Never invent a claim, amount, date, or status. If the search finds "
-        "nothing, say so and ask the caller to check the number.\n"
+        "- Never invent a claim, amount, date, or status.\n"
+        "\n"
+        "VERIFICATION:\n"
+        "- Before you share anything about a claim, verify the caller. Once you "
+        "have the claim number, ask for the policyholder's last name.\n"
+        "- Call search_knowledge_base only when you have both, and pass both.\n"
+        "- If the lookup says the details don't match, tell the caller the claim "
+        "number and last name don't match our records, and ask them to repeat the "
+        "number and spell the last name.\n"
+        "- Never say, confirm, or hint at the name on a claim, and never share "
+        "details of a claim the caller has not been verified for.\n"
         "\n"
         "ESCALATION:\n"
         "- If the caller wants to file a new claim, dispute a decision, or asks for "
@@ -178,25 +187,72 @@ If you try to run this botfile right now, you'd get an error, because none of th
 
 Each service takes its configuration through a `Settings` object. The LLM's `system_instruction` is the system prompt that tells the bot how to behave. It's written for a caller who hears every word, and the [Prompting for the ear](#prompting-for-the-ear) section below explains each rule in it.
 
-Our main LLM, the one in the pipeline, is the one that interacts with the user. We need to give it a way to pass queries to the Strands agent. We'll do that with a tool call. Define a `search_knowledge_base` function, and register it with the LLM:
+Our main LLM, the one in the pipeline, is the one that interacts with the user. We need to give it a way to pass queries to the Strands agent. We'll do that with a tool call. Claim records are personal, so the function verifies the caller before anything is looked up: the LLM must pass the policyholder's last name with the claim ID. Define a `search_knowledge_base` function, and register it with the LLM:
 
 ```python
+    # Failed verifications per claim ID, so a caller can't keep guessing names
+    max_verification_attempts = 3
+    failed_verifications: dict[str, int] = {}
+
     async def search_knowledge_base(params: FunctionCallParams):
         query = params.arguments.get("query", "")
+        claim_id = re.sub(r"\D", "", str(params.arguments.get("claim_id", "")))
+        last_name = params.arguments.get("last_name", "")
 
-        if not query:
+        if not (query and claim_id and last_name):
             await params.result_callback(
                 {
-                    "error": "No query provided",
-                    "response": "Please provide a question or claim ID to search the knowledge base.",
+                    "error": "Missing claim ID or last name",
+                    "response": "Ask the caller for their claim number and the policyholder's last name before looking up a claim.",
                 }
             )
             return
 
-        logger.info(f"Using Strands agent for: {query}")
+        if failed_verifications.get(claim_id, 0) >= max_verification_attempts:
+            await params.result_callback(
+                {
+                    "verified": False,
+                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Tri-County agent for help.",
+                }
+            )
+            return
+
+        # Verify before the Strands agent sees the request, so no claim
+        # details are retrieved for an unverified caller
+        try:
+            verified = strands_agent.bedrock_client.verify_policyholder(
+                claim_id, last_name
+            )
+        except Exception as e:
+            logger.error(f"Error verifying claim {claim_id}: {e}")
+            await params.result_callback(
+                {
+                    "verified": False,
+                    "response": "The verification lookup failed. Apologize and ask the caller to try again in a moment.",
+                }
+            )
+            return
+
+        if not verified:
+            failed_verifications[claim_id] = failed_verifications.get(claim_id, 0) + 1
+            logger.info(
+                f"Verification failed for claim {claim_id} "
+                f"({failed_verifications[claim_id]}/{max_verification_attempts})"
+            )
+            # The same answer whether the claim doesn't exist or the name is
+            # wrong, so a caller can't probe for valid claims or names
+            await params.result_callback(
+                {
+                    "verified": False,
+                    "response": "The claim number and last name don't match our records. Share no claim details. Ask the caller to repeat the claim number and spell the policyholder's last name.",
+                }
+            )
+            return
+
+        logger.info(f"Verified caller for claim {claim_id}; using Strands agent for: {query}")
 
         try:
-            response_text = strands_agent.process_query(query)
+            response_text = strands_agent.process_query(f"claim ID {claim_id}: {query}")
 
             await params.result_callback(
                 {
@@ -213,7 +269,22 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
             )
 
     llm.register_function("search_knowledge_base", search_knowledge_base)
+
+    # Speak a filler phrase while the knowledge base lookup runs, so the
+    # caller isn't left in silence. It isn't added to the LLM context.
+    @llm.event_handler("on_function_calls_started")
+    async def on_function_calls_started(service, function_calls):
+        await tts.queue_frame(
+            TTSSpeakFrame(
+                "Let me look that up for you, one second please.",
+                append_to_context=False,
+            )
+        )
 ```
+
+The verification lives in code, not just in the prompt. A prompt is a request: a determined caller can talk an LLM into skipping a step. Here, `verify_policyholder` checks the last name against the claim record, which we'll add to the `BedrockKnowledgeBaseClient` later, before the Strands agent sees the request. If the check fails, no claim details are retrieved, so there's nothing for the LLM to leak. The failure response is identical whether the claim doesn't exist or the name is wrong, so a caller can't use the agent to discover valid claim numbers or the names on them. After three failed attempts on a claim, the agent stops checking it for the rest of the call. The `VERIFICATION` section of the system prompt tells the LLM to ask for the last name and how to respond to a mismatch.
+
+A knowledge base lookup takes a moment, and dead air on a phone call feels broken. The `on_function_calls_started` event fires as soon as the LLM decides to call a tool, so we use it to queue a `TTSSpeakFrame` straight to the TTS service. The caller hears "Let me look that up for you" while the Strands agent does its work. Setting `append_to_context=False` keeps the filler phrase out of the conversation history, so it doesn't land between the tool call and its result.
 
 Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call. We don't need to give the user aggregator a VAD analyzer: Deepgram Flux sends the start-of-turn and end-of-turn signals, and the aggregator uses them automatically. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
 
@@ -331,15 +402,26 @@ search_function = FunctionSchema(
     description=(
         "Look up an existing Tri-County Insurance claim by its claim ID. Use this "
         "whenever the caller asks about a specific claim: its status, estimated or "
-        "approved amount, deductible, date of loss, adjuster, or adjuster notes."
+        "approved amount, deductible, date of loss, adjuster, or adjuster notes. "
+        "Call it only once the caller has given both the claim ID and the "
+        "policyholder's last name; the lookup verifies the name before it "
+        "returns any details."
     ),
     properties={
+        "claim_id": {
+            "type": "string",
+            "description": "The claim ID as digits, e.g. '1234'.",
+        },
+        "last_name": {
+            "type": "string",
+            "description": "The policyholder's last name exactly as the caller said or spelled it.",
+        },
         "query": {
             "type": "string",
             "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 1 approved amount'.",
-        }
+        },
     },
-    required=["query"],
+    required=["claim_id", "last_name", "query"],
 )
 
 tools = ToolsSchema(standard_tools=[search_function])
@@ -390,6 +472,36 @@ class BedrockKnowledgeBaseClient:
                 knowledgeBaseId=self.knowledge_base_id,
                 retrievalQuery={"text": text},
             )
+
+    def verify_policyholder(self, claim_id: str, last_name: str) -> bool:
+        """Check the caller's last name against the policyholder on a claim.
+
+        This runs in code, before any claim details reach the LLM, so no
+        prompt can talk the agent out of it.
+        """
+        # \b keeps "Claim ID 1" from matching "Claim ID 1234"
+        claim_line = re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
+        policyholder = re.compile(r"Policyholder:\s*([^\n]+?)\s*(?:Policy number:|\n|$)")
+
+        def letters(text: str) -> str:
+            # Ignore case, spaces, and punctuation, so a spelled-out
+            # "W-A-L-S-H" matches "Walsh"
+            return re.sub(r"[^a-z]", "", text.lower())
+
+        response = self._retrieve(f"Claim ID {claim_id} policyholder", "HYBRID", 10)
+        for result in response.get("retrievalResults", []):
+            text = result.get("content", {}).get("text", "")
+            match = policyholder.search(text) if claim_line.search(text) else None
+            if match:
+                names = match.group(1).split()
+                heard = letters(last_name)
+                # Accept the last word, or everything after the first name
+                # for multi-word surnames like "De La Cruz"
+                return bool(heard) and heard in {
+                    letters(names[-1]),
+                    letters("".join(names[1:])),
+                }
+        return False
 
     async def query_knowledge_base(self, query: str, max_results: int = 10) -> str:
         """Query the Bedrock Knowledge Base and return formatted response"""
@@ -483,7 +595,9 @@ def speak_dates(text: str) -> str:
     return _ISO_DATE.sub(replace, text)
 ```
 
-The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud. You can refer to the Amazon Knowledge Base documentation to learn more about this code.
+The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud.
+
+`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary keeps claim 1 from matching claim 1234. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 
 
 ### Finishing the Botfile
