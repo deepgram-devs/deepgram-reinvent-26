@@ -340,11 +340,6 @@ class BedrockKnowledgeBaseClient:
             for i, result in enumerate(results[:5], 1):  # Show top 5 results
                 content = result.get("content", {}).get("text", "")
                 score = result.get("score", 0)
-                source = (
-                    result.get("location", {})
-                    .get("s3Location", {})
-                    .get("uri", "Unknown source")
-                )
 
                 if content:
                     # Show full content for claim-related queries to include all notes
