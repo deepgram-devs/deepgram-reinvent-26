@@ -23,7 +23,13 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
-from pipecat.frames.frames import LLMRunFrame, TTSSpeakFrame
+from pipecat.frames.frames import (
+    LLMRunFrame,
+    LLMUpdateSettingsFrame,
+    STTUpdateSettingsFrame,
+    TTSSpeakFrame,
+    TTSUpdateSettingsFrame,
+)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -34,12 +40,16 @@ from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
 from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
+from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.utils.text.transforms import expand_currency
 from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
 from strands.models import BedrockModel
+
+import voices
+from voices import Voice
 ```
 
 Your bot uses a few different third-party services. The standard security practice is to make the API keys for those services available as environment variables. Here, we'll use a Python library to load a `.env` file with our keys:
@@ -115,15 +125,19 @@ If you try to run this botfile right now, you'd get an error, because none of th
     #just below logger.info(f"Starting Bedrock Knowledge Base Voice Agent with Strands")
     strands_agent = StrandsAgent()
 
+    # The voice is the caller's only language setting: it picks the listen
+    # model and the reply language too. Every call starts in English.
+    current_voice = voices.DEFAULT_VOICE
+
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        settings=DeepgramFluxSTTService.Settings(model="flux-general-en"),
+        settings=DeepgramFluxSTTService.Settings(**flux_listen_settings(current_voice)),
     )
 
     tts = DeepgramFluxTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         sample_rate=24000,
-        settings=DeepgramFluxTTSService.Settings(voice="flux-heather-en"),
+        settings=DeepgramFluxTTSService.Settings(voice=current_voice.model),
         # The prompt asks for no markdown; this guarantees it is never spoken
         text_transforms=[("*", strip_markup_symbols)],
     )
@@ -132,60 +146,72 @@ If you try to run this botfile right now, you'd get an error, because none of th
     now = datetime.now()
     today = f"{now:%A, %B} {now.day}, {now.year}"
 
-    # System instruction, written for the ear: the agent is heard, not read
-    system_instruction = (
-        "You are the claims line voice agent for Tri-County Insurance. You help "
-        "callers look up existing claims: status, amounts, dates, and adjuster notes.\n"
-        f"Today is {today}.\n"
-        "\n"
-        "HOW TO SPEAK:\n"
-        "- You are being heard, not read. Never use markdown, bullet points, "
-        "numbered lists, headings, or emoji.\n"
-        "- Keep replies to one or two sentences, and ask one question at a time.\n"
-        "- Say dollar amounts in words and dates with their weekday, e.g. "
-        "'Monday, September 14th'.\n"
-        "- When you repeat a claim ID back, say the digits one at a time, e.g. "
-        "'one two three four'.\n"
-        "- If you do not know something, say so plainly. Never guess.\n"
-        "\n"
-        "CLAIM LOOKUPS:\n"
-        "- For any question about a specific claim, call search_knowledge_base. "
-        "Never answer claim details from memory.\n"
-        "- Treat a number the caller gives as a claim ID and search for that exact "
-        "ID: 'claim 1' is claim ID 1, not 1234.\n"
-        "- If you did not catch the number, ask for it again.\n"
-        "- You may answer general insurance questions, like what a deductible is, "
-        "briefly and in general terms.\n"
-        "- Never invent a claim, amount, date, or status.\n"
-        "\n"
-        "VERIFICATION:\n"
-        "- Before you share anything about a claim, verify the caller. Once you "
-        "have the claim number, ask for the policyholder's last name.\n"
-        "- Call search_knowledge_base only when you have both, and pass both.\n"
-        "- If the lookup says the details don't match, tell the caller the claim "
-        "number and last name don't match our records, and ask them to repeat the "
-        "number and spell the last name.\n"
-        "- Never say, confirm, or hint at the name on a claim, and never share "
-        "details of a claim the caller has not been verified for.\n"
-        "\n"
-        "ESCALATION:\n"
-        "- If the caller wants to file a new claim, dispute a decision, or asks for "
-        "a person, say this line can only look up existing claims and their "
-        "assigned adjuster can help.\n"
-        "- If the caller describes an emergency or says someone is hurt, tell them "
-        "to hang up and call 911."
-    )
+    # System instruction, written for the ear: the agent is heard, not read.
+    # It's rebuilt whenever the voice changes, since it names the voice and
+    # the language to reply in.
+    def build_system_instruction(voice: Voice) -> str:
+        return (
+            "You are the claims line voice agent for Tri-County Insurance. You help "
+            "callers look up existing claims: status, amounts, dates, and adjuster notes.\n"
+            f"{voices.voice_intro(voice)}\n"
+            f"Today is {today}.\n"
+            "\n"
+            "HOW TO SPEAK:\n"
+            "- You are being heard, not read. Never use markdown, bullet points, "
+            "numbered lists, headings, or emoji.\n"
+            "- Keep replies to one or two sentences, and ask one question at a time.\n"
+            "- Say dollar amounts in words and dates with their weekday, e.g. "
+            "'Monday, September 14th'.\n"
+            "- When you repeat a claim ID back, say the digits one at a time, e.g. "
+            "'one two three four'.\n"
+            "- If you do not know something, say so plainly. Never guess.\n"
+            "\n"
+            "CLAIM LOOKUPS:\n"
+            "- For any question about a specific claim, call search_knowledge_base. "
+            "Never answer claim details from memory.\n"
+            "- Treat a number the caller gives as a claim ID and search for that exact "
+            "ID: 'claim 1' is claim ID 1, not 1234.\n"
+            "- If you did not catch the number, ask for it again.\n"
+            "- You may answer general insurance questions, like what a deductible is, "
+            "briefly and in general terms.\n"
+            "- Never invent a claim, amount, date, or status.\n"
+            "\n"
+            "VERIFICATION:\n"
+            "- Before you share anything about a claim, verify the caller. Once you "
+            "have the claim number, ask for the policyholder's last name.\n"
+            "- Call search_knowledge_base only when you have both, and pass both.\n"
+            "- If the lookup says the details don't match, tell the caller the claim "
+            "number and last name don't match our records, and ask them to repeat the "
+            "number and spell the last name.\n"
+            "- Never say, confirm, or hint at the name on a claim, and never share "
+            "details of a claim the caller has not been verified for.\n"
+            "\n"
+            "ESCALATION:\n"
+            "- If the caller wants to file a new claim, dispute a decision, or asks for "
+            "a person, say this line can only look up existing claims and their "
+            "assigned adjuster can help.\n"
+            "- If the caller describes an emergency or says someone is hurt, tell them "
+            "to hang up and call 911.\n"
+            "\n"
+            "VOICE AND LANGUAGE:\n"
+            "- If the caller asks for another language, or to speak with a different "
+            "voice, call set_voice. Every language has its own voices.\n"
+            "- Claim records are in English. Translate what you read from them into "
+            "the language you reply in."
+        )
 
     llm = AWSBedrockLLMService(
         aws_region="us-east-1",
         settings=AWSBedrockLLMService.Settings(
             model="us.anthropic.claude-haiku-5-5",
-            system_instruction=system_instruction,
+            system_instruction=build_system_instruction(current_voice),
         ),
     )
 ```
 
 Each service takes its configuration through a `Settings` object. The LLM's `system_instruction` is the system prompt that tells the bot how to behave. It's written for a caller who hears every word, and the [Prompting for the ear](#prompting-for-the-ear) section below explains each rule in it.
+
+The STT model, the TTS voice, and one line of the prompt all come from `current_voice`, because the caller can change language mid-call by asking for a different voice. [Switching languages by voice](#switching-languages-by-voice) covers how that works.
 
 Our main LLM, the one in the pipeline, is the one that interacts with the user. We need to give it a way to pass queries to the Strands agent. We'll do that with a tool call. Claim records are personal, so the function verifies the caller before anything is looked up: the LLM must pass the policyholder's last name with the claim ID. Define a `search_knowledge_base` function, and register it with the LLM:
 
@@ -272,13 +298,72 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
 
     llm.register_function("search_knowledge_base", search_knowledge_base)
 
+    async def apply_voice(voice: Voice, params: FunctionCallParams):
+        """Switch voice, and with it the language, in place.
+
+        The prompt, voice, and listen updates are queued before the function
+        result, so the confirmation is the first turn in the new voice.
+        """
+        nonlocal current_voice
+        language_changed = voice.lang != current_voice.lang
+        current_voice = voice
+        logger.info(f"Switching voice to {voice.model} (language changed: {language_changed})")
+
+        await llm.queue_frame(
+            LLMUpdateSettingsFrame(
+                delta=AWSBedrockLLMService.Settings(
+                    system_instruction=build_system_instruction(voice)
+                )
+            )
+        )
+        # Flux TTS reconnects with the new voice
+        await tts.queue_frame(
+            TTSUpdateSettingsFrame(delta=DeepgramFluxTTSService.Settings(voice=voice.model))
+        )
+        if language_changed:
+            # A model change reconnects Flux STT once the caller stops speaking;
+            # a hints-only change (one multi language to another) doesn't
+            await stt.queue_frame(
+                STTUpdateSettingsFrame(
+                    delta=DeepgramFluxSTTService.Settings(**flux_listen_settings(voice))
+                )
+            )
+
+        await params.result_callback(
+            {"response": voices.confirmation(voice, language_changed)}
+        )
+
+    async def set_voice(params: FunctionCallParams):
+        voice = voices.find_voice(str(params.arguments.get("voice", "")))
+        if voice is None:
+            await params.result_callback(
+                {"response": "No voice by that name. Call list_voices for the names."}
+            )
+            return
+        await apply_voice(voice, params)
+
+    async def list_voices(params: FunctionCallParams):
+        await params.result_callback(
+            {"response": voices.list_voices_text(str(params.arguments.get("language", "")))}
+        )
+
+    async def reset_voice(params: FunctionCallParams):
+        await apply_voice(voices.DEFAULT_VOICE, params)
+
+    llm.register_function("set_voice", set_voice)
+    llm.register_function("list_voices", list_voices)
+    llm.register_function("reset_voice", reset_voice)
+
     # Speak a filler phrase while the knowledge base lookup runs, so the
-    # caller isn't left in silence. It isn't added to the LLM context.
+    # caller isn't left in silence. It isn't added to the LLM context, and
+    # it's in the current voice's language.
     @llm.event_handler("on_function_calls_started")
     async def on_function_calls_started(service, function_calls):
+        if not any(fc.function_name == "search_knowledge_base" for fc in function_calls):
+            return
         await tts.queue_frame(
             TTSSpeakFrame(
-                "Let me look that up for you, one second please.",
+                voices.language_of(current_voice).filler,
                 append_to_context=False,
             )
         )
@@ -286,7 +371,9 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
 
 The verification lives in code, not just in the prompt. A prompt is a request: a determined caller can talk an LLM into skipping a step. Here, `verify_policyholder` checks the last name against the claim record, which we'll add to the `BedrockKnowledgeBaseClient` later, before the Strands agent sees the request. If the check fails, no claim details are retrieved, so there's nothing for the LLM to leak. The failure response is identical whether the claim doesn't exist or the name is wrong, so a caller can't use the agent to discover valid claim numbers or the names on them. After three failed attempts on a claim, the agent stops checking it for the rest of the call. The `VERIFICATION` section of the system prompt tells the LLM to ask for the last name and how to respond to a mismatch.
 
-A knowledge base lookup takes a moment, and dead air on a phone call feels broken. The `on_function_calls_started` event fires as soon as the LLM decides to call a tool, so we use it to queue a `TTSSpeakFrame` straight to the TTS service. The caller hears "Let me look that up for you" while the Strands agent does its work. Setting `append_to_context=False` keeps the filler phrase out of the conversation history, so it doesn't land between the tool call and its result.
+A knowledge base lookup takes a moment, and dead air on a phone call feels broken. The `on_function_calls_started` event fires as soon as the LLM decides to call a tool, so we use it to queue a `TTSSpeakFrame` straight to the TTS service. The caller hears "Let me look that up for you" while the Strands agent does its work. Setting `append_to_context=False` keeps the filler phrase out of the conversation history, so it doesn't land between the tool call and its result. The filler only plays for claim lookups, since the voice tools answer instantly, and it's spoken in the current voice's language.
+
+The `set_voice`, `list_voices`, and `reset_voice` functions let the caller change the agent's voice and language. They're explained in [Switching languages by voice](#switching-languages-by-voice).
 
 Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call. We don't need to give the user aggregator a VAD analyzer: Deepgram Flux sends the start-of-turn and end-of-turn signals, and the aggregator uses them automatically. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
 
@@ -339,6 +426,83 @@ async def strip_markup_symbols(text: str, text_type: str) -> str:
 ```
 
 Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in values like `TCI-AUTO-48213`.
+
+### Switching languages by voice
+
+A caller can ask the agent to speak Spanish, or to use a different voice, and the agent switches mid-call. The design has one rule: **the voice implies the language.** Each Flux TTS voice belongs to exactly one language, so choosing a voice also chooses the listen model and the language the agent replies in. There's no separate language setting that could disagree with the voice.
+
+All of that lives in `voices.py`, next to `agent.py`. Copy it from this repository: most of it is a catalog of about 145 voices. It's built from two tables:
+
+```python
+@dataclass(frozen=True)
+class Language:
+    code: str  # ISO code: the model suffix and the Flux language hint
+    name: str  # used in the prompt and tool text
+    # Spoken while a claim lookup runs. Written in the language itself, since
+    # the voice would otherwise read the English text with a foreign accent.
+    filler: str
+
+
+@dataclass(frozen=True)
+class Voice:
+    name: str  # the short name the model chooses by
+    model: str  # the Flux TTS model id sent to Deepgram
+    blurb: str  # e.g. "Spanish woman"
+    lang: str  # a code from LANGUAGES
+    featured: bool = False  # named in the set_voice description
+```
+
+The catalog offers only the languages the agent can *hear*. A voice in a language the STT model can't understand is a voice nobody can talk back to. `flux-general-multi` hears English, Spanish, French, German, Hindi, Russian, Portuguese, Italian, and Dutch, so those nine are offered. (It also hears Japanese, but poorly enough that a Japanese voice would need Nova-3 for listening, a second STT service this agent doesn't run.)
+
+`voices.listen_settings()` picks the STT settings for a voice. English listens with `flux-general-en`. Every other language listens with `flux-general-multi` and the language hints `[code, "en"]`. Keeping English in the hints matters: it's how "English, please" still gets heard after a switch to Spanish.
+
+#### The tools
+
+The LLM gets three functions:
+
+- `set_voice(voice)` changes the voice, and with it the language. Its description names one featured voice per language and a handful of English voices. It has no `enum` of all 145 names, which would bloat every request. An unknown name is answered with "No voice by that name. Call list_voices for the names."
+- `list_voices(language)` returns one language's voices with their accent and gender. A voice's name says nothing about either, so the description tells the model to call this first when a caller asks for "a man's voice."
+- `reset_voice()` goes back to the default voice, and so to English.
+
+#### The language line
+
+`voices.voice_intro()` adds one sentence to the system prompt, right after the role, in every language including English:
+
+```
+Your voice is Carmen, a Spanish woman. Reply only in Spanish; for any other language, call set_voice first.
+```
+
+The wording comes from measurements on another Deepgram project, a voice device that switches languages the same way. Without a language line, English sessions answered "Can you speak French?" *in French, in the English voice*, without switching, in 5 of 16 tries. With the line, 0 of 16. A softer "Reply in Spanish unless asked otherwise" missed 1 of 12 language changes. "Reply only in… call set_voice first" missed none.
+
+#### Applying a switch
+
+`apply_voice` makes the switch in place, without dropping the call. It queues three settings updates, one for each service, and then returns the function result:
+
+| Update | What the service does |
+|---|---|
+| `LLMUpdateSettingsFrame` with a new `system_instruction` | Replaces the system prompt, so the old language line is gone, not just contradicted |
+| `TTSUpdateSettingsFrame` with the new `voice` | Flux TTS reconnects with the new voice model |
+| `STTUpdateSettingsFrame` with `listen_settings()`, only when the language changes | A change of model (English to or from `flux-general-multi`) reconnects Flux STT once the caller stops speaking. A change of hints alone (Spanish to French) is sent as a `Configure` message on the open connection |
+
+Because the updates are queued before the result, the confirmation the LLM speaks next ("Sí, ahora hablo español") is the first turn in the new voice. The result asks for it in the new language: `Done: you are now Carmen, a Spanish voice. Say so briefly, in Spanish.`
+
+Every call starts in English with the default voice. Callers are anonymous until they've been verified, so there's no one to remember a preference for.
+
+#### Known limits
+
+- Claim records are in English. The prompt tells the LLM to translate what it reads from them into the reply language.
+- `verify_policyholder` compares letters A to Z. A last name spelled out with accented letters won't match a record without them.
+- A caller who interrupts during the moment Flux STT reconnects may not be heard.
+
+#### Testing it
+
+`tests/test_voices.py` checks the catalog: unique names, the `flux-<name>-<lang>` pattern, one featured voice per language, and that every voice's language can be heard. `scripts/probe_flux_languages.py` checks the live API: for each language it synthesises a sentence with Flux TTS and streams it back through `flux-general-multi`. `scripts/switch_test.py` drives the whole agent through a series of switches with synthesised speech and reports the voice and pitch of every reply.
+
+```bash
+.venv/bin/python -m unittest discover tests
+.venv/bin/python scripts/probe_flux_languages.py
+.venv/bin/python scripts/switch_test.py
+```
 
 With the main LLM speaking for the ear, the Strands agent that feeds it needs the same treatment.
 
@@ -438,7 +602,59 @@ search_function = FunctionSchema(
     required=["claim_id", "last_name", "query"],
 )
 
-tools = ToolsSchema(standard_tools=[search_function])
+set_voice_function = FunctionSchema(
+    name="set_voice",
+    description=voices.set_voice_description(),
+    # No enum: listing ~150 voices would bloat every request
+    properties={
+        "voice": {
+            "type": "string",
+            "description": "The voice's short name, e.g. 'carmen'.",
+        }
+    },
+    required=["voice"],
+)
+
+list_voices_function = FunctionSchema(
+    name="list_voices",
+    description=(
+        "List the voices for one language, with each voice's accent and gender. "
+        "Use it before set_voice when the caller describes a voice instead of "
+        "naming one."
+    ),
+    properties={
+        "language": {
+            "type": "string",
+            "enum": list(voices.LANGUAGES),
+            "description": "ISO language code, e.g. 'es' for Spanish.",
+        }
+    },
+    required=["language"],
+)
+
+reset_voice_function = FunctionSchema(
+    name="reset_voice",
+    description="Go back to the default voice, and so to English.",
+    properties={},
+    required=[],
+)
+
+tools = ToolsSchema(
+    standard_tools=[
+        search_function,
+        set_voice_function,
+        list_voices_function,
+        reset_voice_function,
+    ]
+)
+
+
+def flux_listen_settings(voice: Voice) -> dict:
+    """voices.listen_settings, with the hints as the Language values Pipecat takes."""
+    settings = voices.listen_settings(voice)
+    hints = settings["language_hints"]
+    settings["language_hints"] = [Language(code) for code in hints] if hints else None
+    return settings
 ```
 
 In the `search_knowledge_base` function in the main LLM, we called `strands_agent.process_query()` to give the user's request to the Strands agent. In the StrandsAgent class, the `process_query` function is passing that input to an instance of the Strands library's `Agent` class. We're also defining some different tools that the Strands agent can use with the `@tool` decorator on the `general_query` and `search_knowledge_base` functions.
