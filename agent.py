@@ -69,6 +69,14 @@ def speak_dates(text: str) -> str:
     return _ISO_DATE.sub(replace, text)
 
 
+def claim_id_pattern(claim_id: str) -> re.Pattern:
+    """Match a claim record's "Claim ID" line for exactly this claim.
+
+    The \b word boundary keeps "Claim ID 1" from matching "Claim ID 1234".
+    """
+    return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
+
+
 class BedrockKnowledgeBaseClient:
     """Client for interacting with Amazon Bedrock Knowledge Base"""
 
@@ -112,8 +120,7 @@ class BedrockKnowledgeBaseClient:
         This runs in code, before any claim details reach the LLM, so no
         prompt can talk the agent out of it.
         """
-        # \b keeps "Claim ID 1" from matching "Claim ID 1234"
-        claim_line = re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
+        claim_line = claim_id_pattern(claim_id)
         policyholder = re.compile(r"Policyholder:\s*([^\n]+?)\s*(?:Policy number:|\n|$)")
 
         def letters(text: str) -> str:
@@ -136,8 +143,14 @@ class BedrockKnowledgeBaseClient:
                 }
         return False
 
-    async def query_knowledge_base(self, query: str, max_results: int = 10) -> str:
-        """Query the Bedrock Knowledge Base and return formatted response"""
+    async def query_knowledge_base(
+        self, query: str, max_results: int = 10, claim_id: str | None = None
+    ) -> str:
+        """Query the Bedrock Knowledge Base and return formatted response.
+
+        With a claim_id, only passages from that claim's record are returned,
+        so a lookup never hands the LLM another policyholder's data.
+        """
         try:
             logger.info(f"Querying knowledge base with: {query}")
 
@@ -160,6 +173,16 @@ class BedrockKnowledgeBaseClient:
                 logger.info(f"No results found, trying alternative query: {query}")
                 alt_response = self._retrieve(query, "SEMANTIC", max_results)
                 results = alt_response.get("retrievalResults", [])
+
+            if claim_id:
+                # Search returns the closest matches, which include other
+                # claims. Keep only the claim the caller was verified for.
+                same_claim = claim_id_pattern(claim_id)
+                results = [
+                    r
+                    for r in results
+                    if same_claim.search(r.get("content", {}).get("text", ""))
+                ]
 
             if not results:
                 return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
@@ -207,9 +230,11 @@ class StrandsAgent:
         )
 
         self.bedrock_model = BedrockModel(
-            model_id="amazon.nova-lite-v1:0", boto_session=self.session
+            model_id="us.amazon.nova-2-lite-v1:0", boto_session=self.session
         )
         self.bedrock_client = BedrockKnowledgeBaseClient(KNOWLEDGE_BASE_ID)
+        # The claim the caller was verified for; set per lookup by process_query
+        self.claim_id: str | None = None
 
         self.agent = Agent(
             tools=[self.search_knowledge_base, self.general_query],
@@ -220,6 +245,8 @@ class StrandsAgent:
                 "markdown, bullet points, headings, or emoji. "
                 "Search for the exact claim ID you are given: 'claim ID 1' means "
                 "claim 1, not 1234. "
+                "Answer only what was asked, in one or two sentences; leave out "
+                "the rest of the record. "
                 "Report only what the search returns, and say plainly when it "
                 "returns nothing. Never invent an amount, date, or status. "
                 "Use general_query only for questions that are not about a specific claim."
@@ -230,7 +257,9 @@ class StrandsAgent:
     async def search_knowledge_base(self, query: str) -> str:
         """Look up a claim record by its exact claim ID, e.g. 'claim ID 1'. Use for any question about a specific claim."""
         logger.info(f"Searching KnowledgeBase: {query}")
-        return await self.bedrock_client.query_knowledge_base(query)
+        return await self.bedrock_client.query_knowledge_base(
+            query, claim_id=self.claim_id
+        )
 
     @tool
     def general_query(self, question: str) -> str:
@@ -242,9 +271,15 @@ class StrandsAgent:
             f"Answer it briefly, in plain sentences, from your own knowledge: {question}"
         )
 
-    def process_query(self, user_input: str) -> str:
-        """Process user input through the Strands agent"""
+    def process_query(self, user_input: str, claim_id: str | None = None) -> str:
+        """Process user input through the Strands agent.
+
+        Each lookup starts with an empty history, so the agent answers from a
+        fresh search, never from records it read for an earlier request.
+        """
         try:
+            self.claim_id = claim_id
+            self.agent.messages.clear()
             response = self.agent(user_input)
             return str(response)
         except Exception as e:
@@ -418,7 +453,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info(f"Verified caller for claim {claim_id}; using Strands agent for: {query}")
 
         try:
-            response_text = strands_agent.process_query(f"claim ID {claim_id}: {query}")
+            response_text = strands_agent.process_query(
+                f"claim ID {claim_id}: {query}", claim_id=claim_id
+            )
 
             await params.result_callback(
                 {
