@@ -22,22 +22,17 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
-from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import (
-    LLMContextAggregatorPair,
-    LLMUserAggregatorParams,
-)
+from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.aws.llm import AWSBedrockLLMService
-from pipecat.services.deepgram.stt import DeepgramSTTService
-from pipecat.services.deepgram.tts import DeepgramTTSService
+from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
+from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
-from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.workers.runner import WorkerRunner
@@ -100,9 +95,9 @@ Let's look quickly at each processor in the pipeline.
 
 The `transport.input()` is receiving media from the user and sending it through the pipeline as audio (and possibly video) frames. It's also creating other frames for things like connect/disconnect events, or when the user starts and stops speaking.
 
-The `stt` processor is a speech-to-text service that receives the user's audio frames, sends them to a transcription service, and outputs the received transcription as TextFrames.
+The `stt` processor is a speech-to-text service that receives the user's audio frames, sends them to a transcription service, and outputs the received transcription as TextFrames. We're using Deepgram Flux, a conversational speech recognition model with built-in turn detection: along with the transcript, it tells us when the user starts speaking and when they've finished their turn.
 
-The `user_aggregator` processor is collecting text frames from the STT processor and using voice activity detection (VAD) to determine when the user has completed a 'turn'. Once it makes that determination, this processor emits an LLM context frame to prompt a completion from the LLM processor.
+The `user_aggregator` processor is collecting text frames from the STT processor and listening for Flux's start-of-turn and end-of-turn events to know when the user has completed a 'turn'. Once Flux reports the end of the turn, this processor emits an LLM context frame to prompt a completion from the LLM processor.
 
 The `llm` sends LLM context frames to an LLM service and returns the responses as a stream of text frames.
 
@@ -118,18 +113,15 @@ If you try to run this botfile right now, you'd get an error, because none of th
     #just below logger.info(f"Starting Bedrock Knowledge Base Voice Agent with Strands")
     strands_agent = StrandsAgent()
 
-    stt = DeepgramSTTService(
+    stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        settings=DeepgramSTTService.Settings(
-            model="nova-3-general", language=Language.EN, smart_format=True
-        ),
+        settings=DeepgramFluxSTTService.Settings(model="flux-general-en"),
     )
 
-    tts = DeepgramTTSService(
+    tts = DeepgramFluxTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         sample_rate=24000,
-        encoding="linear16",
-        settings=DeepgramTTSService.Settings(voice="aura-2-arcas-en"),
+        settings=DeepgramFluxTTSService.Settings(voice="flux-heather-en"),
     )
 
     # System instruction for knowledge base integration
@@ -199,7 +191,7 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
     llm.register_function("search_knowledge_base", search_knowledge_base)
 ```
 
-Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call. The user aggregator also gets the Silero VAD analyzer, which it uses to detect when the user starts and stops speaking. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
+Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call. We don't need to give the user aggregator a VAD analyzer: Deepgram Flux sends the start-of-turn and end-of-turn signals, and the aggregator uses them automatically. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
 
 ```python
     context = LLMContext(
@@ -211,10 +203,7 @@ Next, let's create the context and its aggregators. The `LLMContext` stores the 
         ],
         tools=tools,
     )
-    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
-        context,
-        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
-    )
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 ```
 
 ### Configuring the Strands agent
@@ -246,18 +235,14 @@ class StrandsAgent:
         return await self.bedrock_client.query_knowledge_base(query)
 
     @tool
-    async def general_query(self, question: str) -> str:
-        """Answer general questions directly using the model"""
+    def general_query(self, question: str) -> str:
+        """Handle general questions that aren't about a specific claim"""
         logger.info(f"Answering general question: {question}")
-        try:
-            # Use the Bedrock model directly for general questions
-            response = await self.bedrock_model.generate_async(
-                messages=[{"role": "user", "content": question}], max_tokens=200
-            )
-            return response.content
-        except Exception as e:
-            logger.error(f"Error with general query: {e}")
-            return "I can help answer general questions. What would you like to know?"
+        # No lookup is needed, so hand the question back to the agent's own model
+        return (
+            "This is a general question, not a claim lookup. "
+            f"Answer it briefly from your own knowledge: {question}"
+        )
 
     def process_query(self, user_input: str) -> str:
         """Process user input through the Strands agent"""
