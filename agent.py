@@ -326,10 +326,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             await params.result_callback(
                 {
                     "query": query,
-                    "response": response_text,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "knowledge_base_id": KNOWLEDGE_BASE_ID,
-                }
+                    "response": response_text,                }
             )
 
         except Exception as e:
@@ -337,10 +334,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             await params.result_callback(
                 {
                     "query": query,
-                    "response": f"I encountered an error while searching for '{query}'. Please try again.",
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "knowledge_base_id": KNOWLEDGE_BASE_ID,
-                }
+                    "response": f"I encountered an error while searching for '{query}'. Please try again.",                }
             )
 
     llm.register_function("search_knowledge_base", search_knowledge_base)

@@ -201,10 +201,7 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
             await params.result_callback(
                 {
                     "query": query,
-                    "response": response_text,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "knowledge_base_id": KNOWLEDGE_BASE_ID,
-                }
+                    "response": response_text,                }
             )
 
         except Exception as e:
@@ -212,10 +209,7 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
             await params.result_callback(
                 {
                     "query": query,
-                    "response": f"I encountered an error while searching for '{query}'. Please try again.",
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "knowledge_base_id": KNOWLEDGE_BASE_ID,
-                }
+                    "response": f"I encountered an error while searching for '{query}'. Please try again.",                }
             )
 
     llm.register_function("search_knowledge_base", search_knowledge_base)
