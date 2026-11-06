@@ -12,7 +12,10 @@ Voices come from https://developers.deepgram.com/docs/flux-tts/voices
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass
+
+from pipecat.transcriptions.language import Language as PipecatLanguage
 
 
 @dataclass(frozen=True)
@@ -106,23 +109,28 @@ _BY_KEY: dict[str, Voice] = {
 DEFAULT_VOICE: Voice = _BY_KEY["heather"]
 
 
+def ascii_fold(text: str) -> str:
+    """Lowercase text with accents removed: "Véronique" becomes "veronique".
+
+    Letters outside the Latin alphabet, such as Cyrillic or Devanagari, are
+    left as they are, so they never match a Latin catalog name or record.
+    """
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).lower()
+
+
 def find_voice(name_or_model: str) -> Voice | None:
-    """Find a voice by short name or model id, ignoring case and spaces.
+    """Find a voice by short name or model id, ignoring case, accents and spaces.
 
     Transcripts sometimes wrap the name, as in "Voice Kit" or "Kit, please",
     and the model passes that on as is. When there's no exact match, a single
     word that names a voice is accepted.
     """
-    key = name_or_model.strip().lower()
+    key = ascii_fold(name_or_model).strip()
     if key in _BY_KEY:
         return _BY_KEY[key]
     matches = {_BY_KEY[w] for w in re.findall(r"[a-z]+", key) if w in _BY_KEY}
     return matches.pop() if len(matches) == 1 else None
-
-
-def voice_or_default(name_or_model: str | None) -> Voice:
-    """The named voice, or the default when it's unknown or no longer offered."""
-    return (name_or_model and find_voice(name_or_model)) or DEFAULT_VOICE
 
 
 def language_of(voice: Voice) -> Language:
@@ -150,7 +158,11 @@ def voice_intro(voice: Voice) -> str:
 
 
 def article(word: str) -> str:
-    return "an" if word[:1].lower() in "aeiou" else "a"
+    """ "a" or "an", by sound: "an Italian", but "a European"."""
+    lower = word.lower()
+    if lower.startswith(("eu", "uni", "one")):
+        return "a"
+    return "an" if lower[:1] in "aeiou" else "a"
 
 
 def listen_settings(voice: Voice) -> dict:
@@ -162,7 +174,30 @@ def listen_settings(voice: Voice) -> dict:
     """
     if voice.lang == "en":
         return {"model": "flux-general-en", "language_hints": None}
-    return {"model": "flux-general-multi", "language_hints": [voice.lang, "en"]}
+    return {
+        "model": "flux-general-multi",
+        "language_hints": [PipecatLanguage(voice.lang), PipecatLanguage.EN],
+    }
+
+
+def listen_steps(old: Voice, new: Voice) -> list[dict]:
+    """The STT settings changes for a switch, in the order to apply them.
+
+    Language hints go to Flux as a Configure message on the open connection,
+    and only flux-general-multi accepts them. A model change reconnects. So
+    hints are cleared before leaving multi, and set after arriving on it, and
+    a Configure never reaches a flux-general-en connection.
+    """
+    before, after = listen_settings(old), listen_settings(new)
+    if before == after:
+        return []
+    hints = {"language_hints": after["language_hints"]}
+    if before["model"] == after["model"]:
+        return [hints]  # one multi language to another: no reconnect
+    model = {"model": after["model"]}
+    if after["model"] == "flux-general-en":
+        return [hints, model]  # clear hints on multi, then reconnect
+    return [model, hints]  # reconnect to multi, then set hints
 
 
 def set_voice_description() -> str:
@@ -174,7 +209,8 @@ def set_voice_description() -> str:
     return (
         "Change your voice, and with it your language. "
         f"Some English voices: {english}. Also: {others}. "
-        "Every language has more: pass any name you are asked for as is. "
+        "Every language has more: pass any name you are asked for as is, in "
+        "Latin letters. "
         "A name says nothing about accent or gender, so for either, or a "
         "description, call list_voices first."
     )

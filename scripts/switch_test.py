@@ -50,6 +50,11 @@ SCRIPT = [
     ("flux-cole-en", "Can you speak French, with a man's voice?", "a French man"),
     ("flux-cole-en", "Julien, please.", "julien"),
     ("flux-cole-en", "English, please.", "heather"),
+    # Speech before the switch must not be cut off by the TTS reconnect
+    ("flux-cole-en", "Say hello, then switch to Spanish.", "carmen"),
+    ("flux-cole-en", "English, please.", "heather"),
+    # A switch batched with a lookup: no filler in the outgoing voice
+    ("flux-cole-en", "In Spanish please: what's the status of claim one two three four? The last name is Walsh.", "carmen"),
 ]
 
 events: list[tuple[float, str, str]] = []
@@ -216,7 +221,7 @@ async def main():
     def sink(message):
         r = message.record
         text = r["message"]
-        keep = ("Switching voice", "Configure", "reconnecting", "Connected to Flux", "Connecting to Deepgram Flux", "function call")
+        keep = ("Switching voice", "Configure", "reconnecting", "Connected to Flux", "Waited", "Verified caller", "Calling function")
         if r["level"].name in ("ERROR", "WARNING") or any(k in text for k in keep):
             record(r["level"].name.lower(), text[:220])
 

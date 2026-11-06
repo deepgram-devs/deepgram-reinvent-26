@@ -24,7 +24,7 @@ import websockets
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from voices import LANGUAGES, VOICES  # noqa: E402
+from voices import LANGUAGES, VOICES, listen_settings  # noqa: E402
 
 RATE = 16000
 CHUNK_MS = 80
@@ -117,8 +117,12 @@ async def listen(audio: bytes, model: str, hints: list[str]) -> tuple[str, list,
                             break
             finally:
                 sender.cancel()
-    except websockets.exceptions.ConnectionClosed:
+    except websockets.exceptions.ConnectionClosedOK:
         pass
+    except websockets.exceptions.ConnectionClosedError as e:
+        # A server-side close with an error code is a refusal, not a pass
+        close = e.rcvd
+        status = f"closed {close.code}: {close.reason}" if close else f"closed: {e}"
     except Exception as e:
         status = describe_error(e)
     return " ".join(t for t in turns if t).strip(), languages, status
@@ -139,8 +143,10 @@ async def probe_language(code: str) -> bool:
     if not audio:
         return False
 
-    model = "flux-general-en" if code == "en" else "flux-general-multi"
-    hints = [] if code == "en" else [code, "en"]
+    # Probe exactly what the agent sends for this voice
+    settings = listen_settings(voice)
+    model = settings["model"]
+    hints = [str(h) for h in settings["language_hints"] or []]
     transcript, languages, listen_status = await listen(audio, model, hints)
     print(f"[{code}]   listen {model} hints={hints}: {listen_status}")
     print(f"[{code}]   sent:  {sentence}")

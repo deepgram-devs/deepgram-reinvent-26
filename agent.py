@@ -1,5 +1,7 @@
+import asyncio
 import os
 import re
+import unicodedata
 from datetime import date, datetime
 
 import boto3
@@ -25,7 +27,6 @@ from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
 from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
-from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.utils.text.transforms import expand_currency
@@ -87,6 +88,19 @@ def claim_id_pattern(claim_id: str) -> re.Pattern:
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
 
 
+def latin_letters(text: str) -> str:
+    """Only the letters a to z, accents removed: "W-A-L-S-H" and "walsh" match.
+
+    A name in another script, such as Cyrillic or Devanagari, comes back empty.
+    """
+    return re.sub(r"[^a-z]", "", voices.ascii_fold(text))
+
+
+def ascii_digits(text: str) -> str:
+    """Only the digits, as 0 to 9: Devanagari "१२३४" becomes "1234"."""
+    return "".join(str(unicodedata.digit(c)) for c in text if unicodedata.digit(c, None) is not None)
+
+
 class BedrockKnowledgeBaseClient:
     """Client for interacting with Amazon Bedrock Knowledge Base"""
 
@@ -133,23 +147,18 @@ class BedrockKnowledgeBaseClient:
         claim_line = claim_id_pattern(claim_id)
         policyholder = re.compile(r"Policyholder:\s*([^\n]+?)\s*(?:Policy number:|\n|$)")
 
-        def letters(text: str) -> str:
-            # Ignore case, spaces, and punctuation, so a spelled-out
-            # "W-A-L-S-H" matches "Walsh"
-            return re.sub(r"[^a-z]", "", text.lower())
-
         response = self._retrieve(f"Claim ID {claim_id} policyholder", "HYBRID", 10)
         for result in response.get("retrievalResults", []):
             text = result.get("content", {}).get("text", "")
             match = policyholder.search(text) if claim_line.search(text) else None
             if match:
                 names = match.group(1).split()
-                heard = letters(last_name)
+                heard = latin_letters(last_name)
                 # Accept the last word, or everything after the first name
                 # for multi-word surnames like "De La Cruz"
                 return bool(heard) and heard in {
-                    letters(names[-1]),
-                    letters("".join(names[1:])),
+                    latin_letters(names[-1]),
+                    latin_letters("".join(names[1:])),
                 }
         return False
 
@@ -314,7 +323,11 @@ search_function = FunctionSchema(
         },
         "last_name": {
             "type": "string",
-            "description": "The policyholder's last name exactly as the caller said or spelled it.",
+            "description": (
+                "The policyholder's last name in Latin letters, as written on the "
+                "policy. If the caller said or spelled it in another script, "
+                "transliterate it."
+            ),
         },
         "query": {
             "type": "string",
@@ -331,7 +344,7 @@ set_voice_function = FunctionSchema(
     properties={
         "voice": {
             "type": "string",
-            "description": "The voice's short name, e.g. 'carmen'.",
+            "description": "The voice's short name in Latin letters, as listed, e.g. 'carmen'.",
         }
     },
     required=["voice"],
@@ -371,13 +384,6 @@ tools = ToolsSchema(
 )
 
 
-def flux_listen_settings(voice: Voice) -> dict:
-    """voices.listen_settings, with the hints as the Language values Pipecat takes."""
-    settings = voices.listen_settings(voice)
-    hints = settings["language_hints"]
-    settings["language_hints"] = [Language(code) for code in hints] if hints else None
-    return settings
-
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     logger.info("Starting Bedrock Knowledge Base Voice Agent with Strands")
@@ -390,7 +396,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        settings=DeepgramFluxSTTService.Settings(**flux_listen_settings(current_voice)),
+        settings=DeepgramFluxSTTService.Settings(**voices.listen_settings(current_voice)),
     )
 
     tts = DeepgramFluxTTSService(
@@ -455,6 +461,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             "VOICE AND LANGUAGE:\n"
             "- If the caller asks for another language, or to speak with a different "
             "voice, call set_voice. Every language has its own voices.\n"
+            "- Call set_voice before saying anything about the switch; you confirm "
+            "after it.\n"
             "- Claim records are in English. Translate what you read from them into "
             "the language you reply in."
         )
@@ -473,7 +481,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     async def search_knowledge_base(params: FunctionCallParams):
         query = params.arguments.get("query", "")
-        claim_id = re.sub(r"\D", "", str(params.arguments.get("claim_id", "")))
+        claim_id = ascii_digits(str(params.arguments.get("claim_id", "")))
         last_name = params.arguments.get("last_name", "")
 
         if not (query and claim_id and last_name):
@@ -490,6 +498,17 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 {
                     "verified": False,
                     "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Tri-County agent for help.",
+                }
+            )
+            return
+
+        if not latin_letters(last_name):
+            # A name in another script can't match the English records. Ask
+            # for a spelling instead of counting it as a failed attempt.
+            await params.result_callback(
+                {
+                    "verified": False,
+                    "response": "Ask the caller to spell the policyholder's last name letter by letter, as it is written on the policy.",
                 }
             )
             return
@@ -556,8 +575,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         result, so the confirmation is the first turn in the new voice.
         """
         nonlocal current_voice
-        language_changed = voice.lang != current_voice.lang
-        current_voice = voice
+        old_voice, current_voice = current_voice, voice
+        language_changed = voice.lang != old_voice.lang
         logger.info(f"Switching voice to {voice.model} (language changed: {language_changed})")
 
         await llm.queue_frame(
@@ -567,17 +586,23 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 )
             )
         )
-        # Flux TTS reconnects with the new voice
+        # A voice change reconnects Flux TTS, which would cut off speech still
+        # streaming in the old voice, so let that finish first
+        waited = 0.0
+        while tts.has_active_audio_context() and waited < 3.0:
+            await asyncio.sleep(0.1)
+            waited += 0.1
+        if waited:
+            logger.info(f"Waited {waited:.1f}s for speech in progress before switching voice")
         await tts.queue_frame(
             TTSUpdateSettingsFrame(delta=DeepgramFluxTTSService.Settings(voice=voice.model))
         )
-        if language_changed:
-            # A model change reconnects Flux STT once the caller stops speaking;
-            # a hints-only change (one multi language to another) doesn't
+        # A model change reconnects Flux STT; a hints change is a Configure on
+        # the open connection. listen_steps orders them so a Configure only
+        # ever reaches a flux-general-multi connection.
+        for step in voices.listen_steps(old_voice, voice):
             await stt.queue_frame(
-                STTUpdateSettingsFrame(
-                    delta=DeepgramFluxSTTService.Settings(**flux_listen_settings(voice))
-                )
+                STTUpdateSettingsFrame(delta=DeepgramFluxSTTService.Settings(**step))
             )
 
         await params.result_callback(
@@ -607,10 +632,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     # Speak a filler phrase while the knowledge base lookup runs, so the
     # caller isn't left in silence. It isn't added to the LLM context, and
-    # it's in the current voice's language.
+    # it's in the current voice's language. When a voice switch comes in the
+    # same batch, the switch's confirmation takes its place.
     @llm.event_handler("on_function_calls_started")
     async def on_function_calls_started(service, function_calls):
-        if not any(fc.function_name == "search_knowledge_base" for fc in function_calls):
+        names = {fc.function_name for fc in function_calls}
+        if "search_knowledge_base" not in names or names & {"set_voice", "reset_voice"}:
             return
         await tts.queue_frame(
             TTSSpeakFrame(

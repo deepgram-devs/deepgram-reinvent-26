@@ -13,8 +13,10 @@ Let's build the `agent.py` file that contains your agent.
 You'll need these imports at the top of `agent.py`. You can add them now, or refer back to this list as you add other code to the file.
 
 ```python
+import asyncio
 import os
 import re
+import unicodedata
 from datetime import date, datetime
 
 import boto3
@@ -40,7 +42,6 @@ from pipecat.services.aws.llm import AWSBedrockLLMService
 from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
 from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
-from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.utils.text.transforms import expand_currency
@@ -131,7 +132,7 @@ If you try to run this botfile right now, you'd get an error, because none of th
 
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        settings=DeepgramFluxSTTService.Settings(**flux_listen_settings(current_voice)),
+        settings=DeepgramFluxSTTService.Settings(**voices.listen_settings(current_voice)),
     )
 
     tts = DeepgramFluxTTSService(
@@ -196,6 +197,8 @@ If you try to run this botfile right now, you'd get an error, because none of th
             "VOICE AND LANGUAGE:\n"
             "- If the caller asks for another language, or to speak with a different "
             "voice, call set_voice. Every language has its own voices.\n"
+            "- Call set_voice before saying anything about the switch; you confirm "
+            "after it.\n"
             "- Claim records are in English. Translate what you read from them into "
             "the language you reply in."
         )
@@ -222,7 +225,7 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
 
     async def search_knowledge_base(params: FunctionCallParams):
         query = params.arguments.get("query", "")
-        claim_id = re.sub(r"\D", "", str(params.arguments.get("claim_id", "")))
+        claim_id = ascii_digits(str(params.arguments.get("claim_id", "")))
         last_name = params.arguments.get("last_name", "")
 
         if not (query and claim_id and last_name):
@@ -239,6 +242,17 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
                 {
                     "verified": False,
                     "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Tri-County agent for help.",
+                }
+            )
+            return
+
+        if not latin_letters(last_name):
+            # A name in another script can't match the English records. Ask
+            # for a spelling instead of counting it as a failed attempt.
+            await params.result_callback(
+                {
+                    "verified": False,
+                    "response": "Ask the caller to spell the policyholder's last name letter by letter, as it is written on the policy.",
                 }
             )
             return
@@ -305,8 +319,8 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
         result, so the confirmation is the first turn in the new voice.
         """
         nonlocal current_voice
-        language_changed = voice.lang != current_voice.lang
-        current_voice = voice
+        old_voice, current_voice = current_voice, voice
+        language_changed = voice.lang != old_voice.lang
         logger.info(f"Switching voice to {voice.model} (language changed: {language_changed})")
 
         await llm.queue_frame(
@@ -316,17 +330,23 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
                 )
             )
         )
-        # Flux TTS reconnects with the new voice
+        # A voice change reconnects Flux TTS, which would cut off speech still
+        # streaming in the old voice, so let that finish first
+        waited = 0.0
+        while tts.has_active_audio_context() and waited < 3.0:
+            await asyncio.sleep(0.1)
+            waited += 0.1
+        if waited:
+            logger.info(f"Waited {waited:.1f}s for speech in progress before switching voice")
         await tts.queue_frame(
             TTSUpdateSettingsFrame(delta=DeepgramFluxTTSService.Settings(voice=voice.model))
         )
-        if language_changed:
-            # A model change reconnects Flux STT once the caller stops speaking;
-            # a hints-only change (one multi language to another) doesn't
+        # A model change reconnects Flux STT; a hints change is a Configure on
+        # the open connection. listen_steps orders them so a Configure only
+        # ever reaches a flux-general-multi connection.
+        for step in voices.listen_steps(old_voice, voice):
             await stt.queue_frame(
-                STTUpdateSettingsFrame(
-                    delta=DeepgramFluxSTTService.Settings(**flux_listen_settings(voice))
-                )
+                STTUpdateSettingsFrame(delta=DeepgramFluxSTTService.Settings(**step))
             )
 
         await params.result_callback(
@@ -356,10 +376,12 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
 
     # Speak a filler phrase while the knowledge base lookup runs, so the
     # caller isn't left in silence. It isn't added to the LLM context, and
-    # it's in the current voice's language.
+    # it's in the current voice's language. When a voice switch comes in the
+    # same batch, the switch's confirmation takes its place.
     @llm.event_handler("on_function_calls_started")
     async def on_function_calls_started(service, function_calls):
-        if not any(fc.function_name == "search_knowledge_base" for fc in function_calls):
+        names = {fc.function_name for fc in function_calls}
+        if "search_knowledge_base" not in names or names & {"set_voice", "reset_voice"}:
             return
         await tts.queue_frame(
             TTSSpeakFrame(
@@ -482,9 +504,11 @@ The wording comes from measurements on another Deepgram project, a voice device 
 |---|---|
 | `LLMUpdateSettingsFrame` with a new `system_instruction` | Replaces the system prompt, so the old language line is gone, not just contradicted |
 | `TTSUpdateSettingsFrame` with the new `voice` | Flux TTS reconnects with the new voice model |
-| `STTUpdateSettingsFrame` with `listen_settings()`, only when the language changes | A change of model (English to or from `flux-general-multi`) reconnects Flux STT once the caller stops speaking. A change of hints alone (Spanish to French) is sent as a `Configure` message on the open connection |
+| One `STTUpdateSettingsFrame` per step from `listen_steps()`, only when the language changes | A change of model (English to or from `flux-general-multi`) reconnects Flux STT once the caller stops speaking. A change of hints alone (Spanish to French) is sent as a `Configure` message on the open connection |
 
 Because the updates are queued before the result, the confirmation the LLM speaks next ("Sí, ahora hablo español") is the first turn in the new voice. The result asks for it in the new language: `Done: you are now Carmen, a Spanish voice. Say so briefly, in Spanish.`
+
+The order of the listen steps matters. Only `flux-general-multi` accepts language hints, so `listen_steps()` sets hints after reconnecting to it and clears them before leaving it. That way a `Configure` never reaches a `flux-general-en` connection. The TTS update waits, for up to three seconds, for any speech still streaming in the old voice, because reconnecting Flux TTS would cut it off mid-word. The prompt also tells the LLM to call `set_voice` before saying anything about the switch.
 
 Every call starts in English with the default voice. Callers are anonymous until they've been verified, so there's no one to remember a preference for.
 
@@ -592,7 +616,11 @@ search_function = FunctionSchema(
         },
         "last_name": {
             "type": "string",
-            "description": "The policyholder's last name exactly as the caller said or spelled it.",
+            "description": (
+                "The policyholder's last name in Latin letters, as written on the "
+                "policy. If the caller said or spelled it in another script, "
+                "transliterate it."
+            ),
         },
         "query": {
             "type": "string",
@@ -609,7 +637,7 @@ set_voice_function = FunctionSchema(
     properties={
         "voice": {
             "type": "string",
-            "description": "The voice's short name, e.g. 'carmen'.",
+            "description": "The voice's short name in Latin letters, as listed, e.g. 'carmen'.",
         }
     },
     required=["voice"],
@@ -648,13 +676,6 @@ tools = ToolsSchema(
     ]
 )
 
-
-def flux_listen_settings(voice: Voice) -> dict:
-    """voices.listen_settings, with the hints as the Language values Pipecat takes."""
-    settings = voices.listen_settings(voice)
-    hints = settings["language_hints"]
-    settings["language_hints"] = [Language(code) for code in hints] if hints else None
-    return settings
 ```
 
 In the `search_knowledge_base` function in the main LLM, we called `strands_agent.process_query()` to give the user's request to the Strands agent. In the StrandsAgent class, the `process_query` function is passing that input to an instance of the Strands library's `Agent` class. We're also defining some different tools that the Strands agent can use with the `@tool` decorator on the `general_query` and `search_knowledge_base` functions.
@@ -672,6 +693,19 @@ def claim_id_pattern(claim_id: str) -> re.Pattern:
     The \b word boundary keeps "Claim ID 1" from matching "Claim ID 1234".
     """
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
+
+
+def latin_letters(text: str) -> str:
+    """Only the letters a to z, accents removed: "W-A-L-S-H" and "walsh" match.
+
+    A name in another script, such as Cyrillic or Devanagari, comes back empty.
+    """
+    return re.sub(r"[^a-z]", "", voices.ascii_fold(text))
+
+
+def ascii_digits(text: str) -> str:
+    """Only the digits, as 0 to 9: Devanagari "१२३४" becomes "1234"."""
+    return "".join(str(unicodedata.digit(c)) for c in text if unicodedata.digit(c, None) is not None)
 
 
 class BedrockKnowledgeBaseClient:
@@ -720,23 +754,18 @@ class BedrockKnowledgeBaseClient:
         claim_line = claim_id_pattern(claim_id)
         policyholder = re.compile(r"Policyholder:\s*([^\n]+?)\s*(?:Policy number:|\n|$)")
 
-        def letters(text: str) -> str:
-            # Ignore case, spaces, and punctuation, so a spelled-out
-            # "W-A-L-S-H" matches "Walsh"
-            return re.sub(r"[^a-z]", "", text.lower())
-
         response = self._retrieve(f"Claim ID {claim_id} policyholder", "HYBRID", 10)
         for result in response.get("retrievalResults", []):
             text = result.get("content", {}).get("text", "")
             match = policyholder.search(text) if claim_line.search(text) else None
             if match:
                 names = match.group(1).split()
-                heard = letters(last_name)
+                heard = latin_letters(last_name)
                 # Accept the last word, or everything after the first name
                 # for multi-word surnames like "De La Cruz"
                 return bool(heard) and heard in {
-                    letters(names[-1]),
-                    letters("".join(names[1:])),
+                    latin_letters(names[-1]),
+                    latin_letters("".join(names[1:])),
                 }
         return False
 
@@ -850,16 +879,9 @@ def speak_dates(text: str) -> str:
 
 The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud.
 
-`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern` keeps claim 1 from matching claim 1234. Add `claim_id_pattern` just above the `BedrockKnowledgeBaseClient` class:
+`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern`, which you added above the `BedrockKnowledgeBaseClient` class, keeps claim 1 from matching claim 1234.
 
-```python
-def claim_id_pattern(claim_id: str) -> re.Pattern:
-    """Match a claim record's "Claim ID" line for exactly this claim.
-
-    The \b word boundary keeps "Claim ID 1" from matching "Claim ID 1234".
-    """
-    return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
-```
+The two helpers next to it handle callers who aren't speaking English. `latin_letters` compares names on the letters a to z only, with accents removed, so "Núñez" matches "Nunez." A name transcribed in another script, such as Cyrillic, has no Latin letters at all, so `search_knowledge_base` asks the caller to spell it instead of counting a failed attempt. `ascii_digits` turns digits from any script into 0 to 9, so a claim number transcribed in Devanagari still finds the record.
 
 Verification only helps if the lookup that follows stays on the verified claim. A knowledge base search returns the closest matches, and for "claim ID 1234" those include other claims' records. So when `query_knowledge_base` gets a `claim_id`, it uses the same pattern to drop every passage from another claim. The `StrandsAgent` also clears its message history in `process_query` before each lookup, so it can't answer from a record it read earlier in the call. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 

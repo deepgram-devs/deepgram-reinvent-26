@@ -48,10 +48,8 @@ class CatalogTests(unittest.TestCase):
         self.assertTrue(all(fillers))
         self.assertEqual(len(set(fillers)), len(fillers))
 
-    def test_english_is_the_fallback(self):
+    def test_default_is_english_and_unknown_names_are_refused(self):
         self.assertEqual(DEFAULT_VOICE.lang, "en")
-        self.assertIs(voices.voice_or_default("no-such-voice"), DEFAULT_VOICE)
-        self.assertIs(voices.voice_or_default(None), DEFAULT_VOICE)
         self.assertIsNone(voices.find_voice("no-such-voice"))
 
     def test_lookup_by_name_or_model_ignores_case(self):
@@ -68,12 +66,45 @@ class CatalogTests(unittest.TestCase):
         self.assertIsNone(voices.find_voice("kit or carmen"))
         self.assertIsNone(voices.find_voice("a deep voice"))
 
+    def test_lookup_ignores_accents(self):
+        self.assertIs(voices.find_voice("Chloé"), voices.find_voice("chloe"))
+        self.assertIs(voices.find_voice("Véronique"), voices.find_voice("veronique"))
+        self.assertIs(voices.find_voice("Benoît, please"), voices.find_voice("benoit"))
+        # Names in other scripts can't be matched; the tool asks for Latin letters
+        self.assertIsNone(voices.find_voice("Наталья"))
+        self.assertIsNone(voices.find_voice("अंजलि"))
+
+    def test_ascii_fold(self):
+        self.assertEqual(voices.ascii_fold("Núñez"), "nunez")
+        self.assertEqual(voices.ascii_fold("Wałęsa"), "wałesa")  # ł has no decomposition
+        self.assertEqual(voices.ascii_fold("Наталья"), "наталья")
+
+    def test_article(self):
+        self.assertEqual(voices.article("European Portuguese woman"), "a")
+        self.assertEqual(voices.article("Italian woman"), "an")
+        self.assertEqual(voices.article("English"), "an")
+        self.assertEqual(voices.article("Spanish"), "a")
+        self.assertIn("a European Portuguese woman", voices.voice_intro(voices.find_voice("benedita")))
+
     def test_listen_settings(self):
         en = voices.listen_settings(DEFAULT_VOICE)
         self.assertEqual(en, {"model": "flux-general-en", "language_hints": None})
         es = voices.listen_settings(voices.find_voice("carmen"))
         # English stays in the hints, so "switch back to English" is heard
         self.assertEqual(es, {"model": "flux-general-multi", "language_hints": ["es", "en"]})
+
+    def test_listen_steps_keep_configure_off_flux_general_en(self):
+        en, es, fr, es2 = (voices.find_voice(n) for n in ("heather", "carmen", "camille", "pilar"))
+        multi = "flux-general-multi"
+        # English to multi: reconnect first, then set hints on the multi connection
+        self.assertEqual(voices.listen_steps(en, es), [{"model": multi}, {"language_hints": ["es", "en"]}])
+        # Multi to English: clear hints while still on multi, then reconnect
+        self.assertEqual(voices.listen_steps(es, en), [{"language_hints": None}, {"model": "flux-general-en"}])
+        # One multi language to another: hints only, no reconnect
+        self.assertEqual(voices.listen_steps(es, fr), [{"language_hints": ["fr", "en"]}])
+        # Same language: nothing to change
+        self.assertEqual(voices.listen_steps(es, es2), [])
+        self.assertEqual(voices.listen_steps(en, voices.find_voice("kit")), [])
 
     def test_tool_text_fits(self):
         description = voices.set_voice_description()
