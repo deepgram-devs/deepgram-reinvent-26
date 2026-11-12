@@ -1,7 +1,7 @@
 Tri-County Insurance - Claim Record
 
-Claim ID 3
-Claim number: 3
+Claim ID 10003
+Claim number: 10003
 Policyholder: Aisha Rahman
 Policy number: TCI-AUTO-55190
 Claim type: Auto glass
@@ -12,7 +12,7 @@ Approved amount: $420
 Deductible: $0
 Assigned adjuster: Janet Okafor
 
-Adjuster notes for claim ID 3:
+Adjuster notes for claim ID 10003:
 - Windshield cracked by road debris on I-75.
 - Full glass coverage, no deductible applies.
 - Paid directly to SafeView Glass on 2026-10-04.

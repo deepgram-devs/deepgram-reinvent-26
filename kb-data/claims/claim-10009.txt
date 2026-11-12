@@ -1,7 +1,7 @@
 Tri-County Insurance - Claim Record
 
-Claim ID 1234
-Claim number: 1234
+Claim ID 10009
+Claim number: 10009
 Policyholder: Rebecca Walsh
 Policy number: TCI-AUTO-12340
 Claim type: Auto collision (multi-vehicle)
@@ -12,7 +12,7 @@ Approved amount: Pending
 Deductible: $500
 Assigned adjuster: Priya Shah
 
-Adjuster notes for claim ID 1234:
+Adjuster notes for claim ID 10009:
 - Three-car collision on Highway 101 during heavy rain; liability under investigation.
 - Repair estimate: $9,800. Policyholder reports minor neck injury; medical payments coverage review started.
 - Recorded statements taken from both other drivers on 2026-10-23.

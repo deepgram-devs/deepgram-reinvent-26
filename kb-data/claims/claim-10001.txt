@@ -1,7 +1,7 @@
 Tri-County Insurance - Claim Record
 
-Claim ID 1
-Claim number: 1
+Claim ID 10001
+Claim number: 10001
 Policyholder: Maria Delgado
 Policy number: TCI-AUTO-48213
 Claim type: Auto collision
@@ -12,7 +12,7 @@ Approved amount: $4,350
 Deductible: $500
 Assigned adjuster: Janet Okafor
 
-Adjuster notes for claim ID 1:
+Adjuster notes for claim ID 10001:
 - Rear-ended at a stoplight on Route 9; other driver cited.
 - Repair estimate from Cedar Lane Auto Body: $4,850 (rear bumper, trunk lid, tail lights).
 - Rental car authorized for 10 days at $35/day.

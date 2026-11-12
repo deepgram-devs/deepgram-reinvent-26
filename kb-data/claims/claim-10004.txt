@@ -1,7 +1,7 @@
 Tri-County Insurance - Claim Record
 
-Claim ID 4
-Claim number: 4
+Claim ID 10004
+Claim number: 10004
 Policyholder: Tom Nguyen
 Policy number: TCI-HOME-20841
 Claim type: Home wind/hail
@@ -12,7 +12,7 @@ Approved amount: $16,250
 Deductible: $2,500
 Assigned adjuster: Priya Shah
 
-Adjuster notes for claim ID 4:
+Adjuster notes for claim ID 10004:
 - Hail storm damaged roof shingles and two skylights.
 - Roofing estimate: $18,750 for full roof replacement.
 - Approved amount reflects 2% wind/hail deductible of $2,500.

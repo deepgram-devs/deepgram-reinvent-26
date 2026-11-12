@@ -1,7 +1,7 @@
 Tri-County Insurance - Claim Record
 
-Claim ID 6
-Claim number: 6
+Claim ID 10006
+Claim number: 10006
 Policyholder: Marcus Bell
 Policy number: TCI-RENT-31450
 Claim type: Renters theft
@@ -12,7 +12,7 @@ Approved amount: $0
 Deductible: $500
 Assigned adjuster: Priya Shah
 
-Adjuster notes for claim ID 6:
+Adjuster notes for claim ID 10006:
 - Laptop and camera reported stolen from an unlocked vehicle.
 - Denied: property stolen from a vehicle is excluded under the renters policy (Section II.4).
 - Policyholder notified by letter 2026-08-29; appeal window open until 2026-10-28.

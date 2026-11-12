@@ -164,14 +164,14 @@ If you try to run this botfile right now, you'd get an error, because none of th
             "- Say dollar amounts in words and dates with their weekday, e.g. "
             "'Monday, September 14th'.\n"
             "- When you repeat a claim ID back, say the digits one at a time, e.g. "
-            "'one two three four'.\n"
+            "'one zero zero zero one'.\n"
             "- If you do not know something, say so plainly. Never guess.\n"
             "\n"
             "CLAIM LOOKUPS:\n"
             "- For any question about a specific claim, call search_knowledge_base. "
             "Never answer claim details from memory.\n"
             "- Treat a number the caller gives as a claim ID and search for that exact "
-            "ID: 'claim 1' is claim ID 1, not 1234.\n"
+            "ID: 'claim 10001' is claim ID 10001, not 10010.\n"
             "- If you did not catch the number, ask for it again.\n"
             "- You may answer general insurance questions, like what a deductible is, "
             "briefly and in general terms.\n"
@@ -555,8 +555,8 @@ class StrandsAgent:
                 "You look up insurance claims for a voice agent. Another assistant "
                 "speaks your answer to the caller, so write plain sentences: no "
                 "markdown, bullet points, headings, or emoji. "
-                "Search for the exact claim ID you are given: 'claim ID 1' means "
-                "claim 1, not 1234. "
+                "Search for the exact claim ID you are given: 'claim ID 10001' means "
+                "claim 10001, not 10010. "
                 "Answer only what was asked, in one or two sentences; leave out "
                 "the rest of the record. "
                 "Report only what the search returns, and say plainly when it "
@@ -567,7 +567,7 @@ class StrandsAgent:
 
     @tool
     async def search_knowledge_base(self, query: str) -> str:
-        """Look up a claim record by its exact claim ID, e.g. 'claim ID 1'. Use for any question about a specific claim."""
+        """Look up a claim record by its exact claim ID, e.g. 'claim ID 10001'. Use for any question about a specific claim."""
         logger.info(f"Searching KnowledgeBase: {query}")
         return await self.bedrock_client.query_knowledge_base(
             query, claim_id=self.claim_id
@@ -612,7 +612,7 @@ search_function = FunctionSchema(
     properties={
         "claim_id": {
             "type": "string",
-            "description": "The claim ID as digits, e.g. '1234'.",
+            "description": "The claim ID as digits, e.g. '10001'.",
         },
         "last_name": {
             "type": "string",
@@ -624,7 +624,7 @@ search_function = FunctionSchema(
         },
         "query": {
             "type": "string",
-            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 1 approved amount'.",
+            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 10001 approved amount'.",
         },
     },
     required=["claim_id", "last_name", "query"],
@@ -690,7 +690,7 @@ Speaking of `search_knowledge_base`, we're using a `BedrockKnowledgeBaseClient` 
 def claim_id_pattern(claim_id: str) -> re.Pattern:
     """Match a claim record's "Claim ID" line for exactly this claim.
 
-    The \b word boundary keeps "Claim ID 1" from matching "Claim ID 1234".
+    The \b word boundary keeps "Claim ID 1000" from matching "Claim ID 10001".
     """
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
 
@@ -879,11 +879,11 @@ def speak_dates(text: str) -> str:
 
 The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud.
 
-`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern`, which you added above the `BedrockKnowledgeBaseClient` class, keeps claim 1 from matching claim 1234.
+`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern`, which you added above the `BedrockKnowledgeBaseClient` class, keeps a partial ID like 1000 from matching claim 10001.
 
 The two helpers next to it handle callers who aren't speaking English. `latin_letters` compares names on the letters a to z only, with accents removed, so "Núñez" matches "Nunez." A name transcribed in another script, such as Cyrillic, has no Latin letters at all, so `search_knowledge_base` asks the caller to spell it instead of counting a failed attempt. `ascii_digits` turns digits from any script into 0 to 9, so a claim number transcribed in Devanagari still finds the record.
 
-Verification only helps if the lookup that follows stays on the verified claim. A knowledge base search returns the closest matches, and for "claim ID 1234" those include other claims' records. So when `query_knowledge_base` gets a `claim_id`, it uses the same pattern to drop every passage from another claim. The `StrandsAgent` also clears its message history in `process_query` before each lookup, so it can't answer from a record it read earlier in the call. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
+Verification only helps if the lookup that follows stays on the verified claim. A knowledge base search returns the closest matches, and for "claim ID 10009" those include other claims' records. So when `query_knowledge_base` gets a `claim_id`, it uses the same pattern to drop every passage from another claim. The `StrandsAgent` also clears its message history in `process_query` before each lookup, so it can't answer from a record it read earlier in the call. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 
 
 ### Finishing the Botfile
