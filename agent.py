@@ -83,7 +83,8 @@ def speak_dates(text: str) -> str:
 def claim_id_pattern(claim_id: str) -> re.Pattern:
     """Match a claim record's "Claim ID" line for exactly this claim.
 
-    The \b word boundary keeps "Claim ID 1000" from matching "Claim ID 10001".
+    The \b word boundary keeps "Claim ID CLM-2026-84729" from matching
+    "Claim ID CLM-2026-847291".
     """
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
 
@@ -99,6 +100,18 @@ def latin_letters(text: str) -> str:
 def ascii_digits(text: str) -> str:
     """Only the digits, as 0 to 9: Devanagari "१२३४" becomes "1234"."""
     return "".join(str(unicodedata.digit(c)) for c in text if unicodedata.digit(c, None) is not None)
+
+
+def normalize_claim_id(text: str) -> str:
+    """Turn a claim number as heard into "CLM-2026-847291", or "" if incomplete.
+
+    Only the digits count, so "CLM-2026-847291", "c l m 2026 847291", and
+    digits transcribed in another script all give the same ID. Anything but a
+    four-digit year plus a six-digit number comes back empty, so a partial
+    number is never guessed into a full one.
+    """
+    digits = ascii_digits(text)
+    return f"CLM-{digits[:4]}-{digits[4:]}" if len(digits) == 10 else ""
 
 
 class BedrockKnowledgeBaseClient:
@@ -129,13 +142,17 @@ class BedrockKnowledgeBaseClient:
                 },
             )
         except ClientError as e:
-            # Managed knowledge bases reject vectorSearchConfiguration,
-            # so retry with the knowledge base's default search settings.
+            # Managed knowledge bases reject vectorSearchConfiguration and
+            # take managedSearchConfiguration instead. It picks the search
+            # type itself, but still honors the number of results.
             if "vectorSearchConfiguration is not supported" not in str(e):
                 raise
             return self.bedrock_agent_runtime.retrieve(
                 knowledgeBaseId=self.knowledge_base_id,
                 retrievalQuery={"text": text},
+                retrievalConfiguration={
+                    "managedSearchConfiguration": {"numberOfResults": max_results}
+                },
             )
 
     def verify_policyholder(self, claim_id: str, last_name: str) -> bool:
@@ -181,6 +198,11 @@ class BedrockKnowledgeBaseClient:
             ):
                 enhanced_query = f"claim ID {query}"
 
+            # A claim record is split into several passages, and only this
+            # claim's are kept below, so fetch enough to get all of them back
+            if claim_id:
+                max_results = max(max_results, 20)
+
             # HYBRID uses both semantic and keyword search
             response = self._retrieve(enhanced_query, "HYBRID", max_results)
 
@@ -209,23 +231,16 @@ class BedrockKnowledgeBaseClient:
             # Format the results for the ear: dates and amounts ready to speak,
             # and no scores or headers, because what the LLM never receives it can't say
             passages = []
-            for result in results[:5]:  # Use the top 5 results
+            # Every passage of the verified claim, in full, so the agent can
+            # answer from any section; general searches keep the top 5, short
+            for result in results if claim_id else results[:5]:
                 content = result.get("content", {}).get("text", "")
 
                 if content:
                     content = await expand_currency(speak_dates(content), "*")
-
-                    # Show full content for claim-related queries to include all notes
-                    content_length = (
-                        1000
-                        if any(keyword in query.lower() for keyword in ["claim", "id"])
-                        else 200
-                    )
-                    truncated_content = content[:content_length]
-                    if len(content) > content_length:
-                        truncated_content += "..."
-
-                    passages.append(truncated_content)
+                    if not claim_id and len(content) > 200:
+                        content = content[:200] + "..."
+                    passages.append(content)
 
             if not passages:
                 return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
@@ -259,22 +274,27 @@ class StrandsAgent:
             tools=[self.search_knowledge_base, self.general_query],
             model=self.bedrock_model,
             system_prompt=(
-                "You look up insurance claims for a voice agent. Another assistant "
-                "speaks your answer to the caller, so write plain sentences: no "
-                "markdown, bullet points, headings, or emoji. "
-                "Search for the exact claim ID you are given: 'claim ID 10001' means "
-                "claim 10001, not 10010. "
+                "You look up auto insurance claims for a voice agent. Another "
+                "assistant speaks your answer to the caller, so write plain "
+                "sentences: no markdown, bullet points, headings, or emoji. "
+                "Search for the exact claim ID you are given, such as "
+                "'claim ID CLM-2026-847291', and never change a digit. "
                 "Answer only what was asked, in one or two sentences; leave out "
                 "the rest of the record. "
                 "Report only what the search returns, and say plainly when it "
                 "returns nothing. Never invent an amount, date, or status. "
+                "Never give the policyholder's address, phone number, or email, "
+                "or a full VIN or license plate; at most give the last four "
+                "characters. You may give the other driver's name and insurer, "
+                "never their policy number, VIN, or plate. Never give map "
+                "coordinates or photo IDs; you may say how many photos are on file. "
                 "Use general_query only for questions that are not about a specific claim."
             ),
         )
 
     @tool
     async def search_knowledge_base(self, query: str) -> str:
-        """Look up a claim record by its exact claim ID, e.g. 'claim ID 10001'. Use for any question about a specific claim."""
+        """Look up an auto claim record by its exact claim ID, e.g. 'claim ID CLM-2026-847291'. Use for any question about a specific claim."""
         logger.info(f"Searching KnowledgeBase: {query}")
         return await self.bedrock_client.query_knowledge_base(
             query, claim_id=self.claim_id
@@ -282,7 +302,7 @@ class StrandsAgent:
 
     @tool
     def general_query(self, question: str) -> str:
-        """Use for general insurance questions that are not about a specific claim, such as what a deductible is."""
+        """Use for general auto insurance questions that are not about a specific claim, such as how collision and comprehensive coverage differ."""
         logger.info(f"Answering general question: {question}")
         # No lookup is needed, so hand the question back to the agent's own model
         return (
@@ -309,17 +329,21 @@ class StrandsAgent:
 search_function = FunctionSchema(
     name="search_knowledge_base",
     description=(
-        "Look up an existing Tri-County Insurance claim by its claim ID. Use this "
-        "whenever the caller asks about a specific claim: its status, estimated or "
-        "approved amount, deductible, date of loss, adjuster, or adjuster notes. "
-        "Call it only once the caller has given both the claim ID and the "
-        "policyholder's last name; the lookup verifies the name before it "
-        "returns any details."
+        "Look up an existing Tri-County Insurance auto claim by its claim ID. Use "
+        "this whenever the caller asks about a specific claim: its status, the "
+        "vehicle, the accident, the other driver, the damage, the repair estimate, "
+        "the deductible, rental, payments, the police report, the adjuster, or "
+        "adjuster notes. Call it only once the caller has given both the full "
+        "claim ID and the policyholder's last name; the lookup verifies the name "
+        "before it returns any details."
     ),
     properties={
         "claim_id": {
             "type": "string",
-            "description": "The claim ID as digits, e.g. '10001'.",
+            "description": (
+                "The full claim ID as CLM-YYYY-NNNNNN, e.g. 'CLM-2026-847291': "
+                "the four-digit year and the six-digit number."
+            ),
         },
         "last_name": {
             "type": "string",
@@ -331,7 +355,7 @@ search_function = FunctionSchema(
         },
         "query": {
             "type": "string",
-            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 10001 approved amount'.",
+            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID CLM-2026-847291 repair estimate'.",
         },
     },
     required=["claim_id", "last_name", "query"],
@@ -416,8 +440,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     # the language to reply in.
     def build_system_instruction(voice: Voice) -> str:
         return (
-            "You are the claims line voice agent for Tri-County Insurance. You help "
-            "callers look up existing claims: status, amounts, dates, and adjuster notes.\n"
+            "You are the auto claims line voice agent for Tri-County Insurance. You "
+            "help callers look up existing auto claims: status, repair estimates, "
+            "payments, dates, the vehicle, and adjuster notes.\n"
             f"{voices.voice_intro(voice)}\n"
             f"Today is {today}.\n"
             "\n"
@@ -427,19 +452,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             "- Keep replies to one or two sentences, and ask one question at a time.\n"
             "- Say dollar amounts in words and dates with their weekday, e.g. "
             "'Monday, September 14th'.\n"
-            "- When you repeat a claim ID back, say the digits one at a time, e.g. "
-            "'one zero zero zero one'.\n"
+            "- When you repeat a claim ID back, say the letters, then the digits one "
+            "at a time, e.g. 'C L M, two zero two six, eight four seven two nine one'.\n"
             "- If you do not know something, say so plainly. Never guess.\n"
             "\n"
             "CLAIM LOOKUPS:\n"
             "- For any question about a specific claim, call search_knowledge_base. "
             "Never answer claim details from memory.\n"
-            "- Treat a number the caller gives as a claim ID and search for that exact "
-            "ID: 'claim 10001' is claim ID 10001, not 10010.\n"
-            "- If you did not catch the number, ask for it again.\n"
-            "- You may answer general insurance questions, like what a deductible is, "
-            "briefly and in general terms.\n"
+            "- Claim IDs look like CLM-2026-847291: the letters C L M, a four-digit "
+            "year, and a six-digit number. Callers may skip the letters or say the "
+            "year as 'twenty twenty-six'; pass the ID as CLM-2026-847291.\n"
+            "- If you are missing the year or any of the six digits, ask for them. "
+            "Never fill in or change a digit.\n"
+            "- You may answer general auto insurance questions, like what a "
+            "deductible is or how collision and comprehensive differ, briefly and "
+            "in general terms.\n"
             "- Never invent a claim, amount, date, or status.\n"
+            "\n"
+            "PRIVACY:\n"
+            "- Never read out the policyholder's address, phone number, or email, or "
+            "a full VIN or license plate. You may say the last four characters. "
+            "Changes to contact details go through the caller's Tri-County agent.\n"
+            "- You may tell the caller the other driver's name and insurer, never "
+            "their policy number, VIN, or plate.\n"
+            "- Never read map coordinates or photo IDs. You may say how many photos "
+            "are on file.\n"
             "\n"
             "VERIFICATION:\n"
             "- Before you share anything about a claim, verify the caller. Once you "
@@ -455,6 +492,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             "- If the caller wants to file a new claim, dispute a decision, or asks for "
             "a person, say this line can only look up existing claims and their "
             "assigned adjuster can help.\n"
+            "- If the caller needs a tow or roadside help, say this line can't send "
+            "it and they should call the roadside assistance number on their "
+            "insurance card.\n"
             "- If the caller describes an emergency or says someone is hurt, tell them "
             "to hang up and call 911.\n"
             "\n"
@@ -481,14 +521,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     async def search_knowledge_base(params: FunctionCallParams):
         query = params.arguments.get("query", "")
-        claim_id = ascii_digits(str(params.arguments.get("claim_id", "")))
+        claim_id = normalize_claim_id(str(params.arguments.get("claim_id", "")))
         last_name = params.arguments.get("last_name", "")
 
         if not (query and claim_id and last_name):
             await params.result_callback(
                 {
-                    "error": "Missing claim ID or last name",
-                    "response": "Ask the caller for their claim number and the policyholder's last name before looking up a claim.",
+                    "error": "Missing full claim ID or last name",
+                    "response": "Ask the caller for their full claim number, the letters C L M followed by the four-digit year and the six-digit number, and the policyholder's last name before looking up a claim.",
                 }
             )
             return
@@ -652,8 +692,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 "role": "user",
                 "content": (
                     "Start by saying exactly this: 'Thanks for calling Tri-County "
-                    "Insurance. I can look up the status, amounts, or adjuster notes "
-                    "on an existing claim. What's your claim number?'"
+                    "Insurance auto claims. I can look up the status, repair "
+                    "estimate, payments, or adjuster notes on an existing auto "
+                    "claim. What's your claim number?'"
                 ),
             },
         ],

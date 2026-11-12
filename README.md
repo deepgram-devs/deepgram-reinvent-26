@@ -65,6 +65,8 @@ KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 
 Rename `example.env` to `.env` and add your keys, as well as your KB_ID.
 
+The knowledge base holds the sample auto claims in [kb-data/claims/](kb-data/claims/), one file per claim, named by claim ID (`CLM-2026-847291.txt`). If your knowledge base still has older sample claims, follow [Reset the knowledge base](docs/reset-knowledge-base.md) to erase them and load these. Uploading the new files on top isn't enough, because the old records stay in the vector store.
+
 If you're using git, make sure to ignore that file in your `.gitignore` file:
 
 ```
@@ -152,8 +154,9 @@ If you try to run this botfile right now, you'd get an error, because none of th
     # the language to reply in.
     def build_system_instruction(voice: Voice) -> str:
         return (
-            "You are the claims line voice agent for Tri-County Insurance. You help "
-            "callers look up existing claims: status, amounts, dates, and adjuster notes.\n"
+            "You are the auto claims line voice agent for Tri-County Insurance. You "
+            "help callers look up existing auto claims: status, repair estimates, "
+            "payments, dates, the vehicle, and adjuster notes.\n"
             f"{voices.voice_intro(voice)}\n"
             f"Today is {today}.\n"
             "\n"
@@ -163,19 +166,31 @@ If you try to run this botfile right now, you'd get an error, because none of th
             "- Keep replies to one or two sentences, and ask one question at a time.\n"
             "- Say dollar amounts in words and dates with their weekday, e.g. "
             "'Monday, September 14th'.\n"
-            "- When you repeat a claim ID back, say the digits one at a time, e.g. "
-            "'one zero zero zero one'.\n"
+            "- When you repeat a claim ID back, say the letters, then the digits one "
+            "at a time, e.g. 'C L M, two zero two six, eight four seven two nine one'.\n"
             "- If you do not know something, say so plainly. Never guess.\n"
             "\n"
             "CLAIM LOOKUPS:\n"
             "- For any question about a specific claim, call search_knowledge_base. "
             "Never answer claim details from memory.\n"
-            "- Treat a number the caller gives as a claim ID and search for that exact "
-            "ID: 'claim 10001' is claim ID 10001, not 10010.\n"
-            "- If you did not catch the number, ask for it again.\n"
-            "- You may answer general insurance questions, like what a deductible is, "
-            "briefly and in general terms.\n"
+            "- Claim IDs look like CLM-2026-847291: the letters C L M, a four-digit "
+            "year, and a six-digit number. Callers may skip the letters or say the "
+            "year as 'twenty twenty-six'; pass the ID as CLM-2026-847291.\n"
+            "- If you are missing the year or any of the six digits, ask for them. "
+            "Never fill in or change a digit.\n"
+            "- You may answer general auto insurance questions, like what a "
+            "deductible is or how collision and comprehensive differ, briefly and "
+            "in general terms.\n"
             "- Never invent a claim, amount, date, or status.\n"
+            "\n"
+            "PRIVACY:\n"
+            "- Never read out the policyholder's address, phone number, or email, or "
+            "a full VIN or license plate. You may say the last four characters. "
+            "Changes to contact details go through the caller's Tri-County agent.\n"
+            "- You may tell the caller the other driver's name and insurer, never "
+            "their policy number, VIN, or plate.\n"
+            "- Never read map coordinates or photo IDs. You may say how many photos "
+            "are on file.\n"
             "\n"
             "VERIFICATION:\n"
             "- Before you share anything about a claim, verify the caller. Once you "
@@ -191,6 +206,9 @@ If you try to run this botfile right now, you'd get an error, because none of th
             "- If the caller wants to file a new claim, dispute a decision, or asks for "
             "a person, say this line can only look up existing claims and their "
             "assigned adjuster can help.\n"
+            "- If the caller needs a tow or roadside help, say this line can't send "
+            "it and they should call the roadside assistance number on their "
+            "insurance card.\n"
             "- If the caller describes an emergency or says someone is hurt, tell them "
             "to hang up and call 911.\n"
             "\n"
@@ -225,14 +243,14 @@ Our main LLM, the one in the pipeline, is the one that interacts with the user. 
 
     async def search_knowledge_base(params: FunctionCallParams):
         query = params.arguments.get("query", "")
-        claim_id = ascii_digits(str(params.arguments.get("claim_id", "")))
+        claim_id = normalize_claim_id(str(params.arguments.get("claim_id", "")))
         last_name = params.arguments.get("last_name", "")
 
         if not (query and claim_id and last_name):
             await params.result_callback(
                 {
-                    "error": "Missing claim ID or last name",
-                    "response": "Ask the caller for their claim number and the policyholder's last name before looking up a claim.",
+                    "error": "Missing full claim ID or last name",
+                    "response": "Ask the caller for their full claim number, the letters C L M followed by the four-digit year and the six-digit number, and the policyholder's last name before looking up a claim.",
                 }
             )
             return
@@ -406,8 +424,9 @@ Next, let's create the context and its aggregators. The `LLMContext` stores the 
                 "role": "user",
                 "content": (
                     "Start by saying exactly this: 'Thanks for calling Tri-County "
-                    "Insurance. I can look up the status, amounts, or adjuster notes "
-                    "on an existing claim. What's your claim number?'"
+                    "Insurance auto claims. I can look up the status, repair "
+                    "estimate, payments, or adjuster notes on an existing auto "
+                    "claim. What's your claim number?'"
                 ),
             },
         ],
@@ -447,7 +466,7 @@ async def strip_markup_symbols(text: str, text_type: str) -> str:
     return _MARKUP_SYMBOLS.sub("", text)
 ```
 
-Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in values like `TCI-AUTO-48213`.
+Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in claim IDs like `CLM-2026-847291` and policy numbers like `TCI-AUTO-482977`.
 
 ### Switching languages by voice
 
@@ -552,22 +571,27 @@ class StrandsAgent:
             tools=[self.search_knowledge_base, self.general_query],
             model=self.bedrock_model,
             system_prompt=(
-                "You look up insurance claims for a voice agent. Another assistant "
-                "speaks your answer to the caller, so write plain sentences: no "
-                "markdown, bullet points, headings, or emoji. "
-                "Search for the exact claim ID you are given: 'claim ID 10001' means "
-                "claim 10001, not 10010. "
+                "You look up auto insurance claims for a voice agent. Another "
+                "assistant speaks your answer to the caller, so write plain "
+                "sentences: no markdown, bullet points, headings, or emoji. "
+                "Search for the exact claim ID you are given, such as "
+                "'claim ID CLM-2026-847291', and never change a digit. "
                 "Answer only what was asked, in one or two sentences; leave out "
                 "the rest of the record. "
                 "Report only what the search returns, and say plainly when it "
                 "returns nothing. Never invent an amount, date, or status. "
+                "Never give the policyholder's address, phone number, or email, "
+                "or a full VIN or license plate; at most give the last four "
+                "characters. You may give the other driver's name and insurer, "
+                "never their policy number, VIN, or plate. Never give map "
+                "coordinates or photo IDs; you may say how many photos are on file. "
                 "Use general_query only for questions that are not about a specific claim."
             ),
         )
 
     @tool
     async def search_knowledge_base(self, query: str) -> str:
-        """Look up a claim record by its exact claim ID, e.g. 'claim ID 10001'. Use for any question about a specific claim."""
+        """Look up an auto claim record by its exact claim ID, e.g. 'claim ID CLM-2026-847291'. Use for any question about a specific claim."""
         logger.info(f"Searching KnowledgeBase: {query}")
         return await self.bedrock_client.query_knowledge_base(
             query, claim_id=self.claim_id
@@ -575,7 +599,7 @@ class StrandsAgent:
 
     @tool
     def general_query(self, question: str) -> str:
-        """Use for general insurance questions that are not about a specific claim, such as what a deductible is."""
+        """Use for general auto insurance questions that are not about a specific claim, such as how collision and comprehensive coverage differ."""
         logger.info(f"Answering general question: {question}")
         # No lookup is needed, so hand the question back to the agent's own model
         return (
@@ -602,17 +626,21 @@ class StrandsAgent:
 search_function = FunctionSchema(
     name="search_knowledge_base",
     description=(
-        "Look up an existing Tri-County Insurance claim by its claim ID. Use this "
-        "whenever the caller asks about a specific claim: its status, estimated or "
-        "approved amount, deductible, date of loss, adjuster, or adjuster notes. "
-        "Call it only once the caller has given both the claim ID and the "
-        "policyholder's last name; the lookup verifies the name before it "
-        "returns any details."
+        "Look up an existing Tri-County Insurance auto claim by its claim ID. Use "
+        "this whenever the caller asks about a specific claim: its status, the "
+        "vehicle, the accident, the other driver, the damage, the repair estimate, "
+        "the deductible, rental, payments, the police report, the adjuster, or "
+        "adjuster notes. Call it only once the caller has given both the full "
+        "claim ID and the policyholder's last name; the lookup verifies the name "
+        "before it returns any details."
     ),
     properties={
         "claim_id": {
             "type": "string",
-            "description": "The claim ID as digits, e.g. '10001'.",
+            "description": (
+                "The full claim ID as CLM-YYYY-NNNNNN, e.g. 'CLM-2026-847291': "
+                "the four-digit year and the six-digit number."
+            ),
         },
         "last_name": {
             "type": "string",
@@ -624,7 +652,7 @@ search_function = FunctionSchema(
         },
         "query": {
             "type": "string",
-            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID 10001 approved amount'.",
+            "description": "The claim ID and what the caller wants to know, e.g. 'claim ID CLM-2026-847291 repair estimate'.",
         },
     },
     required=["claim_id", "last_name", "query"],
@@ -690,7 +718,8 @@ Speaking of `search_knowledge_base`, we're using a `BedrockKnowledgeBaseClient` 
 def claim_id_pattern(claim_id: str) -> re.Pattern:
     """Match a claim record's "Claim ID" line for exactly this claim.
 
-    The \b word boundary keeps "Claim ID 1000" from matching "Claim ID 10001".
+    The \b word boundary keeps "Claim ID CLM-2026-84729" from matching
+    "Claim ID CLM-2026-847291".
     """
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
 
@@ -706,6 +735,18 @@ def latin_letters(text: str) -> str:
 def ascii_digits(text: str) -> str:
     """Only the digits, as 0 to 9: Devanagari "१२३४" becomes "1234"."""
     return "".join(str(unicodedata.digit(c)) for c in text if unicodedata.digit(c, None) is not None)
+
+
+def normalize_claim_id(text: str) -> str:
+    """Turn a claim number as heard into "CLM-2026-847291", or "" if incomplete.
+
+    Only the digits count, so "CLM-2026-847291", "c l m 2026 847291", and
+    digits transcribed in another script all give the same ID. Anything but a
+    four-digit year plus a six-digit number comes back empty, so a partial
+    number is never guessed into a full one.
+    """
+    digits = ascii_digits(text)
+    return f"CLM-{digits[:4]}-{digits[4:]}" if len(digits) == 10 else ""
 
 
 class BedrockKnowledgeBaseClient:
@@ -736,13 +777,17 @@ class BedrockKnowledgeBaseClient:
                 },
             )
         except ClientError as e:
-            # Managed knowledge bases reject vectorSearchConfiguration,
-            # so retry with the knowledge base's default search settings.
+            # Managed knowledge bases reject vectorSearchConfiguration and
+            # take managedSearchConfiguration instead. It picks the search
+            # type itself, but still honors the number of results.
             if "vectorSearchConfiguration is not supported" not in str(e):
                 raise
             return self.bedrock_agent_runtime.retrieve(
                 knowledgeBaseId=self.knowledge_base_id,
                 retrievalQuery={"text": text},
+                retrievalConfiguration={
+                    "managedSearchConfiguration": {"numberOfResults": max_results}
+                },
             )
 
     def verify_policyholder(self, claim_id: str, last_name: str) -> bool:
@@ -788,6 +833,11 @@ class BedrockKnowledgeBaseClient:
             ):
                 enhanced_query = f"claim ID {query}"
 
+            # A claim record is split into several passages, and only this
+            # claim's are kept below, so fetch enough to get all of them back
+            if claim_id:
+                max_results = max(max_results, 20)
+
             # HYBRID uses both semantic and keyword search
             response = self._retrieve(enhanced_query, "HYBRID", max_results)
 
@@ -816,23 +866,16 @@ class BedrockKnowledgeBaseClient:
             # Format the results for the ear: dates and amounts ready to speak,
             # and no scores or headers, because what the LLM never receives it can't say
             passages = []
-            for result in results[:5]:  # Use the top 5 results
+            # Every passage of the verified claim, in full, so the agent can
+            # answer from any section; general searches keep the top 5, short
+            for result in results if claim_id else results[:5]:
                 content = result.get("content", {}).get("text", "")
 
                 if content:
                     content = await expand_currency(speak_dates(content), "*")
-
-                    # Show full content for claim-related queries to include all notes
-                    content_length = (
-                        1000
-                        if any(keyword in query.lower() for keyword in ["claim", "id"])
-                        else 200
-                    )
-                    truncated_content = content[:content_length]
-                    if len(content) > content_length:
-                        truncated_content += "..."
-
-                    passages.append(truncated_content)
+                    if not claim_id and len(content) > 200:
+                        content = content[:200] + "..."
+                    passages.append(content)
 
             if not passages:
                 return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
@@ -879,11 +922,13 @@ def speak_dates(text: str) -> str:
 
 The results also leave out the search relevance scores and result counts. Whatever the LLM never receives, it can't read aloud.
 
-`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern`, which you added above the `BedrockKnowledgeBaseClient` class, keeps a partial ID like 1000 from matching claim 10001.
+`verify_policyholder` retrieves the claim record and compares the caller's last name with the `Policyholder:` line. It only accepts a passage whose `Claim ID` matches exactly: the `\b` word boundary in `claim_id_pattern`, which you added above the `BedrockKnowledgeBaseClient` class, keeps a mistyped ID like CLM-2026-84729 from matching CLM-2026-847291.
 
 The two helpers next to it handle callers who aren't speaking English. `latin_letters` compares names on the letters a to z only, with accents removed, so "Núñez" matches "Nunez." A name transcribed in another script, such as Cyrillic, has no Latin letters at all, so `search_knowledge_base` asks the caller to spell it instead of counting a failed attempt. `ascii_digits` turns digits from any script into 0 to 9, so a claim number transcribed in Devanagari still finds the record.
 
-Verification only helps if the lookup that follows stays on the verified claim. A knowledge base search returns the closest matches, and for "claim ID 10009" those include other claims' records. So when `query_knowledge_base` gets a `claim_id`, it uses the same pattern to drop every passage from another claim. The `StrandsAgent` also clears its message history in `process_query` before each lookup, so it can't answer from a record it read earlier in the call. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
+`normalize_claim_id` builds on `ascii_digits`. Callers say claim IDs in many ways: "C L M twenty twenty-six, eight four seven two nine one," just the digits, or a mix. Only the digits matter, so it keeps those and rebuilds the ID as `CLM-2026-847291`. Anything other than a four-digit year and a six-digit number comes back empty, and `search_knowledge_base` asks the caller for the full number instead of guessing the missing year.
+
+Verification only helps if the lookup that follows stays on the verified claim. A knowledge base search returns the closest matches, and for "claim ID CLM-2026-527613" those include other claims' records. So when `query_knowledge_base` gets a `claim_id`, it uses the same pattern to drop every passage from another claim. The knowledge base splits each claim record into several passages, which is why every section header in the sample records repeats the claim ID, such as `Adjuster notes for Claim ID CLM-2026-527613:`. Without it, a passage cut from the middle of a record would be dropped. A verified lookup also asks for up to 20 results and passes every remaining passage to the agent in full, so it can answer from any part of the record. The `StrandsAgent` also clears its message history in `process_query` before each lookup, so it can't answer from a record it read earlier in the call. Comparing letters only, without case, spaces, or punctuation, means a name the caller spells out, which Flux transcribes as "W-A-L-S-H," still matches "Walsh." You can refer to the Amazon Knowledge Base documentation to learn more about this code.
 
 
 ### Finishing the Botfile

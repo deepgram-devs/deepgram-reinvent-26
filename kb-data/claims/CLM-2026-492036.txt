@@ -1,0 +1,86 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-492036
+Policyholder: Aisha Rahman
+Policy number: TCI-AUTO-366054
+Claim type: Glass
+Date reported: 2026-09-22
+Claim status: Closed
+
+Coverage for Claim ID CLM-2026-492036:
+Collision: $500 deductible
+Comprehensive: $500 deductible
+Full glass: $0 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-492036:
+Name: Aisha Rahman
+Address: 412 Gilliland Road, Louisville, KY 40243
+Phone: (502) 555-0149
+Email: aisha.rahman@example.com
+
+Insured vehicle for Claim ID CLM-2026-492036:
+Year: 2022
+Make: Hyundai
+Model: Tucson SEL
+Body style: SUV
+Color: Amazon Gray
+VIN: FICTIONAL-VIN-492036
+License plate: KY ARH-5520
+
+Incident for Claim ID CLM-2026-492036:
+Incident type: Glass
+Incident detail: Windshield damage from road debris
+Accident date: 2026-09-22
+Accident time: 8:05 AM
+Weather: Clear
+Police report: None filed
+Injuries reported: None
+Fault determination: Not applicable
+
+When and where for Claim ID CLM-2026-492036:
+Location: Eastbound Interstate 64 near the Hurstbourne Parkway exit, Louisville, KY 40243
+Map coordinates: 38.2350, -85.5880
+Location description: "A gravel truck in front of me on I-64 kicked up a rock. It hit the windshield right in front of me and the crack spread across by the time I got to work."
+
+Vehicle condition and damage for Claim ID CLM-2026-492036:
+Condition: Damaged but safe to drive
+Exterior damage areas: Windshield
+Interior damage areas: None
+Damage description: Rock chip on the driver's side that cracked across the windshield
+Damage photos: 2 on file
+- photo-1: Windshield crack from inside the car
+- photo-2: Close-up of the rock chip
+
+Incident description for Claim ID CLM-2026-492036:
+While driving to work on Interstate 64, a rock thrown from a gravel truck struck the windshield of the insured Hyundai Tucson. The chip spread into a crack across the driver's line of sight. The windshield was replaced, and the forward camera for lane keeping was recalibrated.
+
+Estimated repair costs for Claim ID CLM-2026-492036:
+- Windshield replacement: $780
+- Forward camera recalibration: $320
+- Windshield molding: $45
+- Labor: $95
+Total estimate: $1,240
+
+Claim financial summary for Claim ID CLM-2026-492036:
+Estimated damage: $1,240
+Deductible: $0
+Approved amount: $1,240
+Paid to date: $1,240
+
+Claims representative for Claim ID CLM-2026-492036:
+Adjuster: Grace Liu
+Department: Auto Glass Unit
+Adjuster reference: ADJ-402951
+Status: Closed
+Next review date: None, claim closed
+
+Adjuster notes for Claim ID CLM-2026-492036:
+- 2026-09-22: Claim reported by phone. Full glass coverage applies, so there is no deductible.
+- 2026-09-24: Mobile replacement scheduled with Clearview Auto Glass at the policyholder's workplace.
+- 2026-09-26: Windshield replaced and camera recalibrated. $1,240 paid directly to Clearview Auto Glass.
+- 2026-09-26: Claim closed.

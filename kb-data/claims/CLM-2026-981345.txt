@@ -1,0 +1,89 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-981345
+Policyholder: Sofia Marino
+Policy number: TCI-AUTO-624409
+Claim type: Comprehensive
+Date reported: 2026-10-02
+Claim status: Closed
+
+Coverage for Claim ID CLM-2026-981345:
+Collision: $500 deductible
+Comprehensive: $250 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-981345:
+Name: Sofia Marino
+Address: 6802 Covered Bridge Road, Prospect, KY 40059
+Phone: (502) 555-0156
+Email: sofia.marino@example.com
+
+Insured vehicle for Claim ID CLM-2026-981345:
+Year: 2020
+Make: Mazda
+Model: CX-5 Touring
+Body style: SUV
+Color: Soul Red
+VIN: FICTIONAL-VIN-981345
+License plate: KY SMR-2074
+
+Incident for Claim ID CLM-2026-981345:
+Incident type: Animal strike
+Incident detail: Collision with a deer
+Accident date: 2026-10-02
+Accident time: 6:35 AM
+Weather: Clear, before sunrise
+Police report: None filed
+Injuries reported: None
+Fault determination: Not applicable
+
+When and where for Claim ID CLM-2026-981345:
+Location: Brownsboro Road near Covered Bridge Road, Prospect, KY 40059
+Map coordinates: 38.3450, -85.6050
+Location description: "A deer ran out from the trees on the right side of Brownsboro Road. I braked but hit it with the front passenger corner."
+
+Vehicle condition and damage for Claim ID CLM-2026-981345:
+Condition: Damaged but safe to drive
+Exterior damage areas: Front, Passenger Front, Hood
+Interior damage areas: None
+Damage description: Front bumper cover, grille, passenger headlight, and a dent in the hood
+Damage photos: 4 on file
+- photo-1: Front of the vehicle, straight on
+- photo-2: Passenger headlight and bumper corner
+- photo-3: Hood dent
+- photo-4: Roadside where the deer was struck
+
+Incident description for Claim ID CLM-2026-981345:
+While driving to work before sunrise, the policyholder struck a deer that ran into the road from the right. The front passenger corner of the insured Mazda took the impact. Hitting an animal is covered under comprehensive, not collision, so the lower $250 deductible applied.
+
+Estimated repair costs for Claim ID CLM-2026-981345:
+- Front bumper cover: $980
+- Grille: $410
+- Passenger LED headlight assembly: $1,150
+- Hood repair: $620
+- Paint and refinish: $540
+- Labor: $400
+Total estimate: $4,100
+
+Claim financial summary for Claim ID CLM-2026-981345:
+Estimated damage: $4,100
+Deductible: $250
+Approved amount: $3,850
+Paid to date: $3,850
+
+Claims representative for Claim ID CLM-2026-981345:
+Adjuster: Grace Liu
+Department: Auto Claims Division
+Adjuster reference: ADJ-402951
+Status: Closed
+Next review date: None, claim closed
+
+Adjuster notes for Claim ID CLM-2026-981345:
+- 2026-10-02: Claim reported by phone. Animal strike, covered under comprehensive.
+- 2026-10-06: Estimate from Prospect Collision received: $4,100.
+- 2026-10-07: Rental authorized at $40 per day; returned 2026-10-20.
+- 2026-10-21: Repairs complete. $3,850 paid to Prospect Collision. Claim closed.

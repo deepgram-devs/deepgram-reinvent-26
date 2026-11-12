@@ -54,7 +54,7 @@ SCRIPT = [
     ("flux-cole-en", "Say hello, then switch to Spanish.", "carmen"),
     ("flux-cole-en", "English, please.", "heather"),
     # A switch batched with a lookup: no filler in the outgoing voice
-    ("flux-cole-en", "In Spanish please: what's the status of claim one two three four? The last name is Walsh.", "carmen"),
+    ("flux-cole-en", "In Spanish please: what's the status of claim C L M two zero two six five two seven six one three? The last name is Walsh.", "carmen"),
 ]
 
 events: list[tuple[float, str, str]] = []

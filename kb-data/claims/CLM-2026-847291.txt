@@ -1,0 +1,97 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-847291
+Policyholder: Daniel Mitchell
+Policy number: TCI-AUTO-482977
+Claim type: Collision
+Date reported: 2026-11-10
+Claim status: Under investigation
+
+Coverage for Claim ID CLM-2026-847291:
+Collision: $500 deductible
+Comprehensive: $250 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-847291:
+Name: Daniel Mitchell
+Address: 2458 Oakwood Drive, Louisville, KY 40205
+Phone: (502) 555-0184
+Email: daniel.mitchell@example.com
+
+Insured vehicle for Claim ID CLM-2026-847291:
+Year: 2023
+Make: Toyota
+Model: Camry SE
+Body style: Sedan
+Color: Midnight Black
+VIN: FICTIONAL-VIN-847291
+License plate: KY ABC-4829
+
+Incident for Claim ID CLM-2026-847291:
+Incident type: Vehicle incident while driving
+Incident detail: Incident with another vehicle
+Accident date: 2026-11-09
+Accident time: 5:42 PM
+Weather: Light rain
+Police report: KY-26-119847
+Injuries reported: None
+Fault determination: Pending; the driver behind the policyholder is believed to be at fault
+
+When and where for Claim ID CLM-2026-847291:
+Location: Eastbound Bardstown Road at Taylorsville Road, Louisville, KY 40205
+Map coordinates: 38.2186, -85.6905
+Location description: "Traffic stopped fast on Bardstown Road in the rain. The truck behind me didn't stop in time and pushed me into the SUV in front of me."
+
+Other party for Claim ID CLM-2026-847291:
+Other driver: Kyle Brennan
+Other driver's insurer: Falls City Insurance
+Other driver's policy number: FCI-5017-338402
+Other driver's vehicle: 2016 Chevrolet Silverado, VIN FICTIONAL-VIN-338402, plate KY JRT-5531
+
+Vehicle condition and damage for Claim ID CLM-2026-847291:
+Condition: Damaged but safe to drive
+Exterior damage areas: Front, Hood, Passenger Front, Rear
+Interior damage areas: None
+Damage description: Front bumper, hood, grille, right headlight, and rear bumper
+Damage photos: 5 on file
+- photo-1: Front bumper and grille, straight on
+- photo-2: Hood crease, driver's side view
+- photo-3: Cracked right headlight assembly
+- photo-4: Rear bumper impact from the pickup truck
+- photo-5: Scene photo of all three vehicles, taken by the policyholder
+
+Incident description for Claim ID CLM-2026-847291:
+The policyholder was traveling eastbound when traffic slowed suddenly. A pickup truck traveling behind the insured vehicle failed to stop in time and struck the rear of the Toyota Camry. The impact pushed the Camry forward into the SUV ahead, damaging both the front and rear of the insured vehicle. The SUV driver reported no damage and left the scene after exchanging information.
+
+Estimated repair costs for Claim ID CLM-2026-847291:
+- Front bumper replacement: $1,250
+- Hood repair and repaint: $875
+- Grille replacement: $420
+- Headlight assembly: $680
+- Rear bumper repair: $950
+- Labor and diagnostics: $725
+Total estimate: $4,900
+
+Claim financial summary for Claim ID CLM-2026-847291:
+Estimated damage: $4,900
+Deductible: $500
+Estimated insurance payment: $4,400
+Paid to date: $0
+
+Claims representative for Claim ID CLM-2026-847291:
+Adjuster: Rebecca Thompson
+Department: Auto Claims Division
+Adjuster reference: ADJ-729184
+Status: Awaiting vehicle inspection
+Next review date: 2026-11-16
+
+Adjuster notes for Claim ID CLM-2026-847291:
+- 2026-11-10: Claim reported by phone. Policyholder uninjured; vehicle drivable.
+- 2026-11-10: Police report KY-26-119847 requested from Louisville Metro Police.
+- 2026-11-11: Inspection scheduled for 2026-11-14 at Highlands Auto Body.
+- 2026-11-11: Rental authorized at $40 per day while the vehicle is in the shop.
+- 2026-11-11: If Falls City Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder.

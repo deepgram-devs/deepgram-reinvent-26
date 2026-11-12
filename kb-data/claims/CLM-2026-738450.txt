@@ -1,0 +1,93 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-738450
+Policyholder: Tom Nguyen
+Policy number: TCI-AUTO-290817
+Claim type: Comprehensive
+Date reported: 2026-10-05
+Claim status: Approved
+
+Coverage for Claim ID CLM-2026-738450:
+Collision: $1,000 deductible
+Comprehensive: $1,000 deductible
+Liability: $250,000 per person, $500,000 per accident, $100,000 property damage
+Uninsured motorist: $250,000 per person, $500,000 per accident
+Medical payments: $10,000 per person
+Rental reimbursement: $50 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-738450:
+Name: Tom Nguyen
+Address: 9104 Brookfield Lane, Louisville, KY 40299
+Phone: (502) 555-0172
+Email: tom.nguyen@example.com
+
+Insured vehicle for Claim ID CLM-2026-738450:
+Year: 2024
+Make: Ford
+Model: F-150 XLT
+Body style: Pickup
+Color: Oxford White
+VIN: FICTIONAL-VIN-738450
+License plate: KY TNG-8817
+
+Incident for Claim ID CLM-2026-738450:
+Incident type: Weather
+Incident detail: Hail damage
+Accident date: 2026-10-04
+Accident time: About 4:20 PM
+Weather: Severe thunderstorm with hail up to 1.5 inches
+Police report: None filed
+Injuries reported: None
+Fault determination: Not applicable
+
+When and where for Claim ID CLM-2026-738450:
+Location: Driveway at 9104 Brookfield Lane, Louisville, KY 40299
+Map coordinates: 38.1938, -85.5644
+Location description: "The truck was in my driveway when the storm came through. It sounded like rocks hitting it for ten minutes."
+
+Vehicle condition and damage for Claim ID CLM-2026-738450:
+Condition: Damaged but safe to drive
+Exterior damage areas: Hood, Roof, Driver Side, Passenger Side
+Interior damage areas: None
+Damage description: About 64 small dents across the hood, roof, cab, and bed sides, and a cracked driver-side mirror cap
+Damage photos: 8 on file
+- photo-1: Hood under inspection light
+- photo-2: Roof dents, driver's side
+- photo-3: Roof dents, passenger's side
+- photo-4: Driver-side cab and bed
+- photo-5: Passenger-side cab and bed
+- photo-6: Cracked mirror cap
+- photo-7: Hail stones in the driveway with a coin for scale
+- photo-8: Inspector's dent count sheet
+
+Incident description for Claim ID CLM-2026-738450:
+A severe thunderstorm passed through Jeffersontown and dropped hail on the insured Ford F-150 while it was parked in the policyholder's driveway. An inspector counted about 64 dents. All of them can be fixed with paintless dent repair, so no panels need to be replaced.
+
+Estimated repair costs for Claim ID CLM-2026-738450:
+- Paintless dent repair, hood: $1,450
+- Paintless dent repair, roof: $1,850
+- Paintless dent repair, cab and bed sides: $1,320
+- Mirror cap replacement: $180
+- Remove and reinstall trim, and labor: $400
+Total estimate: $5,200
+
+Claim financial summary for Claim ID CLM-2026-738450:
+Estimated damage: $5,200
+Deductible: $1,000
+Approved amount: $4,200
+Paid to date: $0
+
+Claims representative for Claim ID CLM-2026-738450:
+Adjuster: Priya Shah
+Department: Catastrophe Response Team
+Adjuster reference: ADJ-664018
+Status: Repair scheduled
+Next review date: 2026-11-19
+
+Adjuster notes for Claim ID CLM-2026-738450:
+- 2026-10-05: Claim reported online after the 2026-10-04 hail storm.
+- 2026-10-09: Drive-in inspection at the Tri-County catastrophe site; 64 dents counted.
+- 2026-10-12: Estimate of $5,200 approved, less the $1,000 comprehensive deductible.
+- 2026-10-20: Repair scheduled for 2026-11-17 at Precision Dent Works. Payment of $4,200 will go to the shop when work is complete.
+- 2026-10-20: Rental authorized at $50 per day for the three days of repair.

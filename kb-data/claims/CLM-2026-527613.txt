@@ -1,0 +1,102 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-527613
+Policyholder: Rebecca Walsh
+Policy number: TCI-AUTO-845213
+Claim type: Collision
+Date reported: 2026-09-30
+Claim status: Under investigation, liability disputed
+
+Coverage for Claim ID CLM-2026-527613:
+Collision: $500 deductible
+Comprehensive: $500 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-527613:
+Name: Rebecca Walsh
+Address: 7716 Applegate Lane, Louisville, KY 40219
+Phone: (502) 555-0115
+Email: rebecca.walsh@example.com
+
+Insured vehicle for Claim ID CLM-2026-527613:
+Year: 2022
+Make: Kia
+Model: Telluride EX
+Body style: SUV
+Color: Gravity Gray
+VIN: FICTIONAL-VIN-527613
+License plate: KY RWL-9032
+
+Incident for Claim ID CLM-2026-527613:
+Incident type: Vehicle incident while driving
+Incident detail: Incident with multiple vehicles
+Accident date: 2026-09-30
+Accident time: 3:15 PM
+Weather: Clear
+Police report: KY-26-091562
+Injuries reported: Policyholder reports a minor neck strain; seen at urgent care on 2026-10-01
+Fault determination: Disputed; both drivers say they had a green light
+
+When and where for Claim ID CLM-2026-527613:
+Location: Intersection of Preston Highway and Outer Loop, Louisville, KY 40219
+Map coordinates: 38.1340, -85.6890
+Location description: "I had a green light going north on Preston. A car coming off Outer Loop ran the light and hit my driver's side, and I got pushed into a car waiting to turn."
+
+Other party for Claim ID CLM-2026-527613:
+Other driver: Brandon Hughes
+Other driver's insurer: Riverbend Auto Insurance
+Other driver's policy number: RAI-7720-114593
+Other driver's vehicle: 2017 Nissan Altima, VIN FICTIONAL-VIN-318840, plate KY KTM-2205
+
+Vehicle condition and damage for Claim ID CLM-2026-527613:
+Condition: Not drivable; towed to Southside Collision Center
+Exterior damage areas: Driver Front, Driver Side, Front
+Interior damage areas: Airbags
+Damage description: Driver-side front fender and doors, front bumper, driver-side curtain airbag deployed
+Damage photos: 7 on file
+- photo-1: Driver side, full length
+- photo-2: Front door intrusion
+- photo-3: Front bumper where it struck the third vehicle
+- photo-4: Deployed curtain airbag
+- photo-5: Intersection and traffic signals
+- photo-6: Other driver's Nissan Altima
+- photo-7: Third vehicle's rear bumper
+
+Incident description for Claim ID CLM-2026-527613:
+The policyholder was northbound on Preston Highway when a Nissan Altima entered the intersection from Outer Loop and struck the driver's side of the insured Kia. The impact pushed the Kia into a third vehicle waiting to turn left. Both drivers say they had a green light. One witness gave a statement. The policyholder reported neck pain the next day.
+
+Estimated repair costs for Claim ID CLM-2026-527613:
+- Driver-side doors, both: $3,450
+- Front fender and bumper: $2,180
+- Curtain airbag and sensors: $2,640
+- Suspension and alignment: $1,330
+- Paint and refinish: $1,400
+- Labor: $900
+Total estimate: $11,900
+
+Claim financial summary for Claim ID CLM-2026-527613:
+Estimated damage: $11,900
+Deductible: $500
+Estimated insurance payment: $11,400, on hold until liability is decided
+Medical payments: $640 urgent care bill submitted, under review
+Rental paid: $1,200
+Paid to date: $1,200
+
+Claims representative for Claim ID CLM-2026-527613:
+Adjuster: Janet Okafor
+Department: Auto Claims Division
+Adjuster reference: ADJ-610247
+Status: Waiting on traffic camera footage
+Next review date: 2026-11-13
+
+Adjuster notes for Claim ID CLM-2026-527613:
+- 2026-09-30: Claim reported from the scene. Vehicle towed to Southside Collision Center.
+- 2026-10-02: Rental authorized at $40 per day; the 30-day limit ended 2026-10-31 and $1,200 was paid.
+- 2026-10-06: Witness statement collected. Witness believes the Altima ran a red light.
+- 2026-10-08: Traffic camera footage requested from Louisville Metro.
+- 2026-10-14: Riverbend Auto Insurance disputes liability pending the footage.
+- 2026-11-04: Policyholder may repair now under collision coverage, paying the $500 deductible, and Tri-County will seek it back if Riverbend is found at fault.

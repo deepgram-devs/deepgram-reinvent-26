@@ -1,0 +1,90 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-159827
+Policyholder: Linda Park
+Policy number: TCI-AUTO-731562
+Claim type: Theft
+Date reported: 2026-08-30
+Claim status: Settlement offered
+
+Coverage for Claim ID CLM-2026-159827:
+Collision: $500 deductible
+Comprehensive: $250 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-159827:
+Name: Linda Park
+Address: 205 Browns Lane, Louisville, KY 40207
+Phone: (502) 555-0191
+Email: linda.park@example.com
+
+Insured vehicle for Claim ID CLM-2026-159827:
+Year: 2019
+Make: Honda
+Model: Civic Sport
+Body style: Hatchback
+Color: Aegean Blue
+VIN: FICTIONAL-VIN-159827
+License plate: KY LPK-4402
+Lienholder: Derby City Federal Credit Union
+
+Incident for Claim ID CLM-2026-159827:
+Incident type: Theft
+Incident detail: Vehicle stolen, not recovered
+Accident date: 2026-08-30
+Accident time: Between 6:10 PM and 8:45 PM
+Weather: Clear
+Police report: KY-26-077615
+Injuries reported: None
+Fault determination: Not applicable
+
+When and where for Claim ID CLM-2026-159827:
+Location: Shopping center parking lot, 5000 Shelbyville Road, Louisville, KY 40207
+Map coordinates: 38.2490, -85.6265
+Location description: "I parked near the movie theater entrance and went to a show. When I came out the car was gone. I had both keys with me."
+
+Vehicle condition and damage for Claim ID CLM-2026-159827:
+Condition: Stolen, not recovered; declared a total loss
+Exterior damage areas: None, vehicle not recovered
+Interior damage areas: None, vehicle not recovered
+Damage description: Vehicle not recovered
+Damage photos: 2 on file
+- photo-1: Policyholder's photo of the vehicle from June 2026, driver side
+- photo-2: Policyholder's photo of the odometer from June 2026
+
+Incident description for Claim ID CLM-2026-159827:
+The insured Honda Civic was stolen from a shopping center parking lot during an evening movie. The policyholder had both keys. The theft was reported to police the same night, and the vehicle was entered in the national stolen vehicle database. After 30 days without recovery, the vehicle was declared a total loss.
+
+Total loss valuation for Claim ID CLM-2026-159827:
+- Actual cash value: $19,600
+- Sales tax and title fees: $1,320
+- Total value: $20,920
+- Less comprehensive deductible: $250
+Settlement offer: $20,670
+- Paid to lienholder, Derby City Federal Credit Union: $8,410
+- Paid to policyholder: $12,260
+
+Claim financial summary for Claim ID CLM-2026-159827:
+Total value: $20,920
+Deductible: $250
+Settlement offer: $20,670
+Rental paid: $1,200
+Paid to date: $1,200
+
+Claims representative for Claim ID CLM-2026-159827:
+Adjuster: Luis Ortega
+Department: Total Loss Unit
+Adjuster reference: ADJ-583306
+Status: Waiting on the signed title and power of attorney
+Next review date: 2026-11-14
+
+Adjuster notes for Claim ID CLM-2026-159827:
+- 2026-08-30: Theft reported. Police report KY-26-077615 confirmed.
+- 2026-08-31: Rental authorized at $40 per day for up to 30 days.
+- 2026-09-30: No recovery after 30 days. Vehicle declared a total loss. Rental ended; $1,200 paid.
+- 2026-10-30: Settlement offer of $20,670 sent, based on three comparable vehicles in the Louisville area.
+- 2026-11-06: Policyholder accepted the offer. Waiting on the signed title and power of attorney from the lienholder before payment is released.

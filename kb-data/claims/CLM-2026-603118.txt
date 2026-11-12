@@ -1,0 +1,96 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-603118
+Policyholder: Maria Delgado
+Policy number: TCI-AUTO-482135
+Claim type: Collision
+Date reported: 2026-09-14
+Claim status: Approved
+
+Coverage for Claim ID CLM-2026-603118:
+Collision: $500 deductible
+Comprehensive: $500 deductible
+Liability: $50,000 per person, $100,000 per accident, $50,000 property damage
+Uninsured motorist: $50,000 per person, $100,000 per accident
+Medical payments: $2,000 per person
+Rental reimbursement: $40 per day, up to 30 days
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-603118:
+Name: Maria Delgado
+Address: 3917 Wilmoth Avenue, Louisville, KY 40216
+Phone: (502) 555-0127
+Email: maria.delgado@example.com
+
+Insured vehicle for Claim ID CLM-2026-603118:
+Year: 2021
+Make: Honda
+Model: CR-V EX
+Body style: SUV
+Color: Lunar Silver
+VIN: FICTIONAL-VIN-603118
+License plate: KY MDL-2108
+
+Incident for Claim ID CLM-2026-603118:
+Incident type: Vehicle incident while driving
+Incident detail: Incident with another vehicle
+Accident date: 2026-09-14
+Accident time: 8:12 AM
+Weather: Clear
+Police report: KY-26-088214
+Injuries reported: None
+Fault determination: Other driver at fault; cited for following too closely
+
+When and where for Claim ID CLM-2026-603118:
+Location: Northbound Dixie Highway at Greenwood Road, Louisville, KY 40258
+Map coordinates: 38.1690, -85.8435
+Location description: "I was stopped at the red light on Dixie Highway and a pickup hit me from behind. He said he looked down at his phone."
+
+Other party for Claim ID CLM-2026-603118:
+Other driver: Travis Coleman
+Other driver's insurer: Ohio Valley Casualty
+Other driver's policy number: OVC-3318-204571
+Other driver's vehicle: 2018 Ford F-150, VIN FICTIONAL-VIN-204571, plate KY TCL-6640
+
+Vehicle condition and damage for Claim ID CLM-2026-603118:
+Condition: Damaged but safe to drive
+Exterior damage areas: Rear, Driver Rear, Passenger Rear
+Interior damage areas: None
+Damage description: Rear bumper cover, liftgate, both tail lights, and rear parking sensors
+Damage photos: 4 on file
+- photo-1: Rear bumper and liftgate, straight on
+- photo-2: Broken driver-side tail light
+- photo-3: Broken passenger-side tail light
+- photo-4: Other driver's pickup and license plate
+
+Incident description for Claim ID CLM-2026-603118:
+The policyholder was stopped at a red light northbound on Dixie Highway. A pickup truck approaching from behind failed to stop and struck the rear of the insured Honda CR-V. Louisville Metro Police responded and cited the other driver for following too closely. No one was injured.
+
+Estimated repair costs for Claim ID CLM-2026-603118:
+- Rear bumper cover replacement: $1,150
+- Liftgate replacement: $1,640
+- Tail light assemblies, both sides: $560
+- Rear parking sensors: $420
+- Paint and refinish: $780
+- Labor: $300
+Total estimate: $4,850
+
+Claim financial summary for Claim ID CLM-2026-603118:
+Estimated damage: $4,850
+Deductible: $500
+Approved amount: $4,350
+Paid to date: $4,350
+
+Claims representative for Claim ID CLM-2026-603118:
+Adjuster: Janet Okafor
+Department: Auto Claims Division
+Adjuster reference: ADJ-610247
+Status: Subrogation in progress
+Next review date: 2026-11-20
+
+Adjuster notes for Claim ID CLM-2026-603118:
+- 2026-09-15: Repair estimate from Cedar Lane Auto Body received: $4,850.
+- 2026-09-16: Rental authorized for 10 days at $35 per day; returned 2026-09-28.
+- 2026-09-29: Repairs complete. $4,350 paid to Cedar Lane Auto Body.
+- 2026-10-02: Subrogation opened against Ohio Valley Casualty for $4,850, including the policyholder's $500 deductible.
+- 2026-11-03: Ohio Valley Casualty accepted liability; payment expected within 30 days. Deductible will be refunded to the policyholder when received.

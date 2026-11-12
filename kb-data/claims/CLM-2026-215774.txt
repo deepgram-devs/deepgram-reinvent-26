@@ -1,0 +1,98 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-215774
+Policyholder: Kevin Brooks
+Policy number: TCI-AUTO-517390
+Claim type: Uninsured motorist property damage
+Date reported: 2026-10-27
+Claim status: Pending police follow-up
+
+Coverage for Claim ID CLM-2026-215774:
+Collision: $1,000 deductible
+Comprehensive: $500 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Uninsured motorist property damage: $250 deductible
+Medical payments: $5,000 per person
+Rental reimbursement: $30 per day, up to 30 days
+Roadside assistance: Not carried
+
+Policyholder information for Claim ID CLM-2026-215774:
+Name: Kevin Brooks
+Address: 1127 Cherokee Road, Louisville, KY 40204
+Phone: (502) 555-0163
+Email: kevin.brooks@example.com
+
+Insured vehicle for Claim ID CLM-2026-215774:
+Year: 2020
+Make: Subaru
+Model: Outback Premium
+Body style: Wagon
+Color: Crimson Red
+VIN: FICTIONAL-VIN-215774
+License plate: KY KBR-3391
+
+Incident for Claim ID CLM-2026-215774:
+Incident type: Vehicle incident while parked
+Incident detail: Hit and run
+Accident date: 2026-10-27
+Accident time: Overnight, discovered at 7:15 AM
+Weather: Clear
+Police report: KY-26-104223
+Injuries reported: None
+Fault determination: Unknown driver at fault
+
+When and where for Claim ID CLM-2026-215774:
+Location: Parked on the street in front of 1127 Cherokee Road, Louisville, KY 40204
+Map coordinates: 38.2408, -85.7172
+Location description: "I parked on the street in front of my house like always. In the morning the whole driver's side was smashed and there was white paint on it."
+
+Other party for Claim ID CLM-2026-215774:
+Other driver: Unknown, left the scene
+Other driver's insurer: Unknown
+Other driver's policy number: Unknown
+Other driver's vehicle: Unknown; a neighbor's doorbell camera shows a white pickup truck with a partial plate
+
+Vehicle condition and damage for Claim ID CLM-2026-215774:
+Condition: Damaged but safe to drive
+Exterior damage areas: Driver Front, Driver Side
+Interior damage areas: None
+Damage description: Driver-side front fender, both driver-side doors, and driver-side mirror, with white paint transfer
+Damage photos: 6 on file
+- photo-1: Driver side, full length
+- photo-2: Front door dent and paint transfer
+- photo-3: Rear door dent
+- photo-4: Front fender scrape
+- photo-5: Broken driver-side mirror
+- photo-6: Still from the neighbor's doorbell camera
+
+Incident description for Claim ID CLM-2026-215774:
+The insured Subaru was legally parked on the street overnight. The policyholder found damage along the driver's side the next morning, with no note left. A neighbor's doorbell camera recorded a white pickup truck sideswiping the car at about 2:40 AM. The police report was filed the same morning.
+
+Estimated repair costs for Claim ID CLM-2026-215774:
+- Front fender repair and repaint: $640
+- Front door replacement: $1,180
+- Rear door repair and repaint: $720
+- Mirror assembly: $340
+- Labor: $400
+Total estimate: $3,280
+
+Claim financial summary for Claim ID CLM-2026-215774:
+Estimated damage: $3,280
+Deductible: $250
+Estimated insurance payment: $3,030
+Paid to date: $0
+
+Claims representative for Claim ID CLM-2026-215774:
+Adjuster: Luis Ortega
+Department: Auto Claims Division
+Adjuster reference: ADJ-583306
+Status: Waiting on the police investigation
+Next review date: 2026-11-18
+
+Adjuster notes for Claim ID CLM-2026-215774:
+- 2026-10-27: Claim reported online with photos and the doorbell camera clip.
+- 2026-10-29: Police report KY-26-104223 received. Detective is checking the partial plate.
+- 2026-11-02: Estimate from Highlands Auto Body received: $3,280.
+- 2026-11-02: Repairs can go ahead now under uninsured motorist property damage. Policyholder chose to wait two weeks for the police result.
+- 2026-11-02: If the other driver is identified, the claim moves to their liability insurer and the $250 deductible is refunded.

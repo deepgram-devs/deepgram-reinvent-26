@@ -1,0 +1,88 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-364902
+Policyholder: Marcus Bell
+Policy number: TCI-AUTO-158840
+Claim type: Collision
+Date reported: 2026-08-22
+Claim status: Denied
+
+Coverage for Claim ID CLM-2026-364902:
+Collision: Not carried
+Comprehensive: Not carried
+Liability: $25,000 per person, $50,000 per accident, $25,000 property damage
+Uninsured motorist: Not carried
+Medical payments: $1,000 per person
+Rental reimbursement: Not carried
+Roadside assistance: Not carried
+
+Policyholder information for Claim ID CLM-2026-364902:
+Name: Marcus Bell
+Address: 4419 Southern Parkway, Louisville, KY 40214
+Phone: (502) 555-0138
+Email: marcus.bell@example.com
+
+Insured vehicle for Claim ID CLM-2026-364902:
+Year: 2014
+Make: Chevrolet
+Model: Malibu LT
+Body style: Sedan
+Color: Silver Ice
+VIN: FICTIONAL-VIN-364902
+License plate: KY MBL-1186
+
+Incident for Claim ID CLM-2026-364902:
+Incident type: Vehicle incident while driving
+Incident detail: Single vehicle, hydroplaned into a guardrail
+Accident date: 2026-08-21
+Accident time: 10:50 PM
+Weather: Heavy rain
+Police report: KY-26-071338
+Injuries reported: None
+Fault determination: Policyholder at fault, single vehicle
+
+When and where for Claim ID CLM-2026-364902:
+Location: Westbound Interstate 264 near Poplar Level Road, Louisville, KY 40213
+Map coordinates: 38.1985, -85.7125
+Location description: "It was pouring on the Watterson. I hit standing water, the car spun, and I slid into the guardrail on the right."
+
+Vehicle condition and damage for Claim ID CLM-2026-364902:
+Condition: Not drivable; towed to Watterson Tow and Storage
+Exterior damage areas: Front, Passenger Front, Passenger Side
+Interior damage areas: Airbags
+Damage description: Front bumper, passenger fender, passenger door, front suspension, and deployed front passenger airbag
+Damage photos: 3 on file
+- photo-1: Front and passenger side at the tow yard
+- photo-2: Deployed passenger airbag
+- photo-3: Damaged guardrail section, taken by police
+
+Incident description for Claim ID CLM-2026-364902:
+The policyholder lost control on standing water during heavy rain and slid into the right-side guardrail. No other vehicles were involved and no one was hurt. The policy carries liability coverage only, so it does not pay for damage to the policyholder's own vehicle. It does pay for the damaged state guardrail.
+
+Estimated repair costs for Claim ID CLM-2026-364902:
+- Front bumper and passenger fender: $1,980
+- Passenger door: $1,240
+- Front suspension and alignment: $1,610
+- Airbag replacement: $1,520
+Total estimate: $6,350
+
+Claim financial summary for Claim ID CLM-2026-364902:
+Estimated damage to the policyholder's vehicle: $6,350
+Covered for the policyholder's vehicle: $0, no collision coverage
+Guardrail repair, paid under property damage liability: $2,100
+Deductible: Not applicable
+Paid to date: $2,100, to the Kentucky Transportation Cabinet
+
+Claims representative for Claim ID CLM-2026-364902:
+Adjuster: Samuel Reyes
+Department: Auto Claims Division
+Adjuster reference: ADJ-357720
+Status: Denied for vehicle damage; appeal window open
+Next review date: 2026-11-27
+
+Adjuster notes for Claim ID CLM-2026-364902:
+- 2026-08-22: Claim reported. Policy is liability only, with no collision coverage.
+- 2026-08-29: Denial letter sent for vehicle damage. Appeal window open until 2026-11-27.
+- 2026-09-15: Kentucky Transportation Cabinet invoice for guardrail repair received: $2,100.
+- 2026-10-12: Guardrail invoice paid under property damage liability.
+- 2026-10-12: Storage fees at the tow yard are $35 per day and are not covered. Policyholder advised to move the vehicle.

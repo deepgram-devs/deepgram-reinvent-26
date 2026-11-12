@@ -1,0 +1,97 @@
+Tri-County Insurance - Automobile Claim Record
+
+Claim ID CLM-2026-746209
+Policyholder: Omar Haddad
+Policy number: TCI-AUTO-570268
+Claim type: Collision and property damage liability
+Date reported: 2026-10-18
+Claim status: Open, repair in progress
+
+Coverage for Claim ID CLM-2026-746209:
+Collision: $1,000 deductible
+Comprehensive: $500 deductible
+Liability: $100,000 per person, $300,000 per accident, $100,000 property damage
+Uninsured motorist: $100,000 per person, $300,000 per accident
+Medical payments: $5,000 per person
+Rental reimbursement: Not carried
+Roadside assistance: Included
+
+Policyholder information for Claim ID CLM-2026-746209:
+Name: Omar Haddad
+Address: 3305 Hikes Lane, Louisville, KY 40220
+Phone: (502) 555-0109
+Email: omar.haddad@example.com
+
+Insured vehicle for Claim ID CLM-2026-746209:
+Year: 2018
+Make: Toyota
+Model: Sienna LE
+Body style: Minivan
+Color: Predawn Gray
+VIN: FICTIONAL-VIN-746209
+License plate: KY OHD-3360
+
+Incident for Claim ID CLM-2026-746209:
+Incident type: Vehicle incident while driving
+Incident detail: Backing collision with a parked vehicle
+Accident date: 2026-10-18
+Accident time: 11:20 AM
+Weather: Overcast
+Police report: None filed; information exchanged at the scene
+Injuries reported: None
+Fault determination: Policyholder at fault
+
+When and where for Claim ID CLM-2026-746209:
+Location: Grocery store parking lot, 2200 Hikes Lane, Louisville, KY 40218
+Map coordinates: 38.2045, -85.6720
+Location description: "I was backing out of my spot at the grocery store and didn't see the car parked behind me. I hit the side of it."
+
+Other party for Claim ID CLM-2026-746209:
+Other driver: Natalie Ferguson, owner of the parked vehicle
+Other driver's insurer: Bluegrass Mutual Insurance
+Other driver's policy number: BMI-2290-640118
+Other driver's vehicle: 2021 Honda Accord, VIN FICTIONAL-VIN-640118, plate KY NFR-7713
+
+Vehicle condition and damage for Claim ID CLM-2026-746209:
+Condition: Damaged but safe to drive
+Exterior damage areas: Rear, Driver Rear
+Interior damage areas: None
+Damage description: Rear bumper, rear camera, and the lower liftgate panel
+Damage photos: 5 on file
+- photo-1: Policyholder's rear bumper
+- photo-2: Broken rear camera housing
+- photo-3: Liftgate lower panel
+- photo-4: Parked Honda Accord, driver's side
+- photo-5: Accord rear door and quarter panel close-up
+
+Incident description for Claim ID CLM-2026-746209:
+The policyholder backed out of a parking space and struck the driver's side of a parked Honda Accord. The policyholder is at fault. The Accord owner's damage was paid under the policy's property damage liability coverage. Repairs to the policyholder's minivan are paid under collision coverage, less the $1,000 deductible.
+
+Estimated repair costs for Claim ID CLM-2026-746209:
+- Rear bumper replacement: $890
+- Rear camera: $410
+- Liftgate lower panel: $650
+- Labor: $380
+Total estimate: $2,330
+
+Claim financial summary for Claim ID CLM-2026-746209:
+Estimated damage to the policyholder's vehicle: $2,330
+Deductible: $1,000
+Estimated insurance payment for the policyholder's vehicle: $1,330
+Third-party vehicle repair, paid under property damage liability: $3,560
+Third-party rental, paid under property damage liability: $280
+Paid to date: $3,840
+
+Claims representative for Claim ID CLM-2026-746209:
+Adjuster: Samuel Reyes
+Department: Auto Claims Division
+Adjuster reference: ADJ-357720
+Status: Policyholder's repair in progress
+Next review date: 2026-11-19
+
+Adjuster notes for Claim ID CLM-2026-746209:
+- 2026-10-18: Claim reported by the policyholder, who accepted fault.
+- 2026-10-22: Bluegrass Mutual Insurance submitted the Accord estimate: $3,560.
+- 2026-11-05: $3,560 paid for the Accord repair and $280 for the owner's rental. Third-party claim closed.
+- 2026-11-09: Policyholder's minivan dropped off at Hikes Point Collision. Repair expected to be done 2026-11-18.
+- 2026-11-09: No rental coverage on this policy.
