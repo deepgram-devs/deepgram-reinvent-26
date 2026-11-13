@@ -97,6 +97,9 @@ function Screens({
       </div>
     </aside>
   ) : null;
+  // Staff screens follow the claim card they opened, kept in EmployeeSession.
+  // The session's claim, which the agent sends when a card opens, only feeds
+  // the review screen's focus and highlights, so it never moves the desk.
   if (persona === "employee") {
     return <EmployeeSession live={live || !!forced} onEnd={onEnd} aside={aside} />;
   }

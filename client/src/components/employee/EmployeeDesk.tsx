@@ -1,5 +1,6 @@
 "use client";
 
+import { usePipecatClient } from "@pipecat-ai/client-react";
 import { useState, type ReactNode } from "react";
 
 import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
@@ -150,12 +151,19 @@ export function EmployeeSession({
   onEnd: () => void;
   aside?: ReactNode;
 }) {
+  const client = usePipecatClient();
   // The claim itself, so a new search doesn't close the one being read
   const [open, setOpen] = useState<ClaimView | null>(null);
   // Each view starts at its top, not wherever the other was scrolled to
   const show = (claim: ClaimView | null) => {
     setOpen(claim);
     window.scrollTo({ top: 0 });
+    // Tell the agent what's on screen, so "this claim" means the open one.
+    // Only the ID goes: the agent reads the record itself. Fixtures have no
+    // call, and nothing to tell.
+    if (!client?.connected) return;
+    if (claim) client.sendClientMessage("claim-opened", { claim_id: claim.claim_id });
+    else client.sendClientMessage("claim-closed");
   };
   if (open) {
     return <ClaimReview claim={open} live={live} onEnd={onEnd} onBack={() => show(null)} />;

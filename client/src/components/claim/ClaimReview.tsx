@@ -245,7 +245,7 @@ export function ClaimReview({
         <aside className="hidden space-y-5 lg:block">
           <div className="sticky top-24 space-y-5">
             <VoiceSessionPanel onEnd={onEnd} live={live} />
-            <TryAsking />
+            <TryAsking claim={claim} />
             <ViewOnlyNote />
           </div>
         </aside>

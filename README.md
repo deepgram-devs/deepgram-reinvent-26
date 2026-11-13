@@ -24,6 +24,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -34,6 +35,8 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    Frame,
+    InputAudioRawFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
@@ -47,6 +50,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.frameworks.rtvi.frames import RTVIServerMessageFrame
 from pipecat.processors.frameworks.rtvi.observer import (
     RTVIFunctionCallReportLevel,
@@ -60,7 +64,6 @@ from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
-from pipecat.turns.user_mute import MuteUntilFirstBotCompleteUserMuteStrategy
 from pipecat.utils.text.transforms import expand_currency
 from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
@@ -83,6 +86,12 @@ KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 # that answers sooner goes straight to the answer: a hold line before an
 # instant answer is a delay, not a courtesy.
 HOLD_LINE_DELAY_SECS = 1.0
+
+# How much of the caller's first audio Flux hears as silence. Opening a
+# microphone can click, and Flux can hear the click as a word ("two"). It's
+# over in a few tens of milliseconds, and a caller can't start talking in less
+# than 200, so nothing they say is lost.
+MIC_OPEN_GATE_MS = 200
 ```
 
 Rename `example.env` to `.env` and add your keys, as well as your KB_ID.
@@ -149,6 +158,7 @@ The heart of your botfile is the **Pipeline**. This is where you define the seri
     pipeline = Pipeline(
         [
             transport.input(),
+            mic_gate,
             stt,
             user_aggregator,
             llm,
@@ -230,12 +240,54 @@ GREETINGS = {
 }
 
 
-def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
+async def on_screen_view(record: dict) -> dict:
+    """The claim a staff member has open, as the prompt gets it.
+
+    The masked record, with dates and dollar amounts ready to speak, the same
+    view the policyholder lookup returns. It's built from the record the
+    server read, never from anything the browser sent.
+    """
+    return {
+        "claim_id": record["claim_id"],
+        "record": await expand_currency(claims.spoken_view(record), "*"),
+    }
+
+
+def on_screen_section(on_screen: dict) -> str:
+    """The ON SCREEN block: the claim a staff member has open, and how to use it.
+
+    It lives in the system prompt, not the conversation, so it always matches
+    the screen: opening another claim replaces it, and closing one removes it.
+    """
+    return (
+        "ON SCREEN:\n"
+        f"- The staff member has claim {on_screen['claim_id']} open and can see "
+        "it. Its record is below.\n"
+        "- 'This claim', 'this one', 'what I'm looking at', or 'on screen' means "
+        "this record.\n"
+        "- Answer questions about it from this record, without calling "
+        "search_claims. Call search_claims only when they ask about other "
+        "claims, or about something this record doesn't have.\n"
+        "- They're reading along, so show them the answer instead of telling "
+        "them where it is: before you answer, call show_on_screen with the "
+        "sections the answer is in, and their screen highlights them. Never "
+        "name a card or say where something is on the screen.\n"
+        "- Answer only what was asked; they can read the rest.\n"
+        f"RECORD: {on_screen['record']}"
+    )
+
+
+def build_system_instruction(
+    persona: str, voice: Voice, today: str, on_screen: dict | None = None
+) -> str:
     """The system prompt, written for the ear: the agent is heard, not read.
 
     It's rebuilt whenever the voice changes, since it names the voice and the
-    language to reply in. HOW TO SPEAK, PRIVACY, and VOICE AND LANGUAGE are
-    the same for both personas.
+    language to reply in, and whenever a staff member opens or closes a claim.
+    HOW TO SPEAK, PRIVACY, and VOICE AND LANGUAGE are the same for both
+    personas. on_screen, from on_screen_view, is the claim a staff member has
+    open; policyholders see only their own verified claim, so it's ignored
+    for them.
     """
     if persona == EMPLOYEE:
         role = (
@@ -274,6 +326,9 @@ def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
             "to go through the rest instead of listing them all.\n"
             "- You may answer general auto insurance questions briefly, in general "
             "terms, without searching.\n"
+            "- Staff can open one claim from the results. If they ask about 'this "
+            "claim' or what's on screen and there's no ON SCREEN section below, "
+            "say no claim is open and ask which one they mean.\n"
             "- Never invent a claim, amount, date, or status.\n"
         )
     else:
@@ -348,22 +403,23 @@ def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
         "the language you reply in."
     )
 
-    return "\n".join(
-        [
-            role,
-            voices.voice_intro(voice),
-            f"Today is {today}.",
-            "",
-            how_to_speak,
-            work,
-            privacy,
-            rules,
-            voice_rules,
-        ]
-    )
+    blocks = [
+        role,
+        voices.voice_intro(voice),
+        f"Today is {today}.",
+        "",
+        how_to_speak,
+        work,
+        privacy,
+        rules,
+        voice_rules,
+    ]
+    if persona == EMPLOYEE and on_screen:
+        blocks += ["", on_screen_section(on_screen)]
+    return "\n".join(blocks)
 ```
 
-The prompt is built from blocks. `HOW TO SPEAK`, `PRIVACY`, and `VOICE AND LANGUAGE` are the same for both personas, because both hear the agent the same way and both get the same masked claim data. The role line, the block that describes the claim tool, and the rules at the end differ. A policyholder gets `CLAIM LOOKUPS`, `VERIFICATION`, and the full `ESCALATION` list. An employee gets `SEARCHING CLAIMS`, which tells the model to rewrite a follow-up like "and the adjuster?" into a standalone question before it searches, and a one-line `ESCALATION`: the desk looks up claims but can't change them. It's written for a listener who hears every word, and the [Prompting for the ear](#prompting-for-the-ear) section below explains each rule in it.
+The prompt is built from blocks. `HOW TO SPEAK`, `PRIVACY`, and `VOICE AND LANGUAGE` are the same for both personas, because both hear the agent the same way and both get the same masked claim data. The role line, the block that describes the claim tool, and the rules at the end differ. A policyholder gets `CLAIM LOOKUPS`, `VERIFICATION`, and the full `ESCALATION` list. An employee gets `SEARCHING CLAIMS`, which tells the model to rewrite a follow-up like "and the adjuster?" into a standalone question before it searches, and a one-line `ESCALATION`: the desk looks up claims but can't change them. When a staff member has a claim open, an `ON SCREEN` block at the end holds its masked record, so "what am I looking at?" is answered without a search; [What staff have open](#what-staff-have-open) covers how it gets there. It's written for a listener who hears every word, and the [Prompting for the ear](#prompting-for-the-ear) section below explains each rule in it.
 
 The STT model, the TTS voice, and one line of the prompt all come from `current_voice`, because the caller can change language mid-call by asking for a different voice. [Switching languages by voice](#switching-languages-by-voice) covers how that works.
 
@@ -376,6 +432,29 @@ Our main LLM, the one in the pipeline, is the one that talks to the caller. It r
 
     # The claim on the caller's screen, so it's sent once per verified claim
     shown_claim_id: str | None = None
+
+    # Staff only: the claim open on their screen, from on_screen_view, for
+    # the prompt's ON SCREEN section. The browser only ever sends its ID.
+    on_screen: dict | None = None
+    # Bumped each time a claim is opened or closed, so a slow load can't put
+    # back a claim the staff member has already closed or moved on from
+    screen_changes = 0
+
+    async def refresh_prompt():
+        """Rebuild the system prompt for the current voice and the claim on screen.
+
+        It replaces the old prompt rather than adding to the conversation, so
+        the model never answers from a claim that's no longer open.
+        """
+        await llm.queue_frame(
+            LLMUpdateSettingsFrame(
+                delta=AWSBedrockLLMService.Settings(
+                    system_instruction=build_system_instruction(
+                        persona, current_voice, today, on_screen
+                    )
+                )
+            )
+        )
 
     async def send_to_client(data: dict):
         """Send a message to the claims UI. task is created below, before any call."""
@@ -650,13 +729,8 @@ Both claim tools can take long enough that the caller deserves a hold line, so t
         language_changed = voice.lang != old_voice.lang
         logger.info(f"Switching voice to {voice.model} (language changed: {language_changed})")
 
-        await llm.queue_frame(
-            LLMUpdateSettingsFrame(
-                delta=AWSBedrockLLMService.Settings(
-                    system_instruction=build_system_instruction(persona, voice, today)
-                )
-            )
-        )
+        # The new voice and language, keeping any claim a staff member has open
+        await refresh_prompt()
         # A voice change reconnects Flux TTS, which would cut off speech still
         # streaming in the old voice, so let that finish first
         waited = 0.0
@@ -744,19 +818,41 @@ Next, let's create the context and its aggregators. The `LLMContext` stores the 
         ],
         tools=tools_for(persona),
     )
-    # Flux can turn the click and hiss of a microphone opening into a short
-    # word ("two"), which would cut off the greeting and get an answer. The
-    # caller has nothing to say before the greeting ends, so ignore their
-    # audio until then.
+    # The caller can interrupt the greeting like any other reply. The click of
+    # their microphone opening, which Flux can hear as a word, never reaches
+    # Flux: MicGate, at the front of the pipeline, sends silence in its place.
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
-        user_params=LLMUserAggregatorParams(
-            user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
-        ),
+        user_params=LLMUserAggregatorParams(),
     )
 ```
 
-The `MuteUntilFirstBotCompleteUserMuteStrategy` drops what the caller says until the greeting finishes. When the browser opens the microphone, the first audio can hold a click that Flux hears as a short word. Without the mute, that phantom word interrupts the greeting and the agent answers it.
+The caller can interrupt the greeting, like any other reply. That needs one guard. When the browser opens the microphone, the first audio can hold a click that Flux hears as a short word, often "two". The RTVI observer sends Flux's transcript to the browser as soon as Flux produces it, so the caller sees a "two" they never said as their first message, and the agent stops its greeting to answer it.
+
+`MicGate` sits at the front of the pipeline, between the transport and the STT, and replaces the first `MIC_OPEN_GATE_MS` (200 ms) of the caller's audio with silence of the same length. The click is over in a few tens of milliseconds, and nobody starts talking that fast, so nothing the caller says is lost. It counts audio rather than clock time, so the 200 ms start with the first audio the caller sends, however long the call took to connect:
+
+```python
+class MicGate(FrameProcessor):
+    """Sends speech-to-text silence for the first moment the microphone is open."""
+
+    def __init__(self, gate_ms: int = MIC_OPEN_GATE_MS):
+        super().__init__()
+        self._gate_ms = gate_ms
+        # Counted in samples, which are whole numbers: summing frame lengths
+        # in seconds drifts, and ten 20 ms frames would fall short of 200 ms
+        self._heard_samples = 0
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, InputAudioRawFrame):
+            gate_samples = frame.sample_rate * self._gate_ms // 1000
+            if self._heard_samples < gate_samples:
+                self._heard_samples += frame.num_frames
+                frame.audio = bytes(len(frame.audio))
+        await self.push_frame(frame, direction)
+```
+
+Create it in `run_bot` with `mic_gate = MicGate()`, and put it first in the pipeline below.
 
 ### Prompting for the ear
 
@@ -846,7 +942,7 @@ The wording comes from measurements on another Deepgram project, a voice device 
 
 | Update | What the service does |
 |---|---|
-| `LLMUpdateSettingsFrame` with a new `system_instruction` | Replaces the system prompt, so the old language line is gone, not just contradicted |
+| `LLMUpdateSettingsFrame` with a new `system_instruction` | Replaces the system prompt, so the old language line is gone, not just contradicted. `refresh_prompt` builds it from the current voice and keeps a staff member's open claim in it |
 | `TTSUpdateSettingsFrame` with the new `voice` | Flux TTS reconnects with the new voice model |
 | One `STTUpdateSettingsFrame` per step from `listen_steps()`, only when the language changes | A change of model (English to or from `flux-general-multi`) reconnects Flux STT once the caller stops speaking. A change of hints alone (Spanish to French) is sent as a `Configure` message on the open connection |
 
@@ -1092,16 +1188,44 @@ search_claims_function = FunctionSchema(
     required=["question"],
 )
 
+# Staff answer from the open claim without a lookup, so nothing would point
+# their screen at the answer. This does, as the policyholder lookup's
+# sections do.
+show_on_screen_function = FunctionSchema(
+    name="show_on_screen",
+    description=(
+        "Highlight parts of the claim the staff member has open, so their screen "
+        "shows the answer while you say it. Call it before answering any "
+        "question about the open claim."
+    ),
+    properties={
+        "sections": {
+            "type": "array",
+            "items": {"type": "string", "enum": CLAIM_SECTIONS},
+            "description": (
+                "The parts of the claim the answer is in, e.g. ['estimate'] for "
+                "'how much is the repair?' or ['adjuster', 'notes'] for 'who's "
+                "handling it?'."
+            ),
+        },
+    },
+    required=["sections"],
+)
+
 VOICE_TOOLS = [set_voice_function, list_voices_function, reset_voice_function]
 
 
 def tools_for(persona: str) -> ToolsSchema:
-    """The pipeline LLM's tools: a claim tool for the persona, plus the voice tools."""
-    claim_tool = search_claims_function if persona == EMPLOYEE else search_function
-    return ToolsSchema(standard_tools=[claim_tool, *VOICE_TOOLS])
+    """The pipeline LLM's tools: the persona's claim tools, plus the voice tools."""
+    claim_tools = (
+        [search_claims_function, show_on_screen_function]
+        if persona == EMPLOYEE
+        else [search_function]
+    )
+    return ToolsSchema(standard_tools=[*claim_tools, *VOICE_TOOLS])
 ```
 
-The tool descriptions are prompts as well. A description is the only thing an LLM reads when it decides whether to call a tool, so each one says *when* to use the tool, not only what it does. "Search the knowledge base" tells the model what a tool is. The `search_function` description tells the model when to reach for it, and the `search_claims_function` description tells it to pass a standalone question. The `@tool` docstring plays the same role for the research agent. `tools_for` gives each persona its own claim tool and the same voice tools, so a policyholder's LLM never sees a tool that searches every claim.
+The tool descriptions are prompts as well. A description is the only thing an LLM reads when it decides whether to call a tool, so each one says *when* to use the tool, not only what it does. "Search the knowledge base" tells the model what a tool is. The `search_function` description tells the model when to reach for it, and the `search_claims_function` description tells it to pass a standalone question. The `@tool` docstring plays the same role for the research agent. `tools_for` gives each persona its own claim tools and the same voice tools, so a policyholder's LLM never sees a tool that searches every claim. Staff also get `show_on_screen`, which highlights parts of the claim they have open (see [What staff have open](#what-staff-have-open)).
 
 Both personas read claims through a `BedrockKnowledgeBaseClient`. Define it, with the claim ID helpers it needs, right above the `ClaimsResearchAgent` class:
 
@@ -1478,7 +1602,7 @@ Pipecat already sends the browser the conversation itself: transcripts, the agen
 | `voice` | Both | When the caller connects, and after each voice switch | The voice, its language, and the Flux listen model |
 | `verification` | Policyholder | Each time the agent checks a claim number and last name | `checking`, `verified`, `failed`, `locked`, or `error` when the lookup itself fails, and never why a check failed |
 | `claim-focus` | Policyholder | Before each answer about a verified claim | The parts of the claim the answer covers, such as `damage` and `photos` |
-| `claim-loaded` | Policyholder | The first time a claim is verified | The claim, masked for the screen |
+| `claim-loaded` | Both | The first time a policyholder's claim is verified, and each time staff open a claim card | The claim, masked for the screen |
 | `search-results` | Employee | After each research answer | The question, and the claims the answer names, masked for the screen |
 | `function-timing` | Both | Just before each function call's result | The call's `tool_call_id` and how long it took, in milliseconds, for its row in the chat log |
 
@@ -1489,6 +1613,121 @@ The parts of the claim come from the LLM itself. `search_knowledge_base` takes a
 The screen reads the same record the agent does. Verification loads the record into the call's `records` cache, and `claim-loaded` goes out from it right after the answer, so the screen costs no extra knowledge base search or S3 read. `search-results` works the same way: the research agent loads each record it reads into the cache, and the handler builds the screen's claim list from it.
 
 On the employee's screen, the desk shows the question and one card per claim in the latest `search-results`: claim ID, policyholder, status, vehicle, and adjuster. Selecting a card opens that claim in the same review screen policyholders see, with a **Results** button to go back. The open claim stays open when a new search comes in, so staff can keep reading while they ask the next question.
+
+### What staff have open
+
+Opening a card is something the staff member does, not the agent, so the agent has to be told. Otherwise "what am I looking at?" has no answer, and "who's the adjuster on this one?" sends the research agent off to search for a claim that's already on screen. Here the browser talks to the agent, instead of the other way round. `EmployeeSession` in [client/src/components/employee/EmployeeDesk.tsx](client/src/components/employee/EmployeeDesk.tsx) sends an RTVI client message each time a card opens or the staff member goes back to the results:
+
+```tsx
+if (!client?.connected) return;
+if (claim) client.sendClientMessage("claim-opened", { claim_id: claim.claim_id });
+else client.sendClientMessage("claim-closed");
+```
+
+Only the claim ID goes. The agent never takes claim data from the browser, so a page can't put words in the prompt. In `run_bot`, the handlers look the record up in the call's `records` cache, where the search that showed the card put it, or load it from the knowledge base. A claim ID that doesn't match a record is logged and ignored. Add them below `search_claims`:
+
+```python
+    async def claim_opened(data: dict):
+        """A staff member opened a claim card: put its record in the prompt.
+
+        Only the claim ID is taken from the browser. The record comes from
+        this call's cache, where the search that showed the card put it, or
+        from the knowledge base, so the browser can't put words in the prompt.
+        """
+        nonlocal on_screen, screen_changes
+        claim_id = normalize_claim_id(
+            str(data.get("claim_id", "")) if isinstance(data, dict) else ""
+        )
+        if not claim_id:
+            logger.warning(f"Ignoring claim-opened without a valid claim ID: {data}")
+            return
+        screen_changes += 1
+        change = screen_changes
+        try:
+            record = await load_claim(claim_id)
+        except Exception as e:
+            logger.error(f"Error loading on-screen claim {claim_id}: {e}")
+            return
+        if record is None:
+            logger.warning(f"Ignoring claim-opened for unknown claim {claim_id}")
+            return
+        view = await on_screen_view(record)
+        if change != screen_changes:
+            return
+        on_screen = view
+        logger.info(f"Staff opened claim {claim_id}")
+        await refresh_prompt()
+        # The session's claim, which the review screen's focus and highlights
+        # use. The staff desk routes on its own open claim, not on this.
+        await send_to_client({"type": "claim-loaded", "claim": claims.to_client_view(record)})
+
+    async def claim_closed(data: dict):
+        """A staff member went back to the results: take the claim out of the prompt."""
+        nonlocal on_screen, screen_changes
+        screen_changes += 1
+        if on_screen is None:
+            return
+        logger.info(f"Staff closed claim {on_screen['claim_id']}")
+        on_screen = None
+        await refresh_prompt()
+
+    async def show_on_screen(params: FunctionCallParams):
+        """Highlight the cards the answer is in, on the claim a staff member has open."""
+        if on_screen is None:
+            await params.result_callback(
+                {"response": "No claim is open. Say so, and ask which claim they mean."}
+            )
+            return
+        sections = [
+            s for s in params.arguments.get("sections") or [] if s in CLAIM_SECTIONS
+        ]
+        await send_to_client(
+            {
+                "type": "claim-focus",
+                "claim_id": on_screen["claim_id"],
+                "sections": sections or ["overview"],
+            }
+        )
+        await params.result_callback(
+            {
+                "response": "Highlighted on their screen. Answer from the record "
+                "now, briefly, without saying where it is on the screen."
+            }
+        )
+```
+
+Pipecat's RTVI processor raises `on_client_message` for every client message, with its `type` and `data`. One handler dispatches them by type, so each feature only adds an entry. Add it right after the pipeline worker, since it hangs off `task.rtvi`:
+
+```python
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+
+    # Staff tell the agent which claim they have open. Policyholders only see
+    # the claim they were verified for, so their calls don't accept these.
+    if persona == EMPLOYEE:
+        client_handlers["claim-opened"] = claim_opened
+        client_handlers["claim-closed"] = claim_closed
+```
+
+The open claim lives in the system prompt, not in the conversation. `refresh_prompt` rebuilds the prompt with an `ON SCREEN` block holding the claim's masked record, the same `spoken_view` the policyholder lookup returns, with amounts ready to speak. Opening another claim replaces the block, and going back removes it, so the model never answers from a claim that's no longer open. With no claim open, the staff prompt tells the model to say so if asked about "this claim". A voice switch goes through `refresh_prompt` too, so it keeps the open claim. The model doesn't speak when a card opens: it answers the next question with the claim in mind.
+
+`claim-loaded` also goes back to the browser, which sets the session's claim for the review screen's focus and highlights. The staff desk doesn't route on it: which claim is open stays the desk's own state, so a late `claim-loaded` can't reopen a claim. While a claim is open, the **Try asking** prompts change to questions about it, such as "Who's the adjuster?".
+
+Staff answer from the open claim without a lookup, so no lookup's `sections` would point their screen at the answer. Left alone, the model fills the gap by saying where to look ("it's in the Repair estimate card"), which is reading the screen aloud to someone who's looking at it. `show_on_screen` takes the same `sections` as the policyholder lookup and sends the same `claim-focus` message, and the `ON SCREEN` rules tell the model to call it before answering and never to name a card. Register it with the staff tools:
+
+```python
+        llm.register_function("show_on_screen", reports_timing(show_on_screen))
+```
+
+With no claim open, it tells the model to say so instead of highlighting anything. It costs one more LLM round trip per answer, which is short next to a `search_claims` research run.
 
 ### The screen follows the agent's privacy rules
 
@@ -1513,7 +1752,7 @@ npm run dev
 Open http://localhost:3000 and select **Start conversation**. The UI sends its WebRTC offer to `/api/offer`, and [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) passes it to the agent on port 7860, with the persona renamed to the field the runner reads. [client/next.config.ts](client/next.config.ts) passes the agent's other endpoints through. Set `BOT_URL` to point the UI at an agent somewhere else. Pipecat's prebuilt test client still works at http://localhost:7860/client.
 
 Say a claim number, such as "C L M, two zero two six, eight four seven two nine one," and the last name "Mitchell" when the agent asks for it. The **Try asking** prompts also send their question as text, which helps in a noisy room.
-For the staff persona, select **Tri-County staff** before you start, and ask a question across the claims, such as "Which claims are waiting on a title?" or "Which claims is Luis Ortega adjusting?"
+For the staff persona, select **Tri-County staff** before you start, and ask a question across the claims, such as "Which claims are waiting on a title?" or "Which claims is Luis Ortega adjusting?" Then open one of the claims and ask "What am I looking at?" or "Who's the adjuster on this one?" The agent answers from the open claim without searching again.
 
 To work on the screens without a call, open http://localhost:3000/?fixture=CLM-2026-847291&screen=review. The `screen` can be `landing`, `listening`, `found`, or `review`, and any sample claim ID works. For the staff desk, open http://localhost:3000/?persona=employee&fixture=search, with `screen=listening` for the desk before its first search or `screen=landing` for the staff landing screen. The fixtures in `client/src/fixtures/claims.json` are the same masked view the agent sends; regenerate them after changing a claim record or `to_client_view`:
 

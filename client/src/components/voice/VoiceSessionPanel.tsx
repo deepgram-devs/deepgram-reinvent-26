@@ -117,16 +117,23 @@ const SHORT_NAME: Record<string, string> = {
   set_voice: "voice.set",
   list_voices: "voice.list",
   reset_voice: "voice.reset",
+  show_on_screen: "screen.show",
 };
 
 // The argument that says what a call is about
-const MAIN_ARGUMENT = ["claim_id", "question", "voice", "language", "query"];
+const MAIN_ARGUMENT = ["claim_id", "question", "voice", "language", "query", "sections"];
+
+// A string argument as is, and a list of strings (like sections) joined
+function argumentText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.every((v) => typeof v === "string")) return value.join(", ");
+  return "";
+}
 
 function callSummary(name: string, args: Record<string, unknown> = {}): string {
   const key =
-    MAIN_ARGUMENT.find((k) => typeof args[k] === "string" && args[k]) ??
-    Object.keys(args).find((k) => typeof args[k] === "string" && args[k]);
-  return `${SHORT_NAME[name] ?? name}(${key ? (args[key] as string) : ""})`;
+    MAIN_ARGUMENT.find((k) => argumentText(args[k])) ?? Object.keys(args).find((k) => argumentText(args[k]));
+  return `${SHORT_NAME[name] ?? name}(${key ? argumentText(args[key]) : ""})`;
 }
 
 function duration(ms: number): string {
@@ -321,7 +328,12 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
   );
 }
 
-export function TryAsking() {
+/**
+ * Tap-to-ask prompts for what's on screen. `open` is the claim the review
+ * screen shows. Staff prompts follow it, not the session's claim, which
+ * stays set after a staff member goes back to the results.
+ */
+export function TryAsking({ claim: open }: { claim?: ClaimView }) {
   const { claim } = useSession();
   const { sendText } = useConversationTurns();
   const persona = usePersona();
@@ -334,7 +346,14 @@ export function TryAsking() {
           "Read the location notes",
           claim.other_party ? "Who was driving the other car?" : "Where’s the damage?",
         ]
-      : copy.prompts;
+      : persona === "employee" && open
+        ? [
+            "What’s the status of this claim?",
+            "Who’s the adjuster?",
+            open.valuation ? "What’s the total loss valuation?" : "What’s the repair estimate?",
+            "What’s the latest note?",
+          ]
+        : copy.prompts;
   return (
     // text-ink: on the listening screen this white card sits in a text-white aside
     <section className="card p-6 text-ink">
