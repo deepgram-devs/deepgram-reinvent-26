@@ -13,6 +13,7 @@
     "@daily-co/daily-js": "0.94.0",
     "@pipecat-ai/client-js": "1.15.0",
     "@pipecat-ai/client-react": "1.10.0",
+    "@pipecat-ai/daily-transport": "1.7.1",
     "@pipecat-ai/small-webrtc-transport": "1.11.1",
     "@pipecat-ai/voice-ui-kit": "0.14.2",
     "next": "16.4.3",

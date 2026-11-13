@@ -18,14 +18,35 @@ import { isPersona, PersonaProvider, usePersona, type Persona } from "@/lib/pers
 import { SessionProvider, useSession } from "@/lib/session";
 import { SettingsProvider } from "@/lib/settings";
 
-// The browser sends its WebRTC offer here; next.config.ts passes it on to
-// the bot, and requestData reaches it as runner_args.body. One object per
-// persona, kept outside the component: PipecatAppBase rebuilds its client
+// Locally, the browser talks to the bot directly over SmallWebRTC. A deployed
+// build sets NEXT_PUBLIC_PIPECAT_TRANSPORT=daily, and the call goes through a
+// Daily room instead, so neither side has to accept inbound connections.
+// Next inlines the value at build time.
+const TRANSPORT = process.env.NEXT_PUBLIC_PIPECAT_TRANSPORT === "daily" ? "daily" : "smallwebrtc";
+
+// SmallWebRTC: the browser sends its WebRTC offer here; next.config.ts passes
+// it on to the bot, and requestData reaches it as runner_args.body. One object
+// per persona, kept outside the component: PipecatAppBase rebuilds its client
 // whenever these objects change, so switching persona between calls is fine.
-const CONNECT_PARAMS: Record<Persona, { webrtcRequestParams: { endpoint: string; requestData: { persona: Persona } } }> = {
+const WEBRTC_PARAMS: Record<Persona, { webrtcRequestParams: { endpoint: string; requestData: { persona: Persona } } }> = {
   policyholder: { webrtcRequestParams: { endpoint: "/api/offer", requestData: { persona: "policyholder" } } },
   employee: { webrtcRequestParams: { endpoint: "/api/offer", requestData: { persona: "employee" } } },
 };
+
+// Daily: the runner's /start creates a room, starts the bot in it, and returns
+// the room and token the browser joins. body reaches the bot as runner_args.body.
+function dailyParams(persona: Persona) {
+  return {
+    endpoint: "/api/start",
+    requestData: { transport: "daily", createDailyRoom: true, body: { persona } },
+  };
+}
+const DAILY_PARAMS: Record<Persona, ReturnType<typeof dailyParams>> = {
+  policyholder: dailyParams("policyholder"),
+  employee: dailyParams("employee"),
+};
+
+const CONNECT_PARAMS = TRANSPORT === "daily" ? DAILY_PARAMS : WEBRTC_PARAMS;
 
 type Phase = "idle" | "connecting" | "live";
 
@@ -229,7 +250,7 @@ function App() {
 
   return (
     <PersonaProvider persona={persona}>
-      <PipecatAppBase transportType="smallwebrtc" connectParams={CONNECT_PARAMS[persona]} noThemeProvider>
+      <PipecatAppBase transportType={TRANSPORT} connectParams={CONNECT_PARAMS[persona]} noThemeProvider>
         {/* One provider for every screen, so settings stay open as screens change */}
         {(props) => <SettingsProvider>{screens(props)}</SettingsProvider>}
       </PipecatAppBase>
