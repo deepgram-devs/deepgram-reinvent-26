@@ -5,6 +5,7 @@ import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyMark } from "@/components/chrome/TriCountyMark";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
+import { useLocale, useT, type Messages } from "@/i18n";
 import {
   deriveProgress,
   financial,
@@ -18,20 +19,22 @@ import { usePersonaCopy } from "@/lib/persona";
 import { useSession, type Verification } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 
-const STATUS: Record<Verification, string> = {
-  idle: "Listening",
-  checking: "Verifying",
-  verified: "Listening",
-  failed: "Listening",
-  locked: "Listening",
-  error: "Listening",
-};
+function statusText(verification: Verification, t: Messages): string {
+  return verification === "checking" ? t.call.verifying : t.call.listening;
+}
 
-const NOTICE: Partial<Record<Verification, string>> = {
-  failed: "That claim number and last name don't match our records. Try again.",
-  locked: "Too many tries for that claim. Your Tri-County agent can help.",
-  error: "The lookup didn't go through. Ask again in a moment.",
-};
+function noticeText(verification: Verification, t: Messages): string | null {
+  switch (verification) {
+    case "failed":
+      return t.call.failed;
+    case "locked":
+      return t.call.locked;
+    case "error":
+      return t.call.error;
+    default:
+      return null;
+  }
+}
 
 export function ListeningOrb({ muted = false }: { muted?: boolean }) {
   const level = useAudioLevel("local");
@@ -68,14 +71,16 @@ export function LiveCaption() {
 }
 
 export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: () => void }) {
-  const { steps, current } = deriveProgress(claim);
+  const t = useT();
+  const locale = useLocale();
+  const { steps, current } = deriveProgress(claim, t, locale);
   const step = steps[current - 1];
   const done = steps.every((s) => s.state === "done");
   return (
     <section className="animate-rise">
       <p className="label flex items-center gap-2.5 text-white">
         <span className="size-2.5 rounded-full bg-lime" />
-        Found 1 claim
+        {t.call.foundOne}
       </p>
       <div className="mt-4 rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
@@ -84,7 +89,7 @@ export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: ()
         </div>
         <h2 className="mt-4 text-3xl font-semibold tracking-tight">{vehicleName(claim)}</h2>
         <p className="mt-1 text-lg text-white/75">
-          {claim.claim_type} · {formatDate(claim.incident.date)} · {formatTime(claim.incident.time)}
+          {claim.claim_type} · {formatDate(claim.incident.date, locale)} · {formatTime(claim.incident.time)}
         </p>
         <div className="mt-5 flex items-center justify-between font-semibold">
           <span>{step.title}</span>
@@ -100,11 +105,11 @@ export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: ()
         </div>
         <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-white/20 pt-4">
           <div>
-            <dt className="label text-white/75">Adjuster</dt>
+            <dt className="label text-white/75">{t.claim.adjuster}</dt>
             <dd className="mt-1 text-lg">{claim.adjuster.name}</dd>
           </div>
           <div>
-            <dt className="label text-white/75">Deductible</dt>
+            <dt className="label text-white/75">{t.claim.deductible}</dt>
             <dd className="mt-1 text-lg font-semibold">{financial(claim, "Deductible") || "—"}</dd>
           </div>
         </dl>
@@ -114,7 +119,7 @@ export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: ()
         onClick={onOpen}
         className="label mt-5 flex h-16 w-full items-center justify-center gap-3 rounded-full border-2 border-white/25 bg-magenta text-[0.95rem] text-ink shadow-[0_0_40px_-6px] shadow-magenta/70 transition hover:brightness-110"
       >
-        View claim details →
+        {t.call.viewDetails} <span aria-hidden="true">→</span>
       </button>
     </section>
   );
@@ -130,7 +135,8 @@ export function Listening({
 }) {
   const { claim, verification } = useSession();
   const { paused } = useSettings();
-  const notice = NOTICE[verification];
+  const t = useT();
+  const notice = noticeText(verification, t);
   return (
     <main className="flex min-h-dvh bg-ink text-white">
       <div className="relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 pb-6 sm:px-8">
@@ -148,7 +154,7 @@ export function Listening({
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center pt-8 text-center">
           <ListeningOrb />
           <p className="label mt-6 text-white/90" aria-live="polite">
-            {paused ? "Paused" : STATUS[verification]}
+            {paused ? t.call.paused : statusText(verification, t)}
             {!paused && verification === "checking" && <span className="animate-caret">…</span>}
           </p>
           <div className="mt-5 min-h-28" aria-live="polite">

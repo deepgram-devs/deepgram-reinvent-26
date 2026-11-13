@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/i18n";
 import { statusTone, type Tone } from "@/lib/claim";
 
 const TONE: Record<Tone, string> = {
@@ -28,6 +31,7 @@ export function LockIcon({ className = "size-3.5" }: { className?: string }) {
 }
 
 export function ViewOnlyPill({ tone = "light" }: { tone?: "light" | "dark" | "glass" }) {
+  const t = useT();
   const styles = {
     light: "border-ink text-ink",
     dark: "border-white/50 text-white",
@@ -36,7 +40,7 @@ export function ViewOnlyPill({ tone = "light" }: { tone?: "light" | "dark" | "gl
   return (
     <span className={`label inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 ${styles}`}>
       <LockIcon />
-      View only
+      {t.chrome.viewOnly}
     </span>
   );
 }

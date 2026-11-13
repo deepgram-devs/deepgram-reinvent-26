@@ -2,6 +2,8 @@
 // in the Python app. The agent has already masked it, so everything here is
 // safe to show.
 
+import type { Locale, Messages } from "@/i18n";
+
 export type Pair = { label: string; value: string };
 
 export type ClaimView = {
@@ -94,52 +96,56 @@ export const SECTION_CARD: Record<Section, string> = {
   notes: "claim-adjuster",
 };
 
-export function sectionLabel(section: Section, claim: ClaimView | null): string {
+export function sectionLabel(section: Section, claim: ClaimView | null, t: Messages): string {
   switch (section) {
     case "overview":
-      return "Claim opened";
+      return t.claim.claimOpened;
     case "progress":
-      return "Claim progress";
+      return t.claim.progress;
     case "coverage":
-      return "Coverage";
+      return t.claim.coverage;
     case "policyholder":
-      return "Policyholder";
+      return t.claim.policyholder;
     case "vehicle":
-      return "Insured vehicle";
+      return t.claim.insuredVehicle;
     case "incident":
-      return "Incident";
+      return t.claim.incident;
     case "location":
-      return "When and where";
+      return t.claim.whenWhere;
     case "other_party":
-      return "Other driver";
+      return t.claim.otherDriver;
     case "damage":
-      return "Vehicle condition";
-    case "photos": {
-      const count = claim?.damage.photo_count ?? 0;
-      return `${count} photo${count === 1 ? "" : "s"}`;
-    }
+      return t.claim.vehicleCondition;
+    case "photos":
+      return t.claim.photos(claim?.damage.photo_count ?? 0);
     case "estimate":
-      return claim?.valuation ? "Total loss valuation" : "Repair estimate";
+      return claim?.valuation ? t.claim.totalLoss : t.claim.repairEstimate;
     case "payments":
-      return "Payments";
+      return t.claim.payments;
     case "adjuster":
-      return "Adjuster";
+      return t.claim.adjuster;
     case "notes":
-      return "Adjuster notes";
+      return t.claim.adjusterNotes;
   }
 }
 
 // ---------- formatting ----------
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-11-10" as "Nov 10, 2026"; anything else as written. */
-export function formatDate(iso: string, withYear = true): string {
+/**
+ * "2026-11-10" as "Nov 10, 2026" in English, "10 nov 2026" in Spanish, and
+ * so on; anything else as written. Records hold calendar dates, not moments,
+ * so they're read and written in UTC and never shift a day with the time zone.
+ */
+export function formatDate(iso: string, locale: Locale, withYear = true): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!match) return iso;
-  const [, year, month, day] = match;
-  const text = `${MONTHS[Number(month) - 1]} ${Number(day)}`;
-  return withYear ? `${text}, ${year}` : text;
+  const [, year, month, day] = match.map(Number);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: withYear ? "numeric" : undefined,
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 /** "5:42 PM" as "5:42 pm"; ranges and words keep their wording. */
@@ -176,10 +182,10 @@ export function financial(claim: ClaimView, label: string): string {
 }
 
 /** "$40 per day, up to 30 days" as "$40 / day". */
-export function rentalPerDay(claim: ClaimView): string {
+export function rentalPerDay(claim: ClaimView, t: Messages): string {
   const value = coverageValue(claim, "Rental reimbursement");
   const match = /(\$[\d,]+) per day/.exec(value);
-  return match ? `${match[1]} / day` : value || "Not carried";
+  return match ? t.review.perDay(match[1]) : value || t.review.notCarried;
 }
 
 export type Tone = "review" | "good" | "bad" | "done";
@@ -210,35 +216,37 @@ export type Step = { title: string; detail: string; state: StepState };
  * The claim's progress as the four steps on the review page. The records
  * carry a free-text status, so this maps each one onto the steps.
  */
-export function deriveProgress(claim: ClaimView): { steps: Step[]; current: number } {
+export function deriveProgress(claim: ClaimView, t: Messages, locale: Locale): { steps: Step[]; current: number } {
   const status = claim.status;
   const s = status.toLowerCase();
-  const review = claim.valuation ? "Total loss valuation" : "Damage estimate";
+  const p = t.progress;
+  const review = claim.valuation ? t.claim.totalLoss : p.damageEstimate;
+  // The adjuster's status is a record value, so it stays in English
   const nextReview = claim.adjuster.next_review
-    ? ` · next review ${formatDate(claim.adjuster.next_review, false)}`
+    ? ` · ${p.nextReview(formatDate(claim.adjuster.next_review, locale, false))}`
     : "";
 
   const steps: Step[] = [
-    { title: "Filed", detail: formatDate(claim.date_reported), state: "done" },
+    { title: p.filed, detail: formatDate(claim.date_reported, locale), state: "done" },
     {
-      title: "Adjuster assigned",
+      title: p.adjusterAssigned,
       detail: claim.adjuster.name,
       state: "done",
     },
     { title: review, detail: claim.adjuster.status + nextReview, state: "active" },
-    { title: "Settlement", detail: "Pending", state: "pending" },
+    { title: p.settlement, detail: p.pending, state: "pending" },
   ];
 
   if (s.startsWith("closed")) {
-    steps[2] = { ...steps[2], detail: "Complete", state: "done" };
-    steps[3] = { title: "Closed", detail: "Claim complete", state: "done" };
+    steps[2] = { ...steps[2], detail: p.complete, state: "done" };
+    steps[3] = { title: p.closed, detail: p.claimComplete, state: "done" };
   } else if (s.startsWith("denied")) {
-    steps[2] = { ...steps[2], detail: "Reviewed", state: "done" };
-    steps[3] = { title: "Denied", detail: claim.adjuster.status, state: "stopped" };
+    steps[2] = { ...steps[2], detail: p.reviewed, state: "done" };
+    steps[3] = { title: p.denied, detail: claim.adjuster.status, state: "stopped" };
   } else if (s.startsWith("approved") || s.startsWith("settlement")) {
-    steps[2] = { ...steps[2], detail: "Complete", state: "done" };
+    steps[2] = { ...steps[2], detail: p.complete, state: "done" };
     steps[3] = {
-      title: s.startsWith("approved") ? "Approved" : "Settlement offered",
+      title: s.startsWith("approved") ? p.approved : p.settlementOffered,
       detail: claim.adjuster.status + nextReview,
       state: "active",
     };

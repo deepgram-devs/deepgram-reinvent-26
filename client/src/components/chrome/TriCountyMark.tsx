@@ -1,3 +1,7 @@
+"use client";
+
+import { useT } from "@/i18n";
+
 /** Tri-County Insurance, a fictional brand: three interlocking rings. */
 export function TriCountyMark({ className = "size-8" }: { className?: string }) {
   return (
@@ -10,12 +14,13 @@ export function TriCountyMark({ className = "size-8" }: { className?: string }) 
 }
 
 export function TriCountyLogo({ subtitle = true }: { subtitle?: boolean }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2.5">
       <TriCountyMark />
       <div className="leading-none">
         <div className="text-[1.15rem] font-semibold tracking-tight">Tri-County</div>
-        {subtitle && <div className="label mt-1 text-[0.6rem] opacity-70">Insurance · Claims</div>}
+        {subtitle && <div className="label mt-1 text-[0.6rem] opacity-70">{t.chrome.tagline}</div>}
       </div>
     </div>
   );

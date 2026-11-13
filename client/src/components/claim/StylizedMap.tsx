@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/i18n";
 import { cityOf, roadsIn } from "@/lib/claim";
 
 /**
@@ -7,12 +10,13 @@ import { cityOf, roadsIn } from "@/lib/claim";
 export function StylizedMap({ address }: { address: string }) {
   const roads = roadsIn(address);
   const city = cityOf(address);
+  const t = useT();
   return (
     <svg
       viewBox="0 0 300 210"
       className="h-auto w-full rounded-2xl bg-[#f1eee9]"
       role="img"
-      aria-label={roads.length ? `Sketch of ${roads.join(" and ")}` : "Sketch of the location"}
+      aria-label={roads.length ? t.claim.mapOf(roads) : t.claim.mapOfLocation}
     >
       <defs>
         <pattern id="map-grid" width="30" height="30" patternUnits="userSpaceOnUse">

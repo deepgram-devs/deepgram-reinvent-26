@@ -1,10 +1,13 @@
+"use client";
+
 import Image from "next/image";
 
 import { MicIcon, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyMark } from "@/components/chrome/TriCountyMark";
-import { COPY, PERSONAS, type Persona } from "@/lib/persona";
+import { useT } from "@/i18n";
+import { PERSONAS, type Persona } from "@/lib/persona";
 
 /** Who's calling. The bot gets it with the call, so it's fixed once connecting. */
 function PersonaToggle({
@@ -16,8 +19,9 @@ function PersonaToggle({
   onChange: (persona: Persona) => void;
   disabled: boolean;
 }) {
+  const t = useT();
   return (
-    <div role="radiogroup" aria-label="Calling as" className="flex w-fit rounded-full border border-white/20 bg-black/35 p-1 backdrop-blur-md">
+    <div role="radiogroup" aria-label={t.landing.callingAs} className="flex w-fit rounded-full border border-white/20 bg-black/35 p-1 backdrop-blur-md">
       {PERSONAS.map((option) => {
         const on = option === persona;
         return (
@@ -32,7 +36,7 @@ function PersonaToggle({
               on ? "bg-white text-ink" : "text-white/80 hover:text-white"
             }`}
           >
-            {COPY[option].label}
+            {t.persona[option].label}
           </button>
         );
       })}
@@ -47,6 +51,7 @@ export function StartButton({
   onStart: () => void;
   connecting: boolean;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -59,7 +64,7 @@ export function StartButton({
       ) : (
         <MicIcon />
       )}
-      {connecting ? "Connecting…" : "Start conversation"}
+      {connecting ? t.landing.connecting : t.landing.start}
     </button>
   );
 }
@@ -81,14 +86,15 @@ export function Landing({
   persona: Persona;
   onPersonaChange: (persona: Persona) => void;
 }) {
-  const copy = COPY[persona];
+  const t = useT();
+  const copy = t.persona[persona];
   return (
     <main className="relative flex min-h-dvh flex-col bg-ink text-white">
       {/* Hero: on top on phones, the whole background on wide screens */}
       <div className="relative h-[46dvh] min-h-72 w-full lg:absolute lg:inset-0 lg:h-full">
         <Image
           src="/hero.jpg"
-          alt="A purple sedan on a coastal highway at sunset"
+          alt={t.landing.heroAlt}
           fill
           priority
           sizes="100vw"
@@ -116,7 +122,7 @@ export function Landing({
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-white/85">{copy.intro}</p>
 
-        <p className="label mt-8 text-white/80">Try saying</p>
+        <p className="label mt-8 text-white/80">{t.landing.trySaying}</p>
         <ul className="mt-3 space-y-3">
           {copy.trySaying.map((line) => (
             <li
@@ -141,7 +147,7 @@ export function Landing({
           )}
           <StartButton onStart={onStart} connecting={connecting} />
           <p className="mt-3 text-center text-white/70">
-            Talk naturally. We&rsquo;ll ask for microphone access.
+            {t.landing.micNote}
           </p>
           <div className="mt-6 border-t border-white/15 pt-6 lg:hidden">
             <PartnerFooter />

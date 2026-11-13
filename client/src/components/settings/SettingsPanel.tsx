@@ -1,9 +1,13 @@
 "use client";
 
+import { usePipecatClient, usePipecatClientTransportState } from "@pipecat-ai/client-react";
 import { create } from "qrcode";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
+import { blurb, nativeLanguageName, useT } from "@/i18n";
+import { usePreferences } from "@/lib/preferences";
+import { LANGUAGES, voicesFor, voiceTitle } from "@/lib/voices";
 
 // This app's source. The QR code below encodes the same address.
 export const REPO_URL = "https://github.com/deepgram-devs/deepgram-reinvent-26";
@@ -44,6 +48,7 @@ function CheckIcon({ className = "size-4" }: { className?: string }) {
 
 /** The repo address as a QR code, drawn as one SVG path, one square per dark module */
 function RepoQrCode({ className = "" }: { className?: string }) {
+  const t = useT();
   const { size, path } = useMemo(() => {
     const { modules } = create(REPO_URL, { errorCorrectionLevel: "M" });
     let d = "";
@@ -59,7 +64,7 @@ function RepoQrCode({ className = "" }: { className?: string }) {
       viewBox={`-2 -2 ${size + 4} ${size + 4}`}
       className={className}
       role="img"
-      aria-label={`QR code for ${REPO_LABEL}`}
+      aria-label={t.settings.qrLabel(REPO_LABEL)}
       shapeRendering="crispEdges"
     >
       <rect x="-2" y="-2" width={size + 4} height={size + 4} fill="#ffffff" />
@@ -70,6 +75,7 @@ function RepoQrCode({ className = "" }: { className?: string }) {
 
 function CopyRepoButton() {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(false), 2000);
@@ -81,11 +87,90 @@ function CopyRepoButton() {
       onClick={() => {
         navigator.clipboard?.writeText(REPO_URL).then(() => setCopied(true), () => {});
       }}
-      aria-label={copied ? "Copied the repo address" : "Copy the repo address"}
+      aria-label={copied ? t.settings.copied : t.settings.copy}
       className="grid size-11 shrink-0 place-items-center rounded-xl border border-line bg-card text-ink transition hover:bg-paper"
     >
       {copied ? <CheckIcon className="size-4 text-violet" /> : <CopyIcon />}
     </button>
+  );
+}
+
+const SELECT =
+  "mt-2 h-12 w-full rounded-xl border border-line bg-card px-3 text-[1.05rem] text-ink transition hover:border-ink/40 disabled:cursor-not-allowed disabled:opacity-60";
+
+/**
+ * The voice, and with it the language of the agent and of this UI. Picking a
+ * language picks its first suggested voice, so one choice is enough to switch.
+ * Between calls it sets the voice the next call starts in; during a call it
+ * also switches the agent's voice right away.
+ */
+function VoicePicker() {
+  const t = useT();
+  const { voice, setVoice } = usePreferences();
+  const client = usePipecatClient();
+  const state = usePipecatClientTransportState();
+  const languageId = useId();
+  const voiceId = useId();
+  const live = state === "ready";
+  // Connecting: the start voice has gone out with the request, and the bot
+  // can't take a switch yet, so a pick now would be lost
+  const connecting = !live && !["initialized", "disconnected", "error", "disconnecting"].includes(state);
+
+  const pick = (name: string) => {
+    setVoice(name);
+    if (!live) return;
+    try {
+      client?.sendClientMessage("set-voice", { voice: name });
+    } catch {
+      // The call ended as the voice was picked; it's still the next call's voice
+    }
+  };
+
+  return (
+    <section>
+      <h3 className="label text-ink/80">{t.settings.voice}</h3>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor={languageId} className="text-sm text-muted">
+            {t.settings.language}
+          </label>
+          <select
+            id={languageId}
+            value={voice.lang}
+            disabled={connecting}
+            onChange={(event) => pick(voicesFor(event.target.value)[0].name)}
+            className={SELECT}
+          >
+            {LANGUAGES.map((language) => (
+              <option key={language.code} value={language.code} lang={language.code}>
+                {nativeLanguageName(language.code, language.name)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={voiceId} className="text-sm text-muted">
+            {t.settings.voice}
+          </label>
+          <select
+            id={voiceId}
+            value={voice.name}
+            disabled={connecting}
+            onChange={(event) => pick(event.target.value)}
+            className={SELECT}
+          >
+            {voicesFor(voice.lang).map((option) => (
+              <option key={option.name} value={option.name}>
+                {voiceTitle(option)} · {blurb(t, option.blurb)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <p className="mt-3 leading-relaxed text-muted">
+        {connecting ? t.settings.voiceNoteConnecting : live ? t.settings.voiceNoteLive : t.settings.voiceNoteIdle}
+      </p>
+    </section>
   );
 }
 
@@ -95,6 +180,7 @@ function CopyRepoButton() {
  * view.
  */
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);
   const [top] = useState(() =>
@@ -117,7 +203,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       }
       // Keep Tab inside the drawer while it's open
       if (event.key !== "Tab" || !panel.current) return;
-      const focusable = panel.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+      const focusable = panel.current.querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), select:not([disabled]), input:not([disabled])",
+      );
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -148,16 +236,16 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-7 pt-7 pb-6">
           <div>
-            <p className="label text-ink/80">Settings</p>
+            <p className="label text-ink/80">{t.chrome.settings}</p>
             <h2 id="settings-title" className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">
-              About this app
+              {t.settings.title}
             </h2>
           </div>
           <button
             ref={close}
             type="button"
             onClick={onClose}
-            aria-label="Close settings"
+            aria-label={t.settings.close}
             className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-ink transition hover:bg-card"
           >
             <CloseIcon />
@@ -165,23 +253,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="flex-1 space-y-8 overflow-y-auto px-7 py-7">
+          <VoicePicker />
+
           <section>
-            <h3 className="label text-ink/80">What it does</h3>
-            <p className="mt-3 text-[1.1rem] leading-relaxed">
-              Tri-County Claims is a voice assistant for auto insurance claims. Policyholders ask for their claim
-              by number and last name, and it reads back what they need. Tri-County staff ask a question, and it
-              searches every claim for the answer.
-            </p>
-            <p className="mt-4 text-[1.1rem] leading-relaxed">
-              It&rsquo;s view only. You can find and hear claim details, but not change them.
-            </p>
-            <p className="mt-4 leading-relaxed text-muted">
-              Built with Deepgram speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands.
-            </p>
+            <h3 className="label text-ink/80">{t.settings.whatItDoes}</h3>
+            <p className="mt-3 text-[1.1rem] leading-relaxed">{t.settings.about}</p>
+            <p className="mt-4 text-[1.1rem] leading-relaxed">{t.settings.viewOnly}</p>
+            <p className="mt-4 leading-relaxed text-muted">{t.settings.builtWith}</p>
           </section>
 
           <section>
-            <h3 className="label text-ink/80">Source code</h3>
+            <h3 className="label text-ink/80">{t.settings.sourceCode}</h3>
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-line bg-card py-1.5 pr-1.5 pl-4">
               <GitHubIcon className="size-5 shrink-0" />
               <span className="min-w-0 flex-1 truncate font-mono text-[0.9rem]" title={REPO_URL}>
@@ -195,15 +277,15 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               rel="noopener noreferrer"
               className="label mt-4 inline-flex h-12 items-center gap-2 rounded-full bg-magenta px-6 text-[0.8rem] text-ink transition hover:brightness-110"
             >
-              Open on GitHub <span aria-hidden="true">↗</span>
-              <span className="sr-only">(opens in a new tab)</span>
+              {t.settings.openOnGitHub} <span aria-hidden="true">↗</span>
+              <span className="sr-only">{t.settings.newTab}</span>
             </a>
 
             <div className="mt-6 flex items-center gap-6 rounded-2xl border border-line bg-card p-5">
               <RepoQrCode className="size-36 shrink-0 rounded-xl border border-line" />
               <div>
-                <p className="label text-ink/80">Scan to open</p>
-                <p className="mt-2 leading-relaxed">Point your phone&rsquo;s camera here to open the repo.</p>
+                <p className="label text-ink/80">{t.settings.scanToOpen}</p>
+                <p className="mt-2 leading-relaxed">{t.settings.scanHint}</p>
               </div>
             </div>
           </section>
