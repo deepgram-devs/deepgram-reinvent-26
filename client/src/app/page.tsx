@@ -50,11 +50,15 @@ const CONNECT_PARAMS = TRANSPORT === "daily" ? DAILY_PARAMS : WEBRTC_PARAMS;
 
 type Phase = "idle" | "connecting" | "live";
 
+// Shown on the landing screen after the agent hangs up on a quiet caller
+const IDLE_NOTICE = "The call ended because we didn't hear anything. Start again whenever you're ready.";
+
 const CONNECTING = ["initializing", "initialized", "authenticating", "authenticated", "connecting", "connected"];
 
 function Screens({
   phase,
   error,
+  notice,
   forced,
   onStart,
   onEnd,
@@ -62,6 +66,8 @@ function Screens({
 }: {
   phase: Phase;
   error: string | null;
+  /** Not an error: why the last call ended, when the agent ended it */
+  notice: string | null;
   /** A fixture's screen, instead of the one the call is on */
   forced?: Fixture["screen"];
   onStart: () => void;
@@ -84,6 +90,7 @@ function Screens({
         onStart={onStart}
         connecting={phase === "connecting"}
         error={error}
+        notice={notice}
         persona={persona}
         onPersonaChange={onPersonaChange}
       />
@@ -123,9 +130,10 @@ function LiveApp({
   onPersonaChange: (persona: Persona) => void;
 }) {
   const state = usePipecatClientTransportState();
-  const { reset } = useSession();
+  const { reset, endReason } = useSession();
   const [starting, setStarting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ended, setEnded] = useState<string | null>(null);
 
   const phase: Phase = state === "ready" ? "live" : starting && CONNECTING.includes(state) ? "connecting" : "idle";
 
@@ -136,12 +144,25 @@ function LiveApp({
     }, []),
   );
 
+  // When the agent hung up on a quiet caller, the landing screen says so, so
+  // the call doesn't just vanish. The agent sends the reason before it leaves.
   useRTVIClientEvent(
     RTVIEvent.Disconnected,
     useCallback(() => {
+      if (endReason === "idle") setEnded(IDLE_NOTICE);
       setStarting(false);
       reset();
-    }, [reset]),
+    }, [endReason, reset]),
+  );
+
+  // Over Daily, the bot leaving the room doesn't disconnect the browser, which
+  // would stay on the call screen, alone in the room. Leaving too ends the
+  // call here as well, and Disconnected above does the rest.
+  useRTVIClientEvent(
+    RTVIEvent.BotDisconnected,
+    useCallback(() => {
+      void disconnect?.();
+    }, [disconnect]),
   );
 
   const error =
@@ -154,8 +175,10 @@ function LiveApp({
     <Screens
       phase={phase}
       error={error}
+      notice={ended}
       onStart={() => {
         setNotice(null);
+        setEnded(null);
         setStarting(true);
         void connect?.();
       }}
@@ -215,6 +238,7 @@ function App() {
           onStart={() => {}}
           connecting={false}
           error={null}
+          notice={null}
           persona={persona}
           onPersonaChange={setPersona}
         />
@@ -228,6 +252,7 @@ function App() {
             <Screens
               phase="live"
               error={null}
+              notice={null}
               forced={fixture.screen}
               onStart={() => {}}
               onEnd={() => {}}

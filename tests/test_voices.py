@@ -60,6 +60,17 @@ class CatalogTests(unittest.TestCase):
                 self.assertNotEqual(line, last)
                 last = line
 
+    def test_every_language_can_check_in_and_say_goodbye(self):
+        # The idle hang-up speaks these in the current voice, so every
+        # language needs its own, and the goodbye mustn't repeat the check-in
+        for code, language in LANGUAGES.items():
+            voice = voices.voices_for(code)[0]
+            self.assertTrue(voices.still_there(voice).strip(), language.name)
+            self.assertTrue(voices.goodbye(voice).strip(), language.name)
+            self.assertNotEqual(voices.still_there(voice), voices.goodbye(voice), language.name)
+        lines = [line for lang in LANGUAGES.values() for line in (lang.still_there, lang.goodbye)]
+        self.assertEqual(len(set(lines)), len(lines))
+
     def test_default_is_english_and_unknown_names_are_refused(self):
         self.assertEqual(DEFAULT_VOICE.lang, "en")
         self.assertIsNone(voices.find_voice("no-such-voice"))

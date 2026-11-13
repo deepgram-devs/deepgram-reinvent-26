@@ -69,12 +69,15 @@ export function Landing({
   onStart,
   connecting,
   error,
+  notice,
   persona,
   onPersonaChange,
 }: {
   onStart: () => void;
   connecting: boolean;
   error: string | null;
+  /** Why the last call ended, when the agent ended it. Not an error. */
+  notice: string | null;
   persona: Persona;
   onPersonaChange: (persona: Persona) => void;
 }) {
@@ -129,6 +132,11 @@ export function Landing({
           {error && (
             <p role="alert" className="mb-4 rounded-2xl border border-red/40 bg-red/15 px-4 py-3 text-sm">
               {error}
+            </p>
+          )}
+          {notice && !error && (
+            <p role="status" className="mb-4 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
+              {notice}
             </p>
           )}
           <StartButton onStart={onStart} connecting={connecting} />

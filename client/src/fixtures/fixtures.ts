@@ -125,6 +125,7 @@ export function buildFixture(id: string, screen: FixtureScreen): Fixture {
       results: null,
       // Sample bot timings for the function call rows
       calls: { "fixture-1": { ms: 1640 } },
+      endReason: null,
     },
   };
 }
