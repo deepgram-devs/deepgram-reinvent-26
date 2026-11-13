@@ -28,6 +28,11 @@ class Language:
     # with a foreign accent. Each is neutral about the speaker's gender, since
     # any voice in the language may say it.
     fillers: tuple[str, ...]
+    # Said when the caller has gone quiet: a check-in first, then a goodbye
+    # before the agent hangs up. Short, so they don't fill the silence they're
+    # asking about, and in the language for the same reason as the fillers.
+    still_there: str
+    goodbye: str
 
 
 @dataclass(frozen=True)
@@ -48,55 +53,82 @@ LANGUAGES: dict[str, Language] = {
             "Sure, checking on that now.",
             "Give me just a second.",
             "Bear with me one moment.",
-        )),
+        ),
+            still_there="Are you still there?",
+            goodbye="I haven't heard from you, so I'll end the call here. Call back anytime. Take care!",
+        ),
         Language("es", "Spanish", (
             "Permítame buscarlo, un momento, por favor.",
             "Un momento, lo estoy consultando.",
             "Déjeme revisarlo.",
             "Enseguida lo verifico.",
-        )),
+        ),
+            still_there="¿Sigue ahí?",
+            goodbye="Como no le escucho, voy a terminar la llamada. Puede volver a llamar cuando quiera. ¡Hasta luego!",
+        ),
         Language("fr", "French", (
             "Je vérifie cela pour vous, un instant, s'il vous plaît.",
             "Un instant, je regarde.",
             "Laissez-moi vérifier.",
             "Je consulte le dossier, un moment.",
-        )),
+        ),
+            still_there="Vous êtes toujours là ?",
+            goodbye="Je ne vous entends plus, je vais donc raccrocher. N'hésitez pas à rappeler. Au revoir !",
+        ),
         Language("de", "German", (
             "Ich sehe das für Sie nach, einen Moment bitte.",
             "Einen Augenblick, ich schaue nach.",
             "Moment, ich prüfe das kurz.",
             "Ich rufe das gleich auf.",
-        )),
+        ),
+            still_there="Sind Sie noch da?",
+            goodbye="Ich höre Sie leider nicht mehr, deshalb beende ich das Gespräch. Rufen Sie gern jederzeit wieder an. Auf Wiederhören!",
+        ),
         Language("hi", "Hindi", (
             "कृपया एक क्षण रुकिए, जानकारी देखी जा रही है।",
             "बस एक क्षण दीजिए।",
             "ज़रा रुकिए, विवरण निकाला जा रहा है।",
             "जी, अभी जाँच की जा रही है।",
-        )),
+        ),
+            still_there="क्या आप अभी भी लाइन पर हैं?",
+            goodbye="आपकी आवाज़ नहीं आ रही है, इसलिए कॉल समाप्त की जा रही है। आप कभी भी दोबारा कॉल कर सकते हैं। नमस्ते!",
+        ),
         Language("ru", "Russian", (
             "Сейчас посмотрю, одну секунду, пожалуйста.",
             "Минутку, проверяю.",
             "Одну секунду, уточняю.",
             "Сейчас проверю для вас.",
-        )),
+        ),
+            still_there="Вы ещё на линии?",
+            goodbye="Вас не слышно, поэтому завершаю звонок. Звоните в любое время. До свидания!",
+        ),
         Language("pt", "Portuguese", (
             "Vou verificar isso, um momento, por favor.",
             "Só um instante, estou verificando.",
             "Deixe-me consultar.",
             "Um momento, vou conferir.",
-        )),
+        ),
+            still_there="Ainda está aí?",
+            goodbye="Como não há resposta, vou encerrar a chamada. Pode ligar novamente quando quiser. Até logo!",
+        ),
         Language("it", "Italian", (
             "Controllo subito, un momento, per favore.",
             "Un attimo, verifico.",
             "Mi lasci controllare.",
             "Un istante, sto cercando.",
-        )),
+        ),
+            still_there="È ancora lì?",
+            goodbye="Non La sento più, quindi chiudo la chiamata. Può richiamare quando vuole. Arrivederci!",
+        ),
         Language("nl", "Dutch", (
             "Ik zoek het even voor u op, een moment alstublieft.",
             "Een ogenblikje, ik kijk het na.",
             "Momentje, ik controleer het even.",
             "Ik zoek het meteen op.",
-        )),
+        ),
+            still_there="Bent u er nog?",
+            goodbye="Ik hoor u niet meer, dus ik beëindig het gesprek. Bel gerust terug wanneer het u uitkomt. Tot ziens!",
+        ),
     ]
 }  # fmt: skip
 
@@ -190,6 +222,16 @@ def pick_filler(voice: Voice, last: str | None = None) -> str:
     """A hold line in the voice's language, never the one spoken last."""
     fillers = language_of(voice).fillers
     return random.choice([line for line in fillers if line != last] or fillers)
+
+
+def still_there(voice: Voice) -> str:
+    """The check-in after the caller has gone quiet, in the voice's language."""
+    return language_of(voice).still_there
+
+
+def goodbye(voice: Voice) -> str:
+    """The last line before hanging up on a quiet caller, in the voice's language."""
+    return language_of(voice).goodbye
 
 
 def voices_for(code: str) -> list[Voice]:

@@ -24,6 +24,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -34,11 +35,13 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    EndFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
     TTSSpeakFrame,
     TTSUpdateSettingsFrame,
+    UserIdleTimeoutUpdateFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -83,9 +86,17 @@ KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 # that answers sooner goes straight to the answer: a hold line before an
 # instant answer is a delay, not a courtesy.
 HOLD_LINE_DELAY_SECS = 1.0
+
+# How long the caller can stay quiet after the agent finishes speaking before
+# it asks if they're still there. Another stretch that long and it says goodbye
+# and hangs up, so an abandoned call doesn't hold a session open. 0 turns it
+# off, and an empty value in .env means the default.
+USER_IDLE_TIMEOUT_SECS = float(os.getenv("USER_IDLE_TIMEOUT_SECS") or "15")
 ```
 
 Rename `example.env` to `.env` and add your keys, as well as your KB_ID.
+
+`USER_IDLE_TIMEOUT_SECS` is optional. It's how many seconds of silence the agent waits, after it finishes speaking, before it checks in, and then again before it hangs up. It defaults to 15. Set it to 5 to try the hang-up without a long wait, or to 0 to turn it off. See [Hanging up when the caller goes quiet](#hanging-up-when-the-caller-goes-quiet).
 
 The knowledge base holds the sample auto claims in [kb-data/claims/](kb-data/claims/), one file per claim, named by claim ID (`CLM-2026-847291.txt`). If your knowledge base still has older sample claims, follow [Reset the knowledge base](docs/reset-knowledge-base.md) to erase them and load these. Uploading the new files on top isn't enough, because the old records stay in the vector store.
 
@@ -748,15 +759,23 @@ Next, let's create the context and its aggregators. The `LLMContext` stores the 
     # word ("two"), which would cut off the greeting and get an answer. The
     # caller has nothing to say before the greeting ends, so ignore their
     # audio until then.
+    #
+    # The idle timer starts each time the agent stops speaking, and the
+    # caller speaking, the agent speaking, or a lookup in progress stops it.
+    # So it never runs before the greeting ends or while a hold line covers a
+    # slow lookup.
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
             user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
+            user_idle_timeout=USER_IDLE_TIMEOUT_SECS,
         ),
     )
 ```
 
 The `MuteUntilFirstBotCompleteUserMuteStrategy` drops what the caller says until the greeting finishes. When the browser opens the microphone, the first audio can hold a click that Flux hears as a short word. Without the mute, that phantom word interrupts the greeting and the agent answers it.
+
+`user_idle_timeout` turns on Pipecat's idle timer for the caller. You'll use it after the pipeline worker is set up, to hang up on a caller who has gone quiet.
 
 ### Prompting for the ear
 
@@ -1391,6 +1410,102 @@ Next, we need to define a pipeline worker. This is what runs the pipeline. Do th
 
 The `PipelineParams` enable metrics reporting, so you can see latency and token usage in the logs. The `rtvi_observer_params` decide what the claims UI learns about tool calls: the name of every call, and the arguments of the claim tools and `set_voice`, but never a result, since results hold the claim data the LLM reads.
 
+The pipeline worker also runs Pipecat's RTVI processor, which carries messages between the bot and the claims UI. The agent sends the UI messages with `RTVIServerMessageFrame`. The UI sends messages back with `sendClientMessage(type, data)`, and they arrive as the processor's `on_client_message` event. One handler looks each one up by type, so each feature adds an entry to `client_handlers` instead of another branch:
+
+```python
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+```
+
+### Hanging up when the caller goes quiet
+
+A caller who walks away mid-call leaves the session open, with the agent waiting in silence. So when the caller goes quiet, the agent checks in once, and if there's still no answer, it says goodbye and hangs up.
+
+```python
+    # Silences in a row with no answer from the caller, and whether the agent
+    # has given up and is saying goodbye
+    idle_strikes = 0
+    hanging_up = False
+
+    # The caller went quiet after the agent spoke. The first time, check they're
+    # still there. The second time, say goodbye and end the call, so a caller
+    # who walked away doesn't keep a session open. Both lines are in the
+    # current voice's language.
+    @user_aggregator.event_handler("on_user_turn_idle")
+    async def on_user_turn_idle(aggregator):
+        nonlocal idle_strikes, hanging_up
+        if hanging_up:
+            return
+        idle_strikes += 1
+        if idle_strikes == 1:
+            logger.info(f"Caller quiet for {USER_IDLE_TIMEOUT_SECS:g}s; checking in")
+            # The timer starts again when this line finishes. Unlike the hold
+            # line, it goes in the LLM context, so a "yes, I'm here" reaches the
+            # model as the answer to it.
+            await task.queue_frame(TTSSpeakFrame(voices.still_there(current_voice)))
+            return
+
+        logger.info("Caller still quiet after the check-in; hanging up")
+        hanging_up = True
+        # Before the goodbye, so the screen can say why the call ended
+        await send_to_client({"type": "call-ended", "reason": "idle"})
+        cancel_hold_line()
+        # The goodbye stays out of the context: nothing answers it
+        goodbye = TTSSpeakFrame(voices.goodbye(current_voice), append_to_context=False)
+        # The call ends either way, so a word from the caller mustn't cut the
+        # goodbye short
+        goodbye.interruptible = False
+        # EndFrame, not CancelFrame: it queues behind the goodbye, the TTS
+        # service holds it until the goodbye's audio is done, and the output
+        # transport plays everything queued before it. Only then does the bot
+        # leave the call.
+        await task.queue_frames([goodbye, EndFrame(reason="idle")])
+
+    # The caller spoke, so any check-in was answered
+    @user_aggregator.event_handler("on_user_turn_started")
+    async def on_user_turn_started(aggregator, strategy):
+        nonlocal idle_strikes
+        idle_strikes = 0
+
+    async def on_mic(data: dict):
+        """Pause the idle timer while the caller's microphone is off.
+
+        The caller mutes, or opens Settings, which turns the microphone off.
+        Either way the agent can't hear them, so their silence isn't a sign
+        they've left. The update reaches the user aggregator's idle timer, which
+        stops at 0 and, on the way back, starts a full timeout over.
+        """
+        nonlocal idle_strikes
+        if hanging_up:
+            return
+        enabled = bool(data.get("enabled"))
+        if enabled:
+            idle_strikes = 0
+        await task.queue_frame(
+            UserIdleTimeoutUpdateFrame(timeout=USER_IDLE_TIMEOUT_SECS if enabled else 0)
+        )
+
+    client_handlers["mic"] = on_mic
+```
+
+Pipecat does the timing. The `user_idle_timeout` you gave the user aggregator starts a timer each time the agent stops speaking. The caller starting to speak, the agent starting to speak, or a function call starting cancels it, so the greeting, the hold line, and a slow lookup never count as silence. When the timer runs out, the aggregator fires `on_user_turn_idle`.
+
+The first time, the agent asks "Are you still there?" in the current voice's language. That's a `TTSSpeakFrame`, kept out of the LLM context like the hold line. When it finishes, the agent has stopped speaking again, so the timer starts over by itself. If the caller says anything, `on_user_turn_started` clears the count.
+
+The second time, the agent tells the UI why the call is ending, then queues the goodbye and an `EndFrame` together. An `EndFrame` is the graceful way to stop a pipeline: it travels behind the goodbye, the TTS service holds it until the goodbye's audio is done, and the output transport plays everything queued ahead of it before the bot leaves the call. A `CancelFrame` would stop everything at once and cut the goodbye off. The goodbye is also marked uninterruptible, because the call ends either way, and a cough shouldn't swallow the last thing the caller hears.
+
+A caller with the microphone muted is quiet too, but they haven't left. The same goes for a caller reading Settings, which turns the microphone off while it's open. So the UI sends a `mic` message whenever the microphone goes on or off, and the `mic` handler queues a `UserIdleTimeoutUpdateFrame`. A timeout of 0 stops the timer while the microphone is off. When it comes back on, the full timeout starts over.
+
+The check-in and goodbye lines live in `voices.py`, next to the hold lines, one pair per language.
+
 Next, we need to add some event handlers so the pipeline knows how to handle the user connecting and disconnecting. First, when the user connects, we'll tell the screen which voice is speaking and push a frame that tells the LLM to run. The LLM responds to the greeting instruction we put in the context.
 
 ```python
@@ -1481,6 +1596,11 @@ Pipecat already sends the browser the conversation itself: transcripts, the agen
 | `claim-loaded` | Policyholder | The first time a claim is verified | The claim, masked for the screen |
 | `search-results` | Employee | After each research answer | The question, and the claims the answer names, masked for the screen |
 | `function-timing` | Both | Just before each function call's result | The call's `tool_call_id` and how long it took, in milliseconds, for its row in the chat log |
+| `call-ended` | Both | When the agent hangs up on a quiet caller, before the goodbye | `reason: "idle"`, so the landing screen can say why the call ended |
+
+The UI talks back with one message, `mic`, carrying `{ enabled }`, each time the microphone goes on or off: from the mic button, or from Settings opening and closing. Both go through `useSetMic` in [client/src/lib/session.tsx](client/src/lib/session.tsx), so the agent's idle timer always knows when the caller can't be heard.
+
+When the agent hangs up, the bot leaves the call, and the browser hears about it as `BotDisconnected`. Leaving the call isn't the same as ending it for the browser: over Daily, it would stay in the room alone, still on the call screen. So [client/src/app/page.tsx](client/src/app/page.tsx) disconnects too when the bot leaves. The landing screen comes back, and after an idle hang-up it says the call ended because the agent didn't hear anything.
 
 Each function call shows in the chat log as a one-line row, collapsed by default: the function, its main argument, and how long it took. Tap it to see the full request. The duration comes from the bot, since the browser only learns when a call started, and Pipecat backdates that so the row sorts before the reply it belongs to. The row shows arguments only, never results: the results hold the claim record.
 

@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -15,11 +16,13 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    EndFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
     TTSSpeakFrame,
     TTSUpdateSettingsFrame,
+    UserIdleTimeoutUpdateFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -61,6 +64,12 @@ KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 # that answers sooner goes straight to the answer: a hold line before an
 # instant answer is a delay, not a courtesy.
 HOLD_LINE_DELAY_SECS = 1.0
+
+# How long the caller can stay quiet after the agent finishes speaking before
+# it asks if they're still there. Another stretch that long and it says goodbye
+# and hangs up, so an abandoned call doesn't hold a session open. 0 turns it
+# off, and an empty value in .env means the default.
+USER_IDLE_TIMEOUT_SECS = float(os.getenv("USER_IDLE_TIMEOUT_SECS") or "15")
 
 _MARKUP_SYMBOLS = re.compile(r"[*#`]")
 
@@ -996,10 +1005,16 @@ async def run_bot(
     # word ("two"), which would cut off the greeting and get an answer. The
     # caller has nothing to say before the greeting ends, so ignore their
     # audio until then.
+    #
+    # The idle timer starts each time the agent stops speaking, and the
+    # caller speaking, the agent speaking, or a lookup in progress stops it.
+    # So it never runs before the greeting ends or while a hold line covers a
+    # slow lookup.
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
             user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
+            user_idle_timeout=USER_IDLE_TIMEOUT_SECS,
         ),
     )
 
@@ -1034,6 +1049,82 @@ async def run_bot(
             }
         ),
     )
+
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+
+    # Silences in a row with no answer from the caller, and whether the agent
+    # has given up and is saying goodbye
+    idle_strikes = 0
+    hanging_up = False
+
+    # The caller went quiet after the agent spoke. The first time, check they're
+    # still there. The second time, say goodbye and end the call, so a caller
+    # who walked away doesn't keep a session open. Both lines are in the
+    # current voice's language.
+    @user_aggregator.event_handler("on_user_turn_idle")
+    async def on_user_turn_idle(aggregator):
+        nonlocal idle_strikes, hanging_up
+        if hanging_up:
+            return
+        idle_strikes += 1
+        if idle_strikes == 1:
+            logger.info(f"Caller quiet for {USER_IDLE_TIMEOUT_SECS:g}s; checking in")
+            # The timer starts again when this line finishes. Unlike the hold
+            # line, it goes in the LLM context, so a "yes, I'm here" reaches the
+            # model as the answer to it.
+            await task.queue_frame(TTSSpeakFrame(voices.still_there(current_voice)))
+            return
+
+        logger.info("Caller still quiet after the check-in; hanging up")
+        hanging_up = True
+        # Before the goodbye, so the screen can say why the call ended
+        await send_to_client({"type": "call-ended", "reason": "idle"})
+        cancel_hold_line()
+        # The goodbye stays out of the context: nothing answers it
+        goodbye = TTSSpeakFrame(voices.goodbye(current_voice), append_to_context=False)
+        # The call ends either way, so a word from the caller mustn't cut the
+        # goodbye short
+        goodbye.interruptible = False
+        # EndFrame, not CancelFrame: it queues behind the goodbye, the TTS
+        # service holds it until the goodbye's audio is done, and the output
+        # transport plays everything queued before it. Only then does the bot
+        # leave the call.
+        await task.queue_frames([goodbye, EndFrame(reason="idle")])
+
+    # The caller spoke, so any check-in was answered
+    @user_aggregator.event_handler("on_user_turn_started")
+    async def on_user_turn_started(aggregator, strategy):
+        nonlocal idle_strikes
+        idle_strikes = 0
+
+    async def on_mic(data: dict):
+        """Pause the idle timer while the caller's microphone is off.
+
+        The caller mutes, or opens Settings, which turns the microphone off.
+        Either way the agent can't hear them, so their silence isn't a sign
+        they've left. The update reaches the user aggregator's idle timer, which
+        stops at 0 and, on the way back, starts a full timeout over.
+        """
+        nonlocal idle_strikes
+        if hanging_up:
+            return
+        enabled = bool(data.get("enabled"))
+        if enabled:
+            idle_strikes = 0
+        await task.queue_frame(
+            UserIdleTimeoutUpdateFrame(timeout=USER_IDLE_TIMEOUT_SECS if enabled else 0)
+        )
+
+    client_handlers["mic"] = on_mic
 
     # Handle client connection event
     @transport.event_handler("on_client_connected")

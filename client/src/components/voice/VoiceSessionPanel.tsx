@@ -7,7 +7,7 @@ import { LockIcon, MicIcon, MicOffIcon, WaveIcon } from "@/components/chrome/Pil
 import { initials, sectionLabel, type ClaimView, type Section } from "@/lib/claim";
 import { useConversationTurns, type Turn } from "@/lib/conversation";
 import { usePersona, usePersonaCopy } from "@/lib/persona";
-import { useSession } from "@/lib/session";
+import { useSession, useSetMic } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 
 function clock(iso: string): string {
@@ -208,12 +208,13 @@ function FunctionCallRow({ turn }: { turn: Turn }) {
 }
 
 export function MicButton({ live }: { live: boolean }) {
-  const { enableMic, isMicEnabled } = usePipecatClientMicControl();
+  const { isMicEnabled } = usePipecatClientMicControl();
+  const setMic = useSetMic();
   const on = live && isMicEnabled;
   return (
     <button
       type="button"
-      onClick={() => enableMic(!isMicEnabled)}
+      onClick={() => setMic(!isMicEnabled)}
       disabled={!live}
       aria-pressed={!on}
       aria-label={on ? "Mute microphone" : "Unmute microphone"}

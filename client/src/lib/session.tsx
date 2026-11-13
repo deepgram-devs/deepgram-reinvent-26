@@ -1,7 +1,7 @@
 "use client";
 
 import { RTVIEvent } from "@pipecat-ai/client-js";
-import { useRTVIClientEvent } from "@pipecat-ai/client-react";
+import { usePipecatClient, usePipecatClientMicControl, useRTVIClientEvent } from "@pipecat-ai/client-react";
 import {
   createContext,
   useCallback,
@@ -21,7 +21,11 @@ export type ServerMessage =
   | { type: "verification"; status: Exclude<Verification, "idle"> }
   | { type: "voice"; voice: string; language: string; language_name: string; stt_model: string }
   | { type: "search-results"; query: string; claims: ClaimView[] }
-  | { type: "function-timing"; tool_call_id: string; ms: number };
+  | { type: "function-timing"; tool_call_id: string; ms: number }
+  | { type: "call-ended"; reason: EndReason };
+
+/** Why the agent ended the call: "idle" when the caller stayed quiet */
+export type EndReason = "idle";
 
 export type Verification = "idle" | "checking" | "verified" | "failed" | "locked" | "error";
 
@@ -51,6 +55,8 @@ export type SessionState = {
   results: SearchResults | null;
   /** Function calls by tool_call_id: when the browser heard of each, and how long the bot took */
   calls: Record<string, CallInfo>;
+  /** Set when the agent hung up, before it leaves the call */
+  endReason: EndReason | null;
 };
 
 /**
@@ -77,6 +83,7 @@ export const EMPTY_SESSION: SessionState = {
   pendingHighlight: null,
   results: null,
   calls: {},
+  endReason: null,
 };
 
 function lightUp(state: SessionState, claim_id: string, sections: Section[]): Highlight {
@@ -139,6 +146,8 @@ function reducer(state: SessionState, action: Action): SessionState {
           };
         case "search-results":
           return { ...state, results: { query: message.query, claims: message.claims } };
+        case "call-ended":
+          return { ...state, endReason: message.reason };
         case "voice":
           return {
             ...state,
@@ -168,6 +177,31 @@ export function useSession(): SessionContextValue {
   const value = useContext(SessionContext);
   if (!value) throw new Error("useSession must be used inside <SessionProvider>");
   return value;
+}
+
+/**
+ * Turns the caller's microphone on or off, and tells the agent. The agent
+ * hangs up on a caller who stays quiet, and a muted caller is quiet, so it
+ * pauses that timer while the microphone is off. Every mic toggle goes through
+ * here. It uses the React SDK's enableMic rather than the client's, so the mic
+ * buttons update at once.
+ */
+export function useSetMic(): (enabled: boolean) => void {
+  const client = usePipecatClient();
+  const { enableMic } = usePipecatClientMicControl();
+  return useCallback(
+    (enabled: boolean) => {
+      if (!client) return;
+      enableMic(enabled);
+      if (!client.connected) return;
+      try {
+        client.sendClientMessage("mic", { enabled });
+      } catch {
+        // The call is ending, so there's no timer left to pause
+      }
+    },
+    [client, enableMic],
+  );
 }
 
 function isServerMessage(data: unknown): data is ServerMessage {
