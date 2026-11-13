@@ -95,7 +95,6 @@ const de: Messages = {
     liveNote: "Das Gespräch läuft. Sprechen Sie einfach, und unterbrechen Sie jederzeit.",
     endedNote: "Dieses Gespräch ist beendet.",
     tryAsking: "Fragen Sie zum Beispiel",
-    tapHint: "Sagen Sie es, oder tippen Sie, um es als Text zu senden.",
     askDeductible: "Wie hoch ist die Selbstbeteiligung?",
     askNextReview: "Wann ist die nächste Prüfung?",
     askLocationNotes: "Lesen Sie die Notizen zum Unfallort vor",

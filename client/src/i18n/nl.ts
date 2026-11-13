@@ -94,7 +94,6 @@ const nl: Messages = {
     liveNote: "Het gesprek is live. Praat gewoon, en onderbreek wanneer u wilt.",
     endedNote: "Dit gesprek is beëindigd.",
     tryAsking: "Vraag bijvoorbeeld",
-    tapHint: "Zeg het, of tik om het als tekst te vragen.",
     askDeductible: "Wat is het eigen risico?",
     askNextReview: "Wanneer is de volgende beoordeling?",
     askLocationNotes: "Lees de notities over de locatie voor",

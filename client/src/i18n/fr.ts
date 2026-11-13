@@ -95,7 +95,6 @@ const fr: Messages = {
     liveNote: "La conversation est en direct. Parlez, et interrompez quand vous voulez.",
     endedNote: "Cette conversation est terminée.",
     tryAsking: "Essayez de demander",
-    tapHint: "Dites-le, ou touchez pour l’envoyer par écrit.",
     askDeductible: "Quelle est la franchise ?",
     askNextReview: "Quand a lieu le prochain examen ?",
     askLocationNotes: "Lisez les notes sur le lieu",

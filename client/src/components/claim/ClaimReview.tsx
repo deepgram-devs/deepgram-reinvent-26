@@ -7,7 +7,7 @@ import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyLogo } from "@/components/chrome/TriCountyMark";
-import { EndButton, MicButton, TryAsking, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
+import { EndButton, MicButton, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import { useLocale, useT } from "@/i18n";
 import {
   deriveProgress,
@@ -256,8 +256,7 @@ export function ClaimReview({
         {/* Wide screens: the session stays beside the claim */}
         <aside className="hidden space-y-5 lg:block">
           <div className="sticky top-24 space-y-5">
-            <VoiceSessionPanel onEnd={onEnd} live={live} />
-            <TryAsking claim={claim} />
+            <VoiceSessionPanel onEnd={onEnd} live={live} claim={claim} />
             <ViewOnlyNote />
           </div>
         </aside>
@@ -293,7 +292,7 @@ export function ClaimReview({
           >
             {t.session.close}
           </button>
-          <VoiceSessionPanel onEnd={onEnd} live={live} />
+          <VoiceSessionPanel onEnd={onEnd} live={live} claim={claim} />
         </div>
       )}
     </div>

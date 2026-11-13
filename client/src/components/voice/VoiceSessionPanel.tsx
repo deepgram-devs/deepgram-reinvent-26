@@ -267,7 +267,8 @@ export function EndButton({ onEnd, live }: { onEnd: () => void; live: boolean })
   );
 }
 
-export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: boolean }) {
+/** `claim` is the claim open on screen, if any, for the staff prompts */
+export function VoiceSessionPanel({ onEnd, live, claim: open }: { onEnd: () => void; live: boolean; claim?: ClaimView }) {
   const { claim, voice, latencyMs } = useSession();
   const { turns } = useConversationTurns();
   const persona = usePersona();
@@ -333,6 +334,7 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
         ))}
       </ol>
 
+      <TryAsking claim={open} />
 
       <footer className="mt-4">
         <p className="flex items-start gap-2 text-[0.95rem] leading-snug text-white/90">
@@ -349,11 +351,11 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
 }
 
 /**
- * Tap-to-ask prompts for what's on screen. `open` is the claim the review
- * screen shows. Staff prompts follow it, not the session's claim, which
- * stays set after a staff member goes back to the results.
+ * Tap-to-ask prompts for what's on screen, under the log. `open` is the claim
+ * the review screen shows. Staff prompts follow it, not the session's claim,
+ * which stays set after a staff member goes back to the results.
  */
-export function TryAsking({ claim: open }: { claim?: ClaimView }) {
+function TryAsking({ claim: open }: { claim?: ClaimView }) {
   const { claim } = useSession();
   const { sendText } = useConversationTurns();
   const persona = usePersona();
@@ -376,29 +378,27 @@ export function TryAsking({ claim: open }: { claim?: ClaimView }) {
             "What’s the latest note?",
           ]
         : copy.prompts;
+  if (!prompts.length) return null;
+  const pill = "inline-block whitespace-nowrap rounded-full border border-white/30 bg-white/12 px-4 py-2 text-white";
   return (
-    // text-ink: on the listening screen this white card sits in a text-white aside
-    <section className="card p-6 text-ink">
-      <h2 className="label text-ink/80">{t.session.tryAsking}</h2>
-      <ul className="mt-4 flex flex-wrap gap-2.5">
+    <div className="mt-4 shrink-0 border-t border-white/25 pt-4">
+      <h3 className="label text-[0.65rem] text-white/80">{t.session.tryAsking}</h3>
+      {/* One row that scrolls sideways, so the prompts don't crowd the log.
+          It runs to the panel's edges, and a thin scrollbar shows there's more. */}
+      <ul className="-mx-6 mt-3 flex snap-x scroll-px-6 gap-2 overflow-x-auto px-6 pb-2 [scrollbar-color:rgb(255_255_255/0.35)_transparent] [scrollbar-width:thin]">
         {prompts.map((prompt) => (
-          <li key={prompt}>
+          <li key={prompt} className="shrink-0 snap-start">
             {sendText ? (
-              <button
-                type="button"
-                onClick={() => sendText(prompt)}
-                className="rounded-full border border-line px-4 py-2 text-left transition hover:border-violet hover:text-violet"
-              >
-                {prompt}
+              <button type="button" onClick={() => sendText(prompt)} className={`${pill} transition hover:bg-white/25`}>
+                “{prompt}”
               </button>
             ) : (
-              <span className="inline-block rounded-full border border-line px-4 py-2">{prompt}</span>
+              <span className={pill}>“{prompt}”</span>
             )}
           </li>
         ))}
       </ul>
-      {sendText && <p className="mt-3 text-sm text-muted">{t.session.tapHint}</p>}
-    </section>
+    </div>
   );
 }
 

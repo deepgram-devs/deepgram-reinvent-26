@@ -96,7 +96,6 @@ const hi: Messages = {
     liveNote: "बातचीत लाइव है। बस बोलिए, और जब चाहें बीच में टोकिए।",
     endedNote: "यह बातचीत समाप्त हो गई है।",
     tryAsking: "ऐसे पूछकर देखें",
-    tapHint: "बोलिए, या टेक्स्ट में पूछने के लिए टैप करें।",
     askDeductible: "डिडक्टिबल कितना है?",
     askNextReview: "अगली समीक्षा कब है?",
     askLocationNotes: "जगह के नोट्स पढ़िए",

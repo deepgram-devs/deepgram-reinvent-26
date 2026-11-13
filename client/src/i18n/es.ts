@@ -93,7 +93,6 @@ const es: Messages = {
     liveNote: "La conversación está en directo. Hable e interrumpa cuando quiera.",
     endedNote: "Esta conversación ha finalizado.",
     tryAsking: "Pruebe a preguntar",
-    tapHint: "Dígalo, o toque para preguntar por escrito.",
     askDeductible: "¿Cuál es el deducible?",
     askNextReview: "¿Cuándo es la próxima revisión?",
     askLocationNotes: "Lea las notas del lugar",

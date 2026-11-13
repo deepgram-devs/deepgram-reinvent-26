@@ -102,7 +102,6 @@ const en = {
     liveNote: "Conversation is live. Just talk, and interrupt anytime.",
     endedNote: "This conversation has ended.",
     tryAsking: "Try asking",
-    tapHint: "Say it, or tap to ask in text.",
     askDeductible: "What’s the deductible?",
     askNextReview: "When is the next review?",
     askLocationNotes: "Read the location notes",

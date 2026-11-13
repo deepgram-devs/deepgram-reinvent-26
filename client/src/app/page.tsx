@@ -10,7 +10,7 @@ import { ClaimReview } from "@/components/claim/ClaimReview";
 import { EmployeeSession } from "@/components/employee/EmployeeDesk";
 import { Landing } from "@/components/landing/Landing";
 import { Listening } from "@/components/listening/Listening";
-import { TryAsking, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
+import { VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import type { Fixture } from "@/fixtures/fixtures";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { DocumentLanguage, useT } from "@/i18n";
@@ -116,9 +116,8 @@ function Screens({
   }
   const aside = wide ? (
     <aside className="w-[26rem] shrink-0 p-6">
-      <div className="sticky top-6 space-y-5">
+      <div className="sticky top-6">
         <VoiceSessionPanel onEnd={onEnd} live={live || !!forced} />
-        <TryAsking />
       </div>
     </aside>
   ) : null;
