@@ -1,6 +1,10 @@
 # Pipecat voice agent with Deepgram, AWS Bedrock, and AWS Strands
 
-This is the agent code used in the AWS Workshop [Building intelligent voice AI agents with Amazon Nova Sonic, Amazon Bedrock and Pipecat](https://catalog.workshops.aws/voice-ai-agents/en-US). Follow the instructions in that workshop to configure an AWS environment to use with this code.
+Tri-County Claims is a voice agent for auto insurance claims. Policyholders call to hear where their claim stands, and Tri-County staff ask questions that search every claim at once. It's built with Deepgram Flux speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands, and a Next.js claims UI shows the claim on screen while the agent talks about it.
+
+### Built from the AWS and Deepgram workshop
+
+This project started from [pipecat-ai/aws-deepgram-workshop](https://github.com/pipecat-ai/aws-deepgram-workshop), the starter code for the AWS Workshop [Building intelligent voice AI agents with Amazon Nova Sonic, Amazon Bedrock and Pipecat](https://catalog.workshops.aws/voice-ai-agents/en-US). If you want to learn how a Pipecat voice agent comes together step by step, start with the workshop. It also sets up the AWS environment this code needs, including the Bedrock knowledge base, so follow its setup instructions before you run this agent.
 
 ## Understanding the Botfile
 
@@ -1518,6 +1522,8 @@ To work on the screens without a call, open http://localhost:3000/?fixture=CLM-2
 ```
 
 Fixtures load only in development, so no claim data ships in a production build. Connecting the UI to an agent on Pipecat Cloud isn't covered yet.
+
+You'll see one warning when the page loads, in the browser console and in the `npm run dev` terminal. It starts with `[DEPRECATED] atomFamily is deprecated and will be removed in v3`. It's safe to ignore. It doesn't come from this app's code: Pipecat's React SDK, `@pipecat-ai/client-react`, imports `atomFamily` from `jotai/utils`, and jotai 2.16 and later warn when it's used. Nothing in `client/` imports jotai directly. The warning goes away once a React SDK release stops using `atomFamily` and the exact `@pipecat-ai/client-react` version in [client/package.json](client/package.json) is bumped to it.
 
 ## Deploying to Pipecat Cloud
 

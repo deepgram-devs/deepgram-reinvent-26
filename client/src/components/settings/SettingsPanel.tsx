@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 
 // This app's source. The QR code below encodes the same address.
-export const REPO_URL = "https://github.com/dg-edcharbeneau/deepgram-reinvent-26";
+export const REPO_URL = "https://github.com/deepgram-devs/deepgram-reinvent-26";
 const REPO_LABEL = REPO_URL.replace(/^https:\/\//, "");
 
 function CloseIcon({ className = "size-5" }: { className?: string }) {
