@@ -5,6 +5,7 @@
 
 import type { ConversationMessage } from "@pipecat-ai/client-react";
 
+import en from "@/i18n/en";
 import { formatDate, sectionLabel, vehicleName, type ClaimView, type Section } from "@/lib/claim";
 import { EMPTY_SESSION, type SessionState } from "@/lib/session";
 
@@ -98,7 +99,7 @@ export function buildFixture(id: string, screen: FixtureScreen): Fixture {
   point(["overview", "progress"]);
   messages.push(
     assistant(
-      `Found it. ${claim.policyholder.name}'s ${spelled(claim.claim_type)} claim for a ${vehicleName(claim)}, reported ${formatDate(claim.date_reported, false)}. It's ${spelled(claim.status)}.`,
+      `Found it. ${claim.policyholder.name}'s ${spelled(claim.claim_type)} claim for a ${vehicleName(claim)}, reported ${formatDate(claim.date_reported, "en", false)}. It's ${spelled(claim.status)}.`,
     ),
   );
   messages.push(user("Where's the damage?"));
@@ -106,7 +107,7 @@ export function buildFixture(id: string, screen: FixtureScreen): Fixture {
   const areas = claim.damage.exterior_areas.join(", ").toLowerCase() || "there's no damage on record";
   messages.push(
     assistant(
-      `${areas[0].toUpperCase()}${areas.slice(1)}. It's marked ${spelled(claim.damage.condition)}, and there are ${sectionLabel("photos", claim)} on file.`,
+      `${areas[0].toUpperCase()}${areas.slice(1)}. It's marked ${spelled(claim.damage.condition)}, and there are ${sectionLabel("photos", claim, en)} on file.`,
     ),
   );
   messages.push(user(claim.other_party ? "Who was driving the other car?" : "What's the deductible?", false));

@@ -8,6 +8,7 @@ import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyLogo } from "@/components/chrome/TriCountyMark";
 import { EndButton, MicButton, TryAsking, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
+import { useLocale, useT } from "@/i18n";
 import {
   deriveProgress,
   financial,
@@ -39,6 +40,7 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
   const { caption } = useConversationTurns();
   const persona = usePersona();
   const { paused } = useSettings();
+  const t = useT();
   return (
     // Above the settings drawer's backdrop, so "Paused" stays in view
     <header data-top-bar className="sticky top-0 z-50 bg-ink text-white">
@@ -50,7 +52,7 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
             onClick={onBack}
             className="label shrink-0 rounded-full border border-white/30 px-4 py-2 text-[0.7rem] text-white transition hover:bg-white/10"
           >
-            ← Results
+            <span aria-hidden="true">←</span> {t.review.results}
           </button>
         )}
         <div className="mx-auto hidden h-11 max-w-2xl flex-1 items-center gap-4 rounded-full border border-white/15 bg-white/5 pr-3 pl-5 md:flex">
@@ -59,9 +61,9 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
               paused ? "border-[1.5px] border-white/80" : live ? "bg-magenta" : "bg-white/30"
             }`}
           />
-          <span className="label shrink-0 text-white/75">{paused ? "Paused" : live ? "Listening" : "Ended"}</span>
+          <span className="label shrink-0 text-white/75">{paused ? t.call.paused : live ? t.call.listening : t.call.ended}</span>
           <span className="min-w-0 flex-1 truncate text-[0.95rem]">
-            {paused ? "Close settings to keep talking" : caption?.text ? `“${caption.text}”` : ""}
+            {paused ? t.call.closeSettingsToTalk : caption?.text ? `“${caption.text}”` : ""}
           </span>
           {live && !paused && (
             <VoiceVisualizer
@@ -77,10 +79,10 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
           )}
         </div>
         <div className="ml-auto flex items-center gap-4 md:ml-0">
-          <span className="hidden font-mono text-sm text-white/80 xl:inline">Voice AI by Deepgram</span>
+          <span className="hidden font-mono text-sm text-white/80 xl:inline">{t.chrome.voiceAiBy}</span>
           <SettingsButton tone="solid" />
           <span className="label grid size-10 place-items-center rounded-full bg-violet text-[0.7rem] tracking-[0.06em]">
-            {persona === "policyholder" ? initials(claim.policyholder.name) : "YOU"}
+            {persona === "policyholder" ? initials(claim.policyholder.name) : t.chrome.you}
           </span>
         </div>
       </div>
@@ -96,7 +98,9 @@ const STEP_DOT: Record<StepState, string> = {
 };
 
 function ProgressStepper({ claim }: { claim: ClaimView }) {
-  const { steps } = deriveProgress(claim);
+  const t = useT();
+  const locale = useLocale();
+  const { steps } = deriveProgress(claim, t, locale);
   return (
     <FocusCard id="claim-progress" className="card px-6 py-6 sm:px-9">
       <ol className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
@@ -148,11 +152,14 @@ function CarIcon() {
 }
 
 function SummaryBand({ claim }: { claim: ClaimView }) {
+  const t = useT();
+  const locale = useLocale();
+  // The labels are the UI's; the values are the record's, in English
   const strip = [
-    ["Coverage", claim.claim_type],
-    ["Deductible", financial(claim, "Deductible") || "—"],
-    ["Rental", rentalPerDay(claim)],
-    ["Fault", firstClause(claim.incident.fault)],
+    [t.claim.coverage, claim.claim_type],
+    [t.claim.deductible, financial(claim, "Deductible") || "—"],
+    [t.review.rental, rentalPerDay(claim, t)],
+    [t.claim.fault, firstClause(claim.incident.fault)],
   ];
   return (
     <FocusCard
@@ -160,15 +167,17 @@ function SummaryBand({ claim }: { claim: ClaimView }) {
       className="rounded-[1.75rem] bg-[linear-gradient(120deg,#e35cf5_0%,#d946ef_45%,#c13be0_100%)] p-5 text-ink sm:p-7"
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <GlassCard label="Policyholder">
+        <GlassCard label={t.claim.policyholder}>
           <p className="mt-3 text-3xl font-semibold tracking-tight">{claim.policyholder.name}</p>
-          <p className="mt-3 font-mono">Policy {claim.policy_number}</p>
-          <p className="mt-1 text-ink/75">Reported {formatDate(claim.date_reported)}</p>
+          <p className="mt-3 font-mono">{t.review.policy(claim.policy_number)}</p>
+          <p className="mt-1 text-ink/75">{t.review.reported(formatDate(claim.date_reported, locale))}</p>
         </GlassCard>
-        <GlassCard label="Insured vehicle" icon={<CarIcon />}>
+        <GlassCard label={t.claim.insuredVehicle} icon={<CarIcon />}>
           <p className="mt-3 text-3xl font-semibold tracking-tight">{vehicleName(claim)}</p>
           <p className="mt-3 font-mono">VIN {claim.vehicle.vin_last4}</p>
-          <p className="mt-1 font-mono">Plate {claim.vehicle.plate_last4}</p>
+          <p className="mt-1 font-mono">
+            {t.review.plate} {claim.vehicle.plate_last4}
+          </p>
         </GlassCard>
       </div>
       <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 px-2 md:grid-cols-4">
@@ -185,19 +194,21 @@ function SummaryBand({ claim }: { claim: ClaimView }) {
 
 function ClaimHeader({ claim }: { claim: ClaimView }) {
   const updated = claim.notes.at(-1)?.date ?? claim.date_reported;
+  const t = useT();
+  const locale = useLocale();
   return (
     <FocusCard id="claim-header" as="div">
-      <nav aria-label="Breadcrumb" className="label text-muted">
-        Claims / Auto / <span className="text-ink">{claim.claim_id}</span>
+      <nav aria-label={t.review.breadcrumbLabel} className="label text-muted">
+        {t.review.breadcrumb} <span className="text-ink">{claim.claim_id}</span>
       </nav>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <h1 className="mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">Review this claim.</h1>
+        <h1 className="mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{t.review.title}</h1>
         <StatusPill status={claim.status} />
         <ViewOnlyPill />
       </div>
       <p className="mt-3 text-muted">
-        Claim <span className="font-mono font-medium text-ink">{claim.claim_id}</span>
-        <span className="mx-3">Last updated {formatDate(updated)}</span>
+        {t.review.claim} <span className="font-mono font-medium text-ink">{claim.claim_id}</span>
+        <span className="mx-3">{t.review.lastUpdated(formatDate(updated, locale))}</span>
       </p>
     </FocusCard>
   );
@@ -218,6 +229,7 @@ export function ClaimReview({
 }) {
   const [sheet, setSheet] = useState(false);
   const { caption } = useConversationTurns();
+  const t = useT();
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -261,11 +273,11 @@ export function ClaimReview({
           type="button"
           onClick={() => setSheet(true)}
           className="flex w-full items-center gap-3 text-left"
-          aria-label="Open the conversation"
+          aria-label={t.review.openConversation}
         >
           <span className={`size-2.5 shrink-0 rounded-full ${live ? "bg-lime" : "bg-white/40"}`} />
-          <span className="min-w-0 flex-1 truncate">{caption?.text ? `“${caption.text}”` : "Conversation is live. Just talk."}</span>
-          <span className="label text-[0.65rem] text-white/80">Transcript</span>
+          <span className="min-w-0 flex-1 truncate">{caption?.text ? `“${caption.text}”` : t.review.dockLive}</span>
+          <span className="label text-[0.65rem] text-white/80">{t.review.transcript}</span>
         </button>
         <div className="mt-3 flex items-center gap-3">
           <MicButton live={live} />
@@ -273,13 +285,13 @@ export function ClaimReview({
         </div>
       </div>
       {sheet && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-ink/60 p-3 pt-16 backdrop-blur-sm lg:hidden" role="dialog" aria-label="Conversation">
+        <div className="fixed inset-0 z-40 flex flex-col bg-ink/60 p-3 pt-16 backdrop-blur-sm lg:hidden" role="dialog" aria-label={t.review.conversation}>
           <button
             type="button"
             onClick={() => setSheet(false)}
             className="label absolute top-4 right-4 rounded-full bg-white px-4 py-2 text-ink"
           >
-            Close
+            {t.session.close}
           </button>
           <VoiceSessionPanel onEnd={onEnd} live={live} />
         </div>

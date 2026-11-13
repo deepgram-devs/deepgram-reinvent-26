@@ -9,12 +9,14 @@ import { TriCountyMark } from "@/components/chrome/TriCountyMark";
 import { ClaimReview } from "@/components/claim/ClaimReview";
 import { LiveCaption, ListeningOrb } from "@/components/listening/Listening";
 import { EndButton, MicButton } from "@/components/voice/VoiceSessionPanel";
+import { useT } from "@/i18n";
 import { vehicleName, type ClaimView } from "@/lib/claim";
 import { useConversationTurns } from "@/lib/conversation";
 import { useSession } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 
 function ResultCard({ claim, onOpen }: { claim: ClaimView; onOpen: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -31,10 +33,12 @@ function ResultCard({ claim, onOpen }: { claim: ClaimView; onOpen: () => void })
       </span>
       <span className="mt-4 flex items-center justify-between gap-3 border-t border-white/20 pt-3">
         <span>
-          <span className="label block text-[0.65rem] text-white/70">Adjuster</span>
+          <span className="label block text-[0.65rem] text-white/70">{t.claim.adjuster}</span>
           <span className="mt-0.5 block">{claim.adjuster.name || "—"}</span>
         </span>
-        <span className="label text-[0.7rem] text-white/85">Open →</span>
+        <span className="label text-[0.7rem] text-white/85">
+          {t.desk.open} <span aria-hidden="true">→</span>
+        </span>
       </span>
     </button>
   );
@@ -56,6 +60,7 @@ function Desk({
   const { toolCall } = useConversationTurns();
   const searching = toolCall?.function_name === "search_claims" && toolCall.status !== "completed";
   const { paused } = useSettings();
+  const t = useT();
 
   return (
     <main className="flex min-h-dvh bg-ink text-white">
@@ -66,7 +71,7 @@ function Desk({
           <span className="flex items-center gap-2.5">
             <TriCountyMark className="size-8" />
             <span className="text-xl font-semibold tracking-tight">Tri-County</span>
-            <span className="label ml-1 hidden text-white/70 sm:inline">Claims desk</span>
+            <span className="label ml-1 hidden text-white/70 sm:inline">{t.desk.title}</span>
           </span>
           <div className="flex items-center gap-3">
             <ViewOnlyPill tone="dark" />
@@ -78,9 +83,7 @@ function Desk({
           <section className="mx-auto mt-10 w-full max-w-4xl flex-1" aria-live="polite">
             <p className="label flex items-center gap-2.5 text-white/90">
               <span className={`size-2.5 rounded-full ${searching ? "animate-caret bg-magenta" : "bg-lime"}`} />
-              {searching
-                ? "Searching…"
-                : `${results.claims.length} ${results.claims.length === 1 ? "claim" : "claims"}`}
+              {searching ? `${t.call.searching}…` : t.desk.claims(results.claims.length)}
             </p>
             <h1 className="mt-3 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
               &ldquo;{results.query}&rdquo;
@@ -95,7 +98,7 @@ function Desk({
               </ul>
             ) : (
               <p className="mt-8 rounded-2xl border border-white/15 bg-white/5 px-5 py-4 text-lg text-white/80">
-                No claims matched. Try asking another way.
+                {t.desk.noMatches}
               </p>
             )}
             <div className="mt-10 border-t border-white/15 pt-6 text-left" aria-live="polite">
@@ -107,13 +110,14 @@ function Desk({
             <ListeningOrb />
             <p className="label mt-6 text-white/90" aria-live="polite">
               {paused ? (
-                "Paused"
+                t.call.paused
               ) : searching ? (
                 <>
-                  Searching<span className="animate-caret">…</span>
+                  {t.call.searching}
+                  <span className="animate-caret">…</span>
                 </>
               ) : (
-                "Listening"
+                t.call.listening
               )}
             </p>
             <div className="mt-5 min-h-28" aria-live="polite">

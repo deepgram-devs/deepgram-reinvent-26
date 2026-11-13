@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -15,6 +16,7 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    LLMMessagesAppendFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
@@ -336,6 +338,17 @@ def persona_from_body(body) -> str:
     return POLICYHOLDER
 
 
+def voice_from_body(body) -> Voice:
+    """The voice the call starts in: the one picked in Settings, if it's one we have.
+
+    The browser remembers the pick, so a stale or hand-edited name can arrive
+    here. Anything that isn't in the catalog starts the call in the default.
+    """
+    if isinstance(body, dict) and isinstance(body.get("voice"), str):
+        return voices.find_voice(body["voice"]) or voices.DEFAULT_VOICE
+    return voices.DEFAULT_VOICE
+
+
 GREETINGS = {
     POLICYHOLDER: (
         "Thanks for calling Tri-County Insurance auto claims. I can look up the "
@@ -344,6 +357,19 @@ GREETINGS = {
     ),
     EMPLOYEE: "Tri-County claims desk. What would you like to look up?",
 }
+
+
+def greeting_instruction(persona: str, voice: Voice) -> str:
+    """The first turn's instruction: the persona's greeting, in the voice's language.
+
+    The greeting is written in English. In English it's said word for word;
+    in any other language the model translates it, since a Spanish voice
+    reading English text sounds like an accent, not a greeting.
+    """
+    greeting = GREETINGS[persona]
+    if voice.lang == "en":
+        return f"Start by saying exactly this: '{greeting}'"
+    return f"Start by saying this, in {voices.language_of(voice).name}: '{greeting}'"
 
 
 def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
@@ -610,7 +636,10 @@ def tools_for(persona: str) -> ToolsSchema:
 
 
 async def run_bot(
-    transport: BaseTransport, runner_args: RunnerArguments, persona: str = POLICYHOLDER
+    transport: BaseTransport,
+    runner_args: RunnerArguments,
+    persona: str = POLICYHOLDER,
+    voice: Voice = voices.DEFAULT_VOICE,
 ):
     logger.info(f"Starting Tri-County claims voice agent ({persona})")
 
@@ -622,8 +651,9 @@ async def run_bot(
     research_agent = ClaimsResearchAgent(kb, records) if persona == EMPLOYEE else None
 
     # The voice is the caller's only language setting: it picks the listen
-    # model and the reply language too. Every call starts in English.
-    current_voice = voices.DEFAULT_VOICE
+    # model and the reply language too. The call starts in the voice picked
+    # in Settings, English by default.
+    current_voice = voice
 
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
@@ -901,11 +931,11 @@ async def run_bot(
             "search_knowledge_base", holds_the_line(reports_timing(search_knowledge_base))
         )
 
-    async def apply_voice(voice: Voice, params: FunctionCallParams):
-        """Switch voice, and with it the language, in place.
+    async def switch_voice(voice: Voice) -> bool:
+        """Switch voice, and with it the language, in place. True if the language changed.
 
-        The prompt, voice, and listen updates are queued before the function
-        result, so the confirmation is the first turn in the new voice.
+        Both the set_voice tool and the Settings panel switch through here,
+        so the prompt, the voice, the listen settings, and the UI stay in step.
         """
         nonlocal current_voice
         old_voice, current_voice = current_voice, voice
@@ -939,6 +969,15 @@ async def run_bot(
             )
 
         await send_voice()
+        return language_changed
+
+    async def apply_voice(voice: Voice, params: FunctionCallParams):
+        """Switch voice for the set_voice and reset_voice tools.
+
+        The prompt, voice, and listen updates are queued before the function
+        result, so the confirmation is the first turn in the new voice.
+        """
+        language_changed = await switch_voice(voice)
         await params.result_callback(
             {"response": voices.confirmation(voice, language_changed)}
         )
@@ -985,10 +1024,7 @@ async def run_bot(
 
     context = LLMContext(
         messages=[
-            {
-                "role": "user",
-                "content": f"Start by saying exactly this: '{GREETINGS[persona]}'",
-            },
+            {"role": "user", "content": greeting_instruction(persona, current_voice)},
         ],
         tools=tools_for(persona),
     )
@@ -1035,6 +1071,42 @@ async def run_bot(
         ),
     )
 
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+
+    async def on_set_voice(data: dict):
+        """A voice picked in the Settings panel during the call.
+
+        It switches like set_voice, but nothing is said: the microphone is off
+        while Settings is open. A note in the context tells the model the
+        change was the caller's, so its next reply is in the new language.
+        """
+        name = data.get("voice") if isinstance(data, dict) else None
+        voice = voices.find_voice(name) if isinstance(name, str) else None
+        if voice is None:
+            logger.warning(f"Ignoring set-voice for unknown voice: {name!r}")
+            await send_voice()  # puts the picker back on the voice in use
+            return
+        if voice == current_voice:
+            return
+        await switch_voice(voice)
+        await task.queue_frame(
+            LLMMessagesAppendFrame(
+                messages=[{"role": "user", "content": voices.settings_switch_note(voice)}],
+                run_llm=False,
+            )
+        )
+
+    client_handlers["set-voice"] = on_set_voice
+
     # Handle client connection event
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
@@ -1072,9 +1144,10 @@ async def bot(runner_args: RunnerArguments):
 
     transport = await create_transport(runner_args, transport_params)
 
-    # The claims UI sends the persona with its WebRTC offer, as request_data
-    persona = persona_from_body(getattr(runner_args, "body", None))
-    await run_bot(transport, runner_args, persona)
+    # The claims UI sends the persona and the starting voice with its WebRTC
+    # offer, as request_data
+    body = getattr(runner_args, "body", None)
+    await run_bot(transport, runner_args, persona_from_body(body), voice_from_body(body))
 
 
 if __name__ == "__main__":

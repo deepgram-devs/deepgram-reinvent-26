@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n";
 import { useSettings } from "@/lib/settings";
 
 export function GearIcon({ className = "size-5" }: { className?: string }) {
@@ -14,6 +15,7 @@ export function GearIcon({ className = "size-5" }: { className?: string }) {
 /** Opens About this app. "solid" on the claim review's top bar, "glass" over the dark screens. */
 export function SettingsButton({ tone = "glass" }: { tone?: "solid" | "glass" }) {
   const { open, show } = useSettings();
+  const t = useT();
   const styles =
     tone === "solid"
       ? "bg-white text-ink hover:bg-white/90"
@@ -22,7 +24,7 @@ export function SettingsButton({ tone = "glass" }: { tone?: "solid" | "glass" })
     <button
       type="button"
       onClick={show}
-      aria-label="Settings"
+      aria-label={t.chrome.settings}
       aria-haspopup="dialog"
       aria-expanded={open}
       className={`grid size-11 shrink-0 place-items-center rounded-full transition ${styles}`}

@@ -1,11 +1,16 @@
+"use client";
+
 import Image from "next/image";
+
+import { useT } from "@/i18n";
 
 // The logos are white, for the dark backgrounds the footer sits on
 export function PartnerFooter() {
+  const t = useT();
   return (
     <div
       className="flex items-center justify-center gap-3 sm:gap-6"
-      aria-label="Built with Deepgram, AWS, and Pipecat"
+      aria-label={t.chrome.builtWith}
     >
       <Image src="/logos/deepgram.png" alt="Deepgram" width={126} height={24} className="h-5 w-auto sm:h-6" />
       <span className="text-white/40" aria-hidden="true">

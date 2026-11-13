@@ -53,10 +53,11 @@ function Cabin() {
   );
 }
 
-export function CarDiagram({ view, damaged }: { view: "exterior" | "interior"; damaged: string[] }) {
+/** `label` says what's damaged, in the UI's language, for screen readers */
+export function CarDiagram({ view, damaged, label }: { view: "exterior" | "interior"; damaged: string[]; label: string }) {
   const spots = view === "exterior" ? EXTERIOR : INTERIOR;
   return (
-    <svg viewBox="0 0 322 160" className="h-auto w-full" role="img" aria-label={`${view} damage: ${damaged.join(", ") || "none"}`}>
+    <svg viewBox="0 0 322 160" className="h-auto w-full" role="img" aria-label={label}>
       {view === "exterior" ? <Body /> : <Cabin />}
       {Object.entries(spots).map(([name, [x, y]]) => {
         const hit = damaged.includes(name);

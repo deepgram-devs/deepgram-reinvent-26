@@ -13,8 +13,10 @@ import { Listening } from "@/components/listening/Listening";
 import { TryAsking, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import type { Fixture } from "@/fixtures/fixtures";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { DocumentLanguage, useT } from "@/i18n";
 import { FixtureConversation, LiveConversation } from "@/lib/conversation";
 import { isPersona, PersonaProvider, usePersona, type Persona } from "@/lib/persona";
+import { PreferencesProvider, usePreferences } from "@/lib/preferences";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SettingsProvider } from "@/lib/settings";
 
@@ -24,11 +26,15 @@ import { SettingsProvider } from "@/lib/settings";
 // Next inlines the value at build time.
 const TRANSPORT = process.env.NEXT_PUBLIC_PIPECAT_TRANSPORT === "daily" ? "daily" : "smallwebrtc";
 
+// What the bot learns from the browser when the call starts: who's calling,
+// and the voice to start in (agent.py, persona_from_body and voice_from_body)
+type StartRequest = { persona: Persona; voice?: string };
+
 // SmallWebRTC: the browser sends its WebRTC offer here; next.config.ts passes
 // it on to the bot, and requestData reaches it as runner_args.body. One object
 // per persona, kept outside the component: PipecatAppBase rebuilds its client
 // whenever these objects change, so switching persona between calls is fine.
-const WEBRTC_PARAMS: Record<Persona, { webrtcRequestParams: { endpoint: string; requestData: { persona: Persona } } }> = {
+const WEBRTC_PARAMS: Record<Persona, { webrtcRequestParams: { endpoint: string; requestData: StartRequest } }> = {
   policyholder: { webrtcRequestParams: { endpoint: "/api/offer", requestData: { persona: "policyholder" } } },
   employee: { webrtcRequestParams: { endpoint: "/api/offer", requestData: { persona: "employee" } } },
 };
@@ -36,9 +42,10 @@ const WEBRTC_PARAMS: Record<Persona, { webrtcRequestParams: { endpoint: string; 
 // Daily: the runner's /start creates a room, starts the bot in it, and returns
 // the room and token the browser joins. body reaches the bot as runner_args.body.
 function dailyParams(persona: Persona) {
+  const body: StartRequest = { persona };
   return {
     endpoint: "/api/start",
-    requestData: { transport: "daily", createDailyRoom: true, body: { persona } },
+    requestData: { transport: "daily", createDailyRoom: true, body },
   };
 }
 const DAILY_PARAMS: Record<Persona, ReturnType<typeof dailyParams>> = {
@@ -47,6 +54,20 @@ const DAILY_PARAMS: Record<Persona, ReturnType<typeof dailyParams>> = {
 };
 
 const CONNECT_PARAMS = TRANSPORT === "daily" ? DAILY_PARAMS : WEBRTC_PARAMS;
+
+/**
+ * Write the voice the call starts in into the persona's params, just before
+ * connecting. It goes into the same object rather than a new one: a new
+ * object makes PipecatAppBase rebuild its client, which drops a call in
+ * progress, and between calls remounts the screens, closing Settings while a
+ * voice is being picked. Set at Start, it can't change during the call;
+ * switching voice during a call is a set-voice message instead.
+ */
+function setStartVoice(persona: Persona, voice: string) {
+  const params = CONNECT_PARAMS[persona];
+  if ("webrtcRequestParams" in params) params.webrtcRequestParams.requestData.voice = voice;
+  else params.requestData.body.voice = voice;
+}
 
 type Phase = "idle" | "connecting" | "live";
 
@@ -120,16 +141,26 @@ function LiveApp({
   onPersonaChange: (persona: Persona) => void;
 }) {
   const state = usePipecatClientTransportState();
-  const { reset } = useSession();
+  const { reset, voice: activeVoice } = useSession();
+  const persona = usePersona();
+  const { voice: preferred, setVoice } = usePreferences();
+  const t = useT();
   const [starting, setStarting] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [micDenied, setMicDenied] = useState(false);
+
+  // The voice in use becomes the preference, whoever changed it: the UI's
+  // language follows the agent's, and the next call starts where this one left off
+  const activeName = activeVoice?.voice;
+  useEffect(() => {
+    if (activeName) setVoice(activeName);
+  }, [activeName, setVoice]);
 
   const phase: Phase = state === "ready" ? "live" : starting && CONNECTING.includes(state) ? "connecting" : "idle";
 
   useRTVIClientEvent(
     RTVIEvent.DeviceError,
     useCallback(() => {
-      setNotice("We couldn't use your microphone. Allow microphone access in your browser, then try again.");
+      setMicDenied(true);
     }, []),
   );
 
@@ -141,19 +172,16 @@ function LiveApp({
     }, [reset]),
   );
 
-  const error =
-    notice ??
-    (connectError
-      ? "We couldn't reach the claims agent. Start it with python agent.py, then try again."
-      : null);
+  const error = micDenied ? t.landing.micError : connectError ? t.landing.unreachable : null;
 
   return (
     <Screens
       phase={phase}
       error={error}
       onStart={() => {
-        setNotice(null);
+        setMicDenied(false);
         setStarting(true);
+        setStartVoice(persona, preferred.name);
         void connect?.();
       }}
       onEnd={() => {
@@ -261,7 +289,11 @@ function App() {
 export default function Page() {
   return (
     <Suspense>
-      <App />
+      {/* Outside PipecatAppBase: the starting voice goes out with the connect request */}
+      <PreferencesProvider>
+        <DocumentLanguage />
+        <App />
+      </PreferencesProvider>
     </Suspense>
   );
 }

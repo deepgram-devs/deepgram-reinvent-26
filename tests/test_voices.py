@@ -1,15 +1,21 @@
 """Catalog tests for voices.py. Run: .venv/bin/python -m unittest discover tests"""
 
+import json
 import re
 import sys
 import unittest
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 import voices  # noqa: E402
+from agent import EMPLOYEE, GREETINGS, POLICYHOLDER, greeting_instruction, voice_from_body  # noqa: E402
 from voices import DEFAULT_VOICE, LANGUAGES, VOICES  # noqa: E402
+
+# The voice picker's copy of the catalog, written by scripts/export_voices.py
+CLIENT_CATALOG = ROOT / "client" / "src" / "lib" / "voices.json"
 
 # Languages flux-general-multi accepts as language hints (others fail with 400)
 FLUX_MULTI_LANGUAGES = {"en", "es", "fr", "de", "hi", "ru", "pt", "ja", "it", "nl"}
@@ -133,8 +139,57 @@ class CatalogTests(unittest.TestCase):
 
     def test_no_unexpanded_placeholders(self):
         for v in [DEFAULT_VOICE, voices.find_voice("carmen"), voices.find_voice("bianca")]:
-            for text in (voices.voice_intro(v), voices.confirmation(v, True), voices.confirmation(v, False)):
+            for text in (
+                voices.voice_intro(v),
+                voices.confirmation(v, True),
+                voices.confirmation(v, False),
+                voices.settings_switch_note(v),
+            ):
                 self.assertIsNone(re.search(r"[{}<>]", text), text)
+
+    def test_settings_switch_note_names_the_voice_and_language(self):
+        note = voices.settings_switch_note(voices.find_voice("camille"))
+        self.assertIn("Camille, a French woman", note)
+        self.assertIn("Reply only in French", note)
+
+
+class ClientCatalogTests(unittest.TestCase):
+    def test_voices_json_is_in_sync(self):
+        self.assertTrue(CLIENT_CATALOG.exists(), "run scripts/export_voices.py")
+        written = json.loads(CLIENT_CATALOG.read_text())
+        self.assertEqual(
+            written,
+            voices.client_catalog(),
+            "client/src/lib/voices.json is out of date: run scripts/export_voices.py",
+        )
+
+    def test_catalog_default_is_a_listed_voice(self):
+        catalog = voices.client_catalog()
+        self.assertIn(catalog["default"], {v["name"] for v in catalog["voices"]})
+        self.assertEqual([lang["code"] for lang in catalog["languages"]], list(LANGUAGES))
+
+
+class StartingVoiceTests(unittest.TestCase):
+    def test_voice_from_body_finds_the_picked_voice(self):
+        self.assertIs(voice_from_body({"voice": "carmen"}), voices.find_voice("carmen"))
+        self.assertIs(voice_from_body({"persona": "employee", "voice": "flux-kit-en"}), voices.find_voice("kit"))
+
+    def test_voice_from_body_falls_back_to_the_default(self):
+        for body in [None, {}, {"voice": ""}, {"voice": "no-such-voice"}, {"voice": 7}, "carmen", []]:
+            with self.subTest(body=body):
+                self.assertIs(voice_from_body(body), DEFAULT_VOICE)
+
+    def test_greeting_is_word_for_word_in_english(self):
+        for persona in (POLICYHOLDER, EMPLOYEE):
+            self.assertEqual(
+                greeting_instruction(persona, DEFAULT_VOICE),
+                f"Start by saying exactly this: '{GREETINGS[persona]}'",
+            )
+
+    def test_greeting_names_the_language_otherwise(self):
+        text = greeting_instruction(POLICYHOLDER, voices.find_voice("carmen"))
+        self.assertTrue(text.startswith("Start by saying this, in Spanish: "))
+        self.assertIn(GREETINGS[POLICYHOLDER], text)
 
 
 if __name__ == "__main__":

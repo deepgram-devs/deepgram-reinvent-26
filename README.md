@@ -24,6 +24,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -34,6 +35,7 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    LLMMessagesAppendFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
@@ -115,7 +117,7 @@ Two kinds of people use this agent, and they need different tools, prompts, and 
 | `policyholder` | A customer calling about their own claim | Verifies the caller with a claim number and last name, reads that one claim record, and answers from it directly |
 | `employee` | Tri-County staff | Searches every claim on file. The pipeline LLM hands each question to a Strands research agent that runs as many knowledge base searches as it needs |
 
-The persona travels with the call. The claims UI has a **Policyholder / Tri-County staff** toggle on its landing screen, and it sends the choice with the WebRTC offer. Pipecat's runner hands it to the bot as `runner_args.body`, and the `bot()` entry point at the bottom of the file reads it with `persona_from_body` before calling `run_bot`. Anything other than `"employee"`, including no body at all, gets the policyholder persona, so a client that knows nothing about personas still works. Add the persona names just above where `run_bot` will go:
+The persona travels with the call. The claims UI has a **Policyholder / Tri-County staff** toggle on its landing screen, and it sends the choice with the WebRTC offer. Pipecat's runner hands it to the bot as `runner_args.body`, and the `bot()` entry point at the bottom of the file reads it with `persona_from_body` before calling `run_bot`. Anything other than `"employee"`, including no body at all, gets the policyholder persona, so a client that knows nothing about personas still works. The body also carries the voice picked in the UI's Settings panel, which `voice_from_body` reads the same way; see [Picking a voice in Settings](#picking-a-voice-in-settings). Add the persona names just above where `run_bot` will go:
 
 ```python
 # Who is on the call. The claims UI picks it before the call starts.
@@ -131,13 +133,27 @@ def persona_from_body(body) -> str:
     if isinstance(body, dict) and body.get("persona") == EMPLOYEE:
         return EMPLOYEE
     return POLICYHOLDER
+
+
+def voice_from_body(body) -> Voice:
+    """The voice the call starts in: the one picked in Settings, if it's one we have.
+
+    The browser remembers the pick, so a stale or hand-edited name can arrive
+    here. Anything that isn't in the catalog starts the call in the default.
+    """
+    if isinstance(body, dict) and isinstance(body.get("voice"), str):
+        return voices.find_voice(body["voice"]) or voices.DEFAULT_VOICE
+    return voices.DEFAULT_VOICE
 ```
 
 `CLAIM_TOOLS` names the tools that look up claims, one per persona. The hold line you'll add later plays for either of them.
 
 ```python
 async def run_bot(
-    transport: BaseTransport, runner_args: RunnerArguments, persona: str = POLICYHOLDER
+    transport: BaseTransport,
+    runner_args: RunnerArguments,
+    persona: str = POLICYHOLDER,
+    voice: Voice = voices.DEFAULT_VOICE,
 ):
     logger.info(f"Starting Tri-County claims voice agent ({persona})")
 ```
@@ -186,8 +202,9 @@ If you try to run this botfile right now, you'd get an error, because none of th
     research_agent = ClaimsResearchAgent(kb, records) if persona == EMPLOYEE else None
 
     # The voice is the caller's only language setting: it picks the listen
-    # model and the reply language too. Every call starts in English.
-    current_voice = voices.DEFAULT_VOICE
+    # model and the reply language too. The call starts in the voice picked
+    # in Settings, English by default.
+    current_voice = voice
 
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
@@ -228,6 +245,19 @@ GREETINGS = {
     ),
     EMPLOYEE: "Tri-County claims desk. What would you like to look up?",
 }
+
+
+def greeting_instruction(persona: str, voice: Voice) -> str:
+    """The first turn's instruction: the persona's greeting, in the voice's language.
+
+    The greeting is written in English. In English it's said word for word;
+    in any other language the model translates it, since a Spanish voice
+    reading English text sounds like an accent, not a greeting.
+    """
+    greeting = GREETINGS[persona]
+    if voice.lang == "en":
+        return f"Start by saying exactly this: '{greeting}'"
+    return f"Start by saying this, in {voices.language_of(voice).name}: '{greeting}'"
 
 
 def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
@@ -639,11 +669,11 @@ Both claim tools can take long enough that the caller deserves a hold line, so t
             "search_knowledge_base", holds_the_line(reports_timing(search_knowledge_base))
         )
 
-    async def apply_voice(voice: Voice, params: FunctionCallParams):
-        """Switch voice, and with it the language, in place.
+    async def switch_voice(voice: Voice) -> bool:
+        """Switch voice, and with it the language, in place. True if the language changed.
 
-        The prompt, voice, and listen updates are queued before the function
-        result, so the confirmation is the first turn in the new voice.
+        Both the set_voice tool and the Settings panel switch through here,
+        so the prompt, the voice, the listen settings, and the UI stay in step.
         """
         nonlocal current_voice
         old_voice, current_voice = current_voice, voice
@@ -677,6 +707,15 @@ Both claim tools can take long enough that the caller deserves a hold line, so t
             )
 
         await send_voice()
+        return language_changed
+
+    async def apply_voice(voice: Voice, params: FunctionCallParams):
+        """Switch voice for the set_voice and reset_voice tools.
+
+        The prompt, voice, and listen updates are queued before the function
+        result, so the confirmation is the first turn in the new voice.
+        """
+        language_changed = await switch_voice(voice)
         await params.result_callback(
             {"response": voices.confirmation(voice, language_changed)}
         )
@@ -732,15 +771,12 @@ The line itself comes from a short list for the current voice's language, never 
 
 The `set_voice`, `list_voices`, and `reset_voice` functions let the caller change the agent's voice and language. They're explained in [Switching languages by voice](#switching-languages-by-voice).
 
-Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call: `tools_for(persona)` gives each persona its own claim tool alongside the voice tools. The greeting comes from `GREETINGS`, so a policyholder hears about claim lookups and staff hear the claims desk. We don't need to give the user aggregator a VAD analyzer: Deepgram Flux sends the start-of-turn and end-of-turn signals, and the aggregator uses them automatically. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
+Next, let's create the context and its aggregators. The `LLMContext` stores the user and bot turns, plus the tools the LLM can call: `tools_for(persona)` gives each persona its own claim tool alongside the voice tools. The greeting comes from `GREETINGS`, so a policyholder hears about claim lookups and staff hear the claims desk. `greeting_instruction` asks for it word for word in English, and translated when the call starts in another language. We don't need to give the user aggregator a VAD analyzer: Deepgram Flux sends the start-of-turn and end-of-turn signals, and the aggregator uses them automatically. For more on how this works, see Pipecat's documentation on [context management](https://docs.pipecat.ai/guides/learn/context-management).
 
 ```python
     context = LLMContext(
         messages=[
-            {
-                "role": "user",
-                "content": f"Start by saying exactly this: '{GREETINGS[persona]}'",
-            },
+            {"role": "user", "content": greeting_instruction(persona, current_voice)},
         ],
         tools=tools_for(persona),
     )
@@ -842,7 +878,7 @@ The wording comes from measurements on another Deepgram project, a voice device 
 
 #### Applying a switch
 
-`apply_voice` makes the switch in place, without dropping the call. It queues three settings updates, one for each service, and then returns the function result:
+`switch_voice` makes the switch in place, without dropping the call, and `apply_voice` wraps it for the `set_voice` and `reset_voice` tools. It queues three settings updates, one for each service, and then returns the function result:
 
 | Update | What the service does |
 |---|---|
@@ -854,17 +890,28 @@ Because the updates are queued before the result, the confirmation the LLM speak
 
 The order of the listen steps matters. Only `flux-general-multi` accepts language hints, so `listen_steps()` sets hints after reconnecting to it and clears them before leaving it. That way a `Configure` never reaches a `flux-general-en` connection. The TTS update waits, for up to three seconds, for any speech still streaming in the old voice, because reconnecting Flux TTS would cut it off mid-word. The prompt also tells the LLM to call `set_voice` before saying anything about the switch.
 
-Every call starts in English with the default voice. Callers are anonymous until they've been verified, so there's no one to remember a preference for.
+#### Picking a voice in Settings
+
+The claims UI's Settings panel has a **Voice** section: a language, listed by its own name ("Español", "Deutsch", "हिन्दी"), then a voice in that language, suggested voices first. Picking a language picks its first suggested voice, so one choice is enough. The browser remembers the pick in `localStorage`, not the agent: callers are anonymous until they're verified, so there's no one on the server to remember it for.
+
+- **Between calls**, the pick is the voice the next call starts in. The UI sends it with the persona as `request_data`, and `voice_from_body` turns it into the starting voice, falling back to the default for a name that isn't in the catalog. STT, TTS, and the prompt are all built from it, and `greeting_instruction` asks for the greeting in that language.
+- **During a call**, the UI also sends a `set-voice` client message, and the agent switches on the spot. See [Finishing the Botfile](#finishing-the-botfile) for the handler.
+
+The picker reads the catalog from [client/src/lib/voices.json](client/src/lib/voices.json), which [scripts/export_voices.py](scripts/export_voices.py) writes from `voices.py`. Rerun it after changing the catalog; `tests/test_voices.py` fails until you do:
+
+```bash
+.venv/bin/python scripts/export_voices.py
+```
 
 #### Known limits
 
-- Claim records are in English. The prompt tells the LLM to translate what it reads from them into the reply language.
+- Claim records are in English. The prompt tells the LLM to translate what it reads from them into the reply language. On screen, record values stay as recorded; see [The screen speaks the caller's language](#the-screen-speaks-the-callers-language).
 - `policyholder_matches` compares letters A to Z, with accents removed. A last name the caller says in another script, such as Cyrillic, has to be spelled out in Latin letters.
 - A caller who interrupts during the moment Flux STT reconnects may not be heard.
 
 #### Testing it
 
-`tests/test_voices.py` checks the catalog: unique names, the `flux-<name>-<lang>` pattern, one featured voice per language, and that every voice's language can be heard. `scripts/probe_flux_languages.py` checks the live API: for each language it synthesises a sentence with Flux TTS and streams it back through `flux-general-multi`. `scripts/switch_test.py` drives the whole agent through a series of switches with synthesised speech and reports the voice and pitch of every reply.
+`tests/test_voices.py` checks the catalog: unique names, the `flux-<name>-<lang>` pattern, one featured voice per language, and that every voice's language can be heard. It also checks that `client/src/lib/voices.json` matches `voices.py`, that `voice_from_body` falls back to the default, and the greeting instruction for each language. `scripts/probe_flux_languages.py` checks the live API: for each language it synthesises a sentence with Flux TTS and streams it back through `flux-general-multi`. `scripts/switch_test.py` drives the whole agent through a series of switches with synthesised speech and reports the voice and pitch of every reply.
 
 ```bash
 .venv/bin/python -m unittest discover tests
@@ -1391,6 +1438,48 @@ Next, we need to define a pipeline worker. This is what runs the pipeline. Do th
 
 The `PipelineParams` enable metrics reporting, so you can see latency and token usage in the logs. The `rtvi_observer_params` decide what the claims UI learns about tool calls: the name of every call, and the arguments of the claim tools and `set_voice`, but never a result, since results hold the claim data the LLM reads.
 
+The claims UI also talks back during a call. The browser sends RTVI client messages with `client.sendClientMessage(type, data)`, and the pipeline worker's RTVI processor raises `on_client_message` for each one, with the message's `type` and `data`. One handler looks the type up in `client_handlers`, so each feature only adds an entry. The first is `set-voice`, sent when the caller picks a voice in Settings mid-call:
+
+```python
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+
+    async def on_set_voice(data: dict):
+        """A voice picked in the Settings panel during the call.
+
+        It switches like set_voice, but nothing is said: the microphone is off
+        while Settings is open. A note in the context tells the model the
+        change was the caller's, so its next reply is in the new language.
+        """
+        name = data.get("voice") if isinstance(data, dict) else None
+        voice = voices.find_voice(name) if isinstance(name, str) else None
+        if voice is None:
+            logger.warning(f"Ignoring set-voice for unknown voice: {name!r}")
+            await send_voice()  # puts the picker back on the voice in use
+            return
+        if voice == current_voice:
+            return
+        await switch_voice(voice)
+        await task.queue_frame(
+            LLMMessagesAppendFrame(
+                messages=[{"role": "user", "content": voices.settings_switch_note(voice)}],
+                run_llm=False,
+            )
+        )
+
+    client_handlers["set-voice"] = on_set_voice
+```
+
+`on_set_voice` switches through the same `switch_voice` as the `set_voice` tool. It speaks no confirmation: the microphone is off while Settings is open, and nobody asked anything. Instead, an `LLMMessagesAppendFrame` with `run_llm=False` adds a note to the context, so the model knows the switch was the caller's choice and answers the next question in the new language. A name that isn't in the catalog is ignored, and `send_voice()` puts the picker back on the voice in use.
+
 Next, we need to add some event handlers so the pipeline knows how to handle the user connecting and disconnecting. First, when the user connects, we'll tell the screen which voice is speaking and push a frame that tells the LLM to run. The LLM responds to the greeting instruction we put in the context.
 
 ```python
@@ -1442,12 +1531,13 @@ async def bot(runner_args: RunnerArguments):
 
     transport = await create_transport(runner_args, transport_params)
 
-    # The claims UI sends the persona with its WebRTC offer, as request_data
-    persona = persona_from_body(getattr(runner_args, "body", None))
-    await run_bot(transport, runner_args, persona)
+    # The claims UI sends the persona and the starting voice with its WebRTC
+    # offer, as request_data
+    body = getattr(runner_args, "body", None)
+    await run_bot(transport, runner_args, persona_from_body(body), voice_from_body(body))
 ```
 
-The `transport_params` object describes how we want to configure the various transports that this bot supports. In this case, we'll support the DailyTransport (`daily`) and the SmallWebRTCTransport (`webrtc`). The bot starter will request a transport type in the `runner_args`, and the `create_transport` function will create a transport object that gets passed to the `run_bot` function. `runner_args.body` carries the `request_data` the client sent with its offer, and `persona_from_body` turns it into a persona. Reading it with `getattr` keeps `bot()` working when a runner passes arguments without a body.
+The `transport_params` object describes how we want to configure the various transports that this bot supports. In this case, we'll support the DailyTransport (`daily`) and the SmallWebRTCTransport (`webrtc`). The bot starter will request a transport type in the `runner_args`, and the `create_transport` function will create a transport object that gets passed to the `run_bot` function. `runner_args.body` carries the `request_data` the client sent with its offer, and `persona_from_body` and `voice_from_body` turn it into a persona and a starting voice. Reading it with `getattr` keeps `bot()` working when a runner passes arguments without a body.
 
 When you're developing locally, your 'bot runner' is built in to pipecat. We need to add one more thing to the bottom of our botfile for local development.
 
@@ -1467,7 +1557,7 @@ A voice agent answers one question at a time, and a caller only hears what they 
 
 ### Choosing a persona
 
-The landing screen has a **Policyholder / Tri-County staff** toggle above the claim examples. The choice changes the landing copy and example questions, and it rides along with the call: [client/src/app/page.tsx](client/src/app/page.tsx) keeps one set of connect parameters per persona, each with `requestData: { persona }` on its `webrtcRequestParams`. The small WebRTC transport sends `requestData` in the body of its offer to `/api/offer`. There's a catch: the runner's `/api/offer` endpoint only reads the snake_case `request_data` field and silently drops `requestData`, so every call would start as a policyholder. [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) sits in front of the agent's endpoint, renames the field, and passes the offer and its ICE candidates through. The agent then reads the persona as `runner_args.body`. The persona is fixed once the call starts. Changing the connect parameters makes the Voice UI Kit build a new client, which is fine between calls and would end one in progress, so the toggle is disabled while connecting. The copy for each persona, including the **Try asking** prompts, lives in [client/src/lib/persona.tsx](client/src/lib/persona.tsx).
+The landing screen has a **Policyholder / Tri-County staff** toggle above the claim examples. The choice changes the landing copy and example questions, and it rides along with the call: [client/src/app/page.tsx](client/src/app/page.tsx) keeps one set of connect parameters per persona, each with `requestData: { persona }` on its `webrtcRequestParams`. The small WebRTC transport sends `requestData` in the body of its offer to `/api/offer`. There's a catch: the runner's `/api/offer` endpoint only reads the snake_case `request_data` field and silently drops `requestData`, so every call would start as a policyholder. [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) sits in front of the agent's endpoint, renames the field, and passes the offer and its ICE candidates through. The agent then reads the persona as `runner_args.body`. The persona is fixed once the call starts. Changing the connect parameters makes the Voice UI Kit build a new client, which is fine between calls and would end one in progress, so the toggle is disabled while connecting. The starting voice rides along too, as `voice` next to `persona`, but it's written into the persona's existing parameters at **Start conversation** rather than making new ones. New parameters would rebuild the client, which mid-call drops the call, and between calls remounts the screens and closes Settings while a voice is being picked. The copy for each persona, including the **Try asking** prompts, lives in [client/src/lib/persona.tsx](client/src/lib/persona.tsx).
 
 ### How the agent talks to the screen
 
@@ -1489,6 +1579,16 @@ The parts of the claim come from the LLM itself. `search_knowledge_base` takes a
 The screen reads the same record the agent does. Verification loads the record into the call's `records` cache, and `claim-loaded` goes out from it right after the answer, so the screen costs no extra knowledge base search or S3 read. `search-results` works the same way: the research agent loads each record it reads into the cache, and the handler builds the screen's claim list from it.
 
 On the employee's screen, the desk shows the question and one card per claim in the latest `search-results`: claim ID, policyholder, status, vehicle, and adjuster. Selecting a card opens that claim in the same review screen policyholders see, with a **Results** button to go back. The open claim stays open when a new search comes in, so staff can keep reading while they ask the next question.
+
+### The screen speaks the caller's language
+
+The UI's language follows the voice: pick a Spanish voice in Settings, or ask the agent to speak German, and the screen switches with it. During a call, every `voice` message from the agent becomes the remembered voice, so the screen follows the agent's switches, and the next call starts where the last one left off.
+
+The text lives in [client/src/i18n/](client/src/i18n/), one typed dictionary per language: English, Spanish, French, German, Hindi, Russian, Portuguese, Italian, and Dutch. `en.ts` defines the shape, and every other language is typed against it, so `npm run typecheck` fails on a missing or extra key. Text with numbers or names in it is a function, such as `claims: (n) => ...`, so each language handles its own plurals. Components read the text with `useT()`, and dates go through `Intl.DateTimeFormat` for the current language. No i18n library is involved.
+
+Claim records stay in English on screen. Names, notes, statuses, damage areas, and other values show as recorded; the agent translates them when it speaks. The screen does translate the labels the agent sends with a record, such as `Deductible`, `Collision`, or `Paid to date`, when the dictionary knows them (`fieldLabels` in each language), and shows any other label as sent.
+
+The server renders the page in English, since it can't see the browser's storage. The browser switches to the remembered language right after it loads, and keeps `<html lang>` in step.
 
 ### The screen follows the agent's privacy rules
 

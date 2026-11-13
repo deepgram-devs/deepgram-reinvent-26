@@ -4,17 +4,23 @@ import { usePipecatClientMicControl } from "@pipecat-ai/client-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { LockIcon, MicIcon, MicOffIcon, WaveIcon } from "@/components/chrome/Pills";
+import { useLocale, useT, type Locale } from "@/i18n";
 import { initials, sectionLabel, type ClaimView, type Section } from "@/lib/claim";
 import { useConversationTurns, type Turn } from "@/lib/conversation";
 import { usePersona, usePersonaCopy } from "@/lib/persona";
 import { useSession } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 
-function clock(iso: string): string {
+/** The time of a turn, without AM or PM in any language: the log is short, and the hour is never in doubt */
+function clock(iso: string, locale: Locale): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ""
-    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }).replace(/\s?[AP]M$/i, "");
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", second: "2-digit" })
+    .formatToParts(date)
+    .filter((part) => part.type !== "dayPeriod")
+    .map((part) => part.value)
+    .join("")
+    .trim();
 }
 
 function Avatar({ text }: { text: string }) {
@@ -27,6 +33,7 @@ function Avatar({ text }: { text: string }) {
 
 function FocusChips({ sections, claim }: { sections: Section[]; claim: ClaimView | null }) {
   const { pointAt } = useSession();
+  const t = useT();
   if (!sections.length || !claim) return null;
   return (
     <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -37,7 +44,7 @@ function FocusChips({ sections, claim }: { sections: Section[]; claim: ClaimView
             onClick={() => pointAt([section])}
             className="label rounded-full border border-white/40 px-3 py-1 text-[0.65rem] text-white transition hover:bg-white/15"
           >
-            ↳ {sectionLabel(section, claim)}
+            ↳ {sectionLabel(section, claim, t)}
           </button>
         </li>
       ))}
@@ -46,6 +53,8 @@ function FocusChips({ sections, claim }: { sections: Section[]; claim: ClaimView
 }
 
 function Bubble({ turn, you, claim }: { turn: Turn; you: string; claim: ClaimView | null }) {
+  const t = useT();
+  const locale = useLocale();
   if (turn.role === "tool") return <FunctionCallRow turn={turn} />;
   if (turn.role === "user") {
     const live = !turn.final;
@@ -54,10 +63,12 @@ function Bubble({ turn, you, claim }: { turn: Turn; you: string; claim: ClaimVie
         <span className="label mb-1.5 mr-12 text-[0.65rem] text-white/80">
           {live ? (
             <>
-              <span className="mr-1">●</span> You · Speaking
+              <span className="mr-1">●</span> {t.session.you} · {t.session.speaking}
             </>
           ) : (
-            <>You · {clock(turn.at)}</>
+            <>
+              {t.session.you} · {clock(turn.at, locale)}
+            </>
           )}
         </span>
         <div className="flex items-end gap-2.5">
@@ -76,7 +87,9 @@ function Bubble({ turn, you, claim }: { turn: Turn; you: string; claim: ClaimVie
   }
   return (
     <li className="flex flex-col">
-      <span className="label mb-1.5 ml-12 text-[0.65rem] text-white/80">Assistant · {clock(turn.at)}</span>
+      <span className="label mb-1.5 ml-12 text-[0.65rem] text-white/80">
+        {t.session.assistant} · {clock(turn.at, locale)}
+      </span>
       <div className="flex items-start gap-2.5">
         <span className="mt-auto grid size-9 shrink-0 place-items-center rounded-full border border-white/40 text-white">
           <WaveIcon className="size-4" />
@@ -143,11 +156,18 @@ function FunctionCallRow({ turn }: { turn: Turn }) {
   const [open, setOpen] = useState(false);
   const row = useRef<HTMLLIElement>(null);
   const bodyId = useId();
+  const t = useT();
   const call = turn.call;
   if (!call?.function_name) return null;
 
   const running = call.status !== "completed";
-  const status = call.cancelled ? "cancelled" : running ? "running" : turn.ms !== undefined ? duration(turn.ms) : "done";
+  const status = call.cancelled
+    ? t.session.cancelled
+    : running
+      ? t.session.running
+      : turn.ms !== undefined
+        ? duration(turn.ms)
+        : t.session.done;
   const entries: [string, unknown][] = [
     ["function", call.function_name],
     ...Object.entries(call.args ?? {}),
@@ -172,12 +192,12 @@ function FunctionCallRow({ turn }: { turn: Turn }) {
           onClick={toggle}
           aria-expanded={open}
           aria-controls={bodyId}
-          aria-label={`Function call ${call.function_name}, ${status}. ${open ? "Hide" : "Show"} the request.`}
+          aria-label={t.session.callLabel(call.function_name, status, open)}
           className="flex w-full items-center gap-2.5 px-4 py-3 text-left"
         >
           <CodeIcon className={`size-4 shrink-0 ${open ? "text-ring-blue" : "text-white"}`} />
           {/* In a narrow panel the icon says it, and the summary gets the room */}
-          <span className="label hidden shrink-0 text-[0.65rem] text-white @sm:inline">Function call</span>
+          <span className="label hidden shrink-0 text-[0.65rem] text-white @sm:inline">{t.session.functionCall}</span>
           <span
             title={`${call.function_name}(${JSON.stringify(call.args ?? {})})`}
             className={`min-w-0 flex-1 truncate font-mono text-[0.85rem] ${open ? "text-lime" : "text-white"}`}
@@ -210,13 +230,14 @@ function FunctionCallRow({ turn }: { turn: Turn }) {
 export function MicButton({ live }: { live: boolean }) {
   const { enableMic, isMicEnabled } = usePipecatClientMicControl();
   const on = live && isMicEnabled;
+  const t = useT();
   return (
     <button
       type="button"
       onClick={() => enableMic(!isMicEnabled)}
       disabled={!live}
       aria-pressed={!on}
-      aria-label={on ? "Mute microphone" : "Unmute microphone"}
+      aria-label={on ? t.session.mute : t.session.unmute}
       className="grid size-14 shrink-0 place-items-center rounded-full border border-white/40 bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-50"
     >
       {on ? <MicIcon /> : <MicOffIcon />}
@@ -225,6 +246,7 @@ export function MicButton({ live }: { live: boolean }) {
 }
 
 export function EndButton({ onEnd, live }: { onEnd: () => void; live: boolean }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -232,7 +254,7 @@ export function EndButton({ onEnd, live }: { onEnd: () => void; live: boolean })
       className="label flex h-14 flex-1 items-center justify-center gap-3 rounded-full border-2 border-white/40 text-[0.85rem] text-white transition hover:bg-white/10"
     >
       <WaveIcon />
-      {live ? "End conversation" : "Close"}
+      {live ? t.session.end : t.session.close}
     </button>
   );
 }
@@ -242,12 +264,13 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
   const { turns } = useConversationTurns();
   const persona = usePersona();
   const { paused } = useSettings();
+  const t = useT();
   const list = useRef<HTMLOListElement>(null);
   // Whether the log is scrolled to its newest item. Scrolling up to read
   // unpins it; scrolling back down pins it again.
   const pinned = useRef(true);
   // A policyholder is the person on their claim; staff browse other people's
-  const you = persona === "policyholder" && claim ? initials(claim.policyholder.name) : "YOU";
+  const you = persona === "policyholder" && claim ? initials(claim.policyholder.name) : t.chrome.you;
 
   // The panel re-renders for every change to the conversation: a new turn,
   // words as they're spoken, a function call, a card the agent points at.
@@ -282,17 +305,17 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
     .join(" · ");
 
   return (
-    <section aria-label="Voice session" className="flex max-h-[calc(100dvh-7rem)] flex-col rounded-[1.75rem] bg-violet p-6 text-white">
+    <section aria-label={t.session.title} className="flex max-h-[calc(100dvh-7rem)] flex-col rounded-[1.75rem] bg-violet p-6 text-white">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Voice session</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{t.session.title}</h2>
           <p className="mt-2 font-mono text-sm text-white/85">{meta}</p>
         </div>
         <span
           className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.7rem] ${live ? "bg-lime text-ink" : "bg-white/20 text-white"}`}
         >
           <span className="size-1.5 rounded-full bg-current" />
-          {live ? "Live" : "Ended"}
+          {live ? t.call.live : t.call.ended}
         </span>
       </header>
 
@@ -306,11 +329,7 @@ export function VoiceSessionPanel({ onEnd, live }: { onEnd: () => void; live: bo
       <footer className="mt-4">
         <p className="flex items-start gap-2 text-[0.95rem] leading-snug text-white/90">
           <span className={`mt-1.5 size-2 shrink-0 rounded-full ${live && !paused ? "bg-white" : "bg-white/40"}`} />
-          {paused
-            ? "Paused. Close settings to keep talking."
-            : live
-              ? "Conversation is live. Just talk, and interrupt anytime."
-              : "This conversation has ended."}
+          {paused ? t.session.pausedNote : live ? t.session.liveNote : t.session.endedNote}
         </p>
         <div className="mt-4 flex items-center gap-3">
           <MicButton live={live} />
@@ -326,19 +345,21 @@ export function TryAsking() {
   const { sendText } = useConversationTurns();
   const persona = usePersona();
   const copy = usePersonaCopy();
+  const t = useT();
+  // In the UI's language: a tapped prompt is sent as the caller's own words
   const prompts =
     persona === "policyholder" && claim
       ? [
-          "What’s the deductible?",
-          "When is the next review?",
-          "Read the location notes",
-          claim.other_party ? "Who was driving the other car?" : "Where’s the damage?",
+          t.session.askDeductible,
+          t.session.askNextReview,
+          t.session.askLocationNotes,
+          claim.other_party ? t.session.askOtherDriver : t.session.askDamage,
         ]
       : copy.prompts;
   return (
     // text-ink: on the listening screen this white card sits in a text-white aside
     <section className="card p-6 text-ink">
-      <h2 className="label text-ink/80">Try asking</h2>
+      <h2 className="label text-ink/80">{t.session.tryAsking}</h2>
       <ul className="mt-4 flex flex-wrap gap-2.5">
         {prompts.map((prompt) => (
           <li key={prompt}>
@@ -356,7 +377,7 @@ export function TryAsking() {
           </li>
         ))}
       </ul>
-      {sendText && <p className="mt-3 text-sm text-muted">Say it, or tap to ask in text.</p>}
+      {sendText && <p className="mt-3 text-sm text-muted">{t.session.tapHint}</p>}
     </section>
   );
 }

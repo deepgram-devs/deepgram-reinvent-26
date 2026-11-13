@@ -288,3 +288,41 @@ def confirmation(voice: Voice, language_changed: bool) -> str:
         f"Done: you are now {voice.name.title()}, {article(name)} {name} voice. "
         f"Say so briefly, in {name}."
     )
+
+
+def settings_switch_note(voice: Voice) -> str:
+    """The context note for a voice picked in the Settings panel.
+
+    The switch didn't come from a set_voice call, so without it the model
+    would see earlier turns in one language and no reason to change. It isn't
+    spoken: the microphone is off while Settings is open, and nobody asked a
+    question.
+    """
+    name = language_of(voice).name
+    return (
+        f"(The caller switched your voice to {voice.name.title()}, "
+        f"{article(voice.blurb)} {voice.blurb}, in Settings. Reply only in {name} "
+        "from now on.)"
+    )
+
+
+def client_catalog() -> dict:
+    """The catalog as the claims UI's voice picker reads it, from voices.json.
+
+    scripts/export_voices.py writes it, and a test fails when the file falls
+    behind this module.
+    """
+    return {
+        "languages": [{"code": lang.code, "name": lang.name} for lang in LANGUAGES.values()],
+        "voices": [
+            {
+                "name": v.name,
+                "model": v.model,
+                "blurb": v.blurb,
+                "lang": v.lang,
+                "featured": v.featured,
+            }
+            for v in VOICES
+        ],
+        "default": DEFAULT_VOICE.name,
+    }
