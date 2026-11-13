@@ -1,8 +1,12 @@
 import asyncio
+import dataclasses
 import os
 import re
+import threading
+import time
 import unicodedata
-from datetime import date, datetime
+from datetime import datetime
+from urllib.parse import unquote, urlparse
 
 import boto3
 from botocore.exceptions import ClientError
@@ -20,7 +24,15 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
+from pipecat.processors.frameworks.rtvi.frames import RTVIServerMessageFrame
+from pipecat.processors.frameworks.rtvi.observer import (
+    RTVIFunctionCallReportLevel,
+    RTVIObserverParams,
+)
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.aws.llm import AWSBedrockLLMService
@@ -29,11 +41,13 @@ from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.turns.user_mute import MuteUntilFirstBotCompleteUserMuteStrategy
 from pipecat.utils.text.transforms import expand_currency
 from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
 from strands.models import BedrockModel
 
+import claims
 import voices
 from voices import Voice
 
@@ -42,6 +56,11 @@ load_dotenv(override=True)
 
 # Bedrock Knowledge Base Configuration
 KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
+
+# How long a claim lookup runs before the agent says a hold line. A lookup
+# that answers sooner goes straight to the answer: a hold line before an
+# instant answer is a delay, not a courtesy.
+HOLD_LINE_DELAY_SECS = 1.0
 
 _MARKUP_SYMBOLS = re.compile(r"[*#`]")
 
@@ -55,31 +74,6 @@ async def strip_markup_symbols(text: str, text_type: str) -> str:
     return _MARKUP_SYMBOLS.sub("", text)
 
 
-_ORDINAL = {1: "st", 2: "nd", 3: "rd", 21: "st", 22: "nd", 23: "rd", 31: "st"}
-_ISO_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
-
-
-def spoken_date(iso: str) -> str:
-    """Format an ISO date the way a person says it, e.g. 'Monday, September 14th'.
-
-    The weekday gives the caller a free second chance to catch a misheard date.
-    """
-    day = date.fromisoformat(iso)
-    return f"{day:%A, %B} {day.day}{_ORDINAL.get(day.day, 'th')}"
-
-
-def speak_dates(text: str) -> str:
-    """Rewrite every ISO date in the text as a spoken date."""
-
-    def replace(match: re.Match) -> str:
-        try:
-            return spoken_date(match.group())
-        except ValueError:
-            return match.group()
-
-    return _ISO_DATE.sub(replace, text)
-
-
 def claim_id_pattern(claim_id: str) -> re.Pattern:
     """Match a claim record's "Claim ID" line for exactly this claim.
 
@@ -89,12 +83,36 @@ def claim_id_pattern(claim_id: str) -> re.Pattern:
     return re.compile(rf"\bClaim ID {re.escape(claim_id)}\b", re.IGNORECASE)
 
 
-def latin_letters(text: str) -> str:
-    """Only the letters a to z, accents removed: "W-A-L-S-H" and "walsh" match.
+# The claim a knowledge base passage belongs to: every passage of a claim file
+# repeats its claim ID, in the header or in a section title
+_ANY_CLAIM_ID = re.compile(r"\bClaim ID (CLM-\d{4}-\d{6})\b", re.IGNORECASE)
+# Claim files are named for their claim: claims/CLM-2026-847291.txt
+_CLAIM_FILE = re.compile(r"\b(CLM-\d{4}-\d{6})\.txt$", re.IGNORECASE)
 
-    A name in another script, such as Cyrillic or Devanagari, comes back empty.
+# s3.amazonaws.com, s3.us-east-1.amazonaws.com, s3-us-west-2.amazonaws.com
+_S3_HOST = r"s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com"
+_S3_PATH_STYLE = re.compile(rf"^{_S3_HOST}$")
+_S3_VIRTUAL_HOSTED = re.compile(rf"^(?P<bucket>[a-z0-9.-]+)\.{_S3_HOST}$")
+
+
+def s3_object(uri: str) -> tuple[str, str] | None:
+    """The bucket and key of an S3 location, or None if it isn't one.
+
+    Knowledge base results name their source file as s3://bucket/key or as an
+    https URL, with the bucket either in the host name or first in the path.
     """
-    return re.sub(r"[^a-z]", "", voices.ascii_fold(text))
+    url = urlparse(uri)
+    host = url.hostname or ""
+    path = unquote(url.path).lstrip("/")
+    if url.scheme == "s3":
+        bucket, key = url.netloc, path
+    elif url.scheme == "https" and _S3_PATH_STYLE.match(host):
+        bucket, _, key = path.partition("/")
+    elif url.scheme == "https" and (match := _S3_VIRTUAL_HOSTED.match(host)):
+        bucket, key = match.group("bucket"), path
+    else:
+        return None
+    return (bucket, key) if bucket and key else None
 
 
 def ascii_digits(text: str) -> str:
@@ -114,6 +132,15 @@ def normalize_claim_id(text: str) -> str:
     return f"CLM-{digits[:4]}-{digits[4:]}" if len(digits) == 10 else ""
 
 
+@dataclasses.dataclass(frozen=True)
+class ClaimHit:
+    """A claim a search found, and the file that holds it."""
+
+    claim_id: str
+    bucket: str
+    key: str
+
+
 class BedrockKnowledgeBaseClient:
     """Client for interacting with Amazon Bedrock Knowledge Base"""
 
@@ -125,6 +152,8 @@ class BedrockKnowledgeBaseClient:
             "bedrock-agent-runtime",
             region_name=os.getenv("AWS_REGION", "us-east-1"),
         )
+        # Reads a claim's source file once search has found it
+        self.s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1"))
         logger.info(
             f"Initialized Bedrock Knowledge Base client for KB: {knowledge_base_id}"
         )
@@ -155,176 +184,318 @@ class BedrockKnowledgeBaseClient:
                 },
             )
 
-    def verify_policyholder(self, claim_id: str, last_name: str) -> bool:
-        """Check the caller's last name against the policyholder on a claim.
+    def _hits(self, response: dict) -> list[ClaimHit]:
+        """Each claim the results name, best match first, with its file.
 
-        This runs in code, before any claim details reach the LLM, so no
-        prompt can talk the agent out of it.
+        A passage names its claim in its text, or, for a passage cut from the
+        middle of a long section, in its file name. A claim counts once,
+        however many of its passages matched. read_claim_file checks the
+        claim against the file itself, so a misnamed file can't stand in.
         """
-        claim_line = claim_id_pattern(claim_id)
-        policyholder = re.compile(r"Policyholder:\s*([^\n]+?)\s*(?:Policy number:|\n|$)")
-
-        response = self._retrieve(f"Claim ID {claim_id} policyholder", "HYBRID", 10)
+        hits: dict[str, ClaimHit] = {}
         for result in response.get("retrievalResults", []):
+            location = s3_object(
+                result.get("location", {}).get("s3Location", {}).get("uri", "")
+            )
+            if location is None:
+                continue
             text = result.get("content", {}).get("text", "")
-            match = policyholder.search(text) if claim_line.search(text) else None
-            if match:
-                names = match.group(1).split()
-                heard = latin_letters(last_name)
-                # Accept the last word, or everything after the first name
-                # for multi-word surnames like "De La Cruz"
-                return bool(heard) and heard in {
-                    latin_letters(names[-1]),
-                    latin_letters("".join(names[1:])),
-                }
-        return False
+            match = _ANY_CLAIM_ID.search(text) or _CLAIM_FILE.search(location[1])
+            if match is None:
+                continue
+            claim_id = match.group(1).upper()
+            if claim_id not in hits:
+                hits[claim_id] = ClaimHit(claim_id, *location)
+        return list(hits.values())
 
-    async def query_knowledge_base(
-        self, query: str, max_results: int = 10, claim_id: str | None = None
-    ) -> str:
-        """Query the Bedrock Knowledge Base and return formatted response.
+    def read_claim_file(self, hit: ClaimHit) -> dict | None:
+        """A claim's record as fields, read whole from its source file.
 
-        With a claim_id, only passages from that claim's record are returned,
-        so a lookup never hands the LLM another policyholder's data.
+        Search returns passages, not records, so the file is read in full:
+        the record is exact, whichever of its passages search happened to
+        rank. None unless the file is that claim's record, not one that only
+        mentions it.
         """
-        try:
-            logger.info(f"Querying knowledge base with: {query}")
+        body = self.s3.get_object(Bucket=hit.bucket, Key=hit.key)["Body"].read()
+        record = claims.parse_claim(body.decode("utf-8"))
+        return record if record["claim_id"] == hit.claim_id else None
 
-            # Enhanced query for better claim ID matching
-            enhanced_query = query
-            if any(
-                keyword in query.lower()
-                for keyword in ["claim", "id", "number", "reference", "ticket"]
-            ):
-                enhanced_query = f"claim ID {query}"
+    def load_claim(self, claim_id: str) -> dict | None:
+        """One claim's record as fields, found by its exact claim ID.
 
-            # A claim record is split into several passages, and only this
-            # claim's are kept below, so fetch enough to get all of them back
-            if claim_id:
-                max_results = max(max_results, 20)
+        One search and one file read. The policyholder lookup verifies the
+        caller against this record, then answers from it and shows it, so a
+        claim is read once per call.
+        """
+        response = self._retrieve(f"Claim ID {claim_id}", "HYBRID", 10)
+        for hit in self._hits(response):
+            if hit.claim_id == claim_id:
+                return self.read_claim_file(hit)
+        return None
 
-            # HYBRID uses both semantic and keyword search
-            response = self._retrieve(enhanced_query, "HYBRID", max_results)
-
-            # Extract and format the results
-            results = response.get("retrievalResults", [])
-
-            if not results:
-                # Try alternative query if no results found
-                logger.info(f"No results found, trying alternative query: {query}")
-                alt_response = self._retrieve(query, "SEMANTIC", max_results)
-                results = alt_response.get("retrievalResults", [])
-
-            if claim_id:
-                # Search returns the closest matches, which include other
-                # claims. Keep only the claim the caller was verified for.
-                same_claim = claim_id_pattern(claim_id)
-                results = [
-                    r
-                    for r in results
-                    if same_claim.search(r.get("content", {}).get("text", ""))
-                ]
-
-            if not results:
-                return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
-
-            # Format the results for the ear: dates and amounts ready to speak,
-            # and no scores or headers, because what the LLM never receives it can't say
-            passages = []
-            # Every passage of the verified claim, in full, so the agent can
-            # answer from any section; general searches keep the top 5, short
-            for result in results if claim_id else results[:5]:
-                content = result.get("content", {}).get("text", "")
-
-                if content:
-                    content = await expand_currency(speak_dates(content), "*")
-                    if not claim_id and len(content) > 200:
-                        content = content[:200] + "..."
-                    passages.append(content)
-
-            if not passages:
-                return f"I couldn't find any information about '{query}' in the knowledge base. Please check if the claim ID exists or try rephrasing your question."
-
-            return "\n\n".join(passages)
-
-        except ClientError as e:
-            error_msg = f"Error querying knowledge base: {e}"
-            logger.error(error_msg)
-            return f"I encountered an error while searching for '{query}'. Please try again or contact support if the issue persists."
-        except Exception as e:
-            error_msg = f"Unexpected error: {e}"
-            logger.error(error_msg)
-            return "I'm sorry, something went wrong while processing your request."
+    def search_claims(self, query: str, max_results: int = 10) -> list[ClaimHit]:
+        """The claims whose records best match a question, best match first."""
+        return self._hits(self._retrieve(query, "HYBRID", max_results))
 
 
-class StrandsAgent:
-    def __init__(self):
-        self.session = boto3.Session(
-            region_name=os.getenv("AWS_REGION", "us-east-1"),
-        )
+class ClaimsResearchAgent:
+    """A Strands agent that answers a staff member's question across all claims.
 
-        self.bedrock_model = BedrockModel(
-            model_id="us.amazon.nova-2-lite-v1:0", boto_session=self.session
-        )
-        self.bedrock_client = BedrockKnowledgeBaseClient(KNOWLEDGE_BASE_ID)
-        # The claim the caller was verified for; set per lookup by process_query
-        self.claim_id: str | None = None
+    A question like "which claims are waiting on a title?" can take several
+    searches with different wording, and an answer that combines what they
+    found. That's an agent loop, so it runs here, behind one tool call, and
+    the voice LLM only hears the answer.
+    """
 
+    def __init__(self, kb: BedrockKnowledgeBaseClient, records: dict[str, dict]):
+        self.kb = kb
+        # Shared with the call, so a claim is read from S3 once per call
+        self.records = records
+        # The claims this question's searches found, best first
+        self.matched: list[str] = []
+        # One Agent runs one request at a time, so questions take turns
+        self._lock = threading.Lock()
+
+        session = boto3.Session(region_name=os.getenv("AWS_REGION", "us-east-1"))
         self.agent = Agent(
-            tools=[self.search_knowledge_base, self.general_query],
-            model=self.bedrock_model,
+            tools=[self.search_claims],
+            model=BedrockModel(model_id="us.amazon.nova-2-lite-v1:0", boto_session=session),
+            # The answer goes back to the voice LLM; don't print it to the console
+            callback_handler=None,
             system_prompt=(
-                "You look up auto insurance claims for a voice agent. Another "
-                "assistant speaks your answer to the caller, so write plain "
+                "You research Tri-County Insurance auto claims for a staff "
+                "member. Another assistant speaks your answer, so write plain "
                 "sentences: no markdown, bullet points, headings, or emoji. "
-                "Search for the exact claim ID you are given, such as "
-                "'claim ID CLM-2026-847291', and never change a digit. "
-                "Answer only what was asked, in one or two sentences; leave out "
-                "the rest of the record. "
-                "Report only what the search returns, and say plainly when it "
-                "returns nothing. Never invent an amount, date, or status. "
-                "Never give the policyholder's address, phone number, or email, "
-                "or a full VIN or license plate; at most give the last four "
-                "characters. You may give the other driver's name and insurer, "
-                "never their policy number, VIN, or plate. Never give map "
-                "coordinates or photo IDs; you may say how many photos are on file. "
-                "Use general_query only for questions that are not about a specific claim."
+                "Call search_claims to find claims. Search as many times as you "
+                "need, with different wording, to answer fully, then answer only "
+                "from what the searches returned. Name each claim you mention by "
+                "its policyholder and claim ID. If nothing matches, say so. "
+                "Never invent a claim, amount, date, or status. "
+                "Records are already masked: never try to reconstruct contact "
+                "details, a full VIN, or a plate."
             ),
         )
 
     @tool
-    async def search_knowledge_base(self, query: str) -> str:
-        """Look up an auto claim record by its exact claim ID, e.g. 'claim ID CLM-2026-847291'. Use for any question about a specific claim."""
-        logger.info(f"Searching KnowledgeBase: {query}")
-        return await self.bedrock_client.query_knowledge_base(
-            query, claim_id=self.claim_id
-        )
+    def search_claims(self, query: str) -> str:
+        """Search every claim record for a question, e.g. 'stolen vehicle not recovered' or 'waiting on title'. Returns the best-matching claims as JSON."""
+        logger.info(f"Research search: {query}")
+        found = []
+        for hit in self.kb.search_claims(query):
+            record = self.records.get(hit.claim_id)
+            if record is None:
+                record = self.kb.read_claim_file(hit)
+                if record is None:
+                    continue
+                self.records[hit.claim_id] = record
+            if hit.claim_id not in self.matched:
+                self.matched.append(hit.claim_id)
+            found.append(claims.spoken_view(record))
+        if not found:
+            return "No claims matched that search."
+        return "[" + ",\n".join(found) + "]"
 
-    @tool
-    def general_query(self, question: str) -> str:
-        """Use for general auto insurance questions that are not about a specific claim, such as how collision and comprehensive coverage differ."""
-        logger.info(f"Answering general question: {question}")
-        # No lookup is needed, so hand the question back to the agent's own model
-        return (
-            "This is a general question, not a claim lookup. "
-            f"Answer it briefly, in plain sentences, from your own knowledge: {question}"
-        )
+    def research(self, question: str) -> tuple[str, list[str]]:
+        """The agent's answer, and the claims it names, best match first.
 
-    def process_query(self, user_input: str, claim_id: str | None = None) -> str:
-        """Process user input through the Strands agent.
-
-        Each lookup starts with an empty history, so the agent answers from a
-        fresh search, never from records it read for an earlier request.
+        A search returns its best matches whether they fit or not, so the
+        screen lists only the claims the answer names, not every one found.
+        Each question starts with an empty history: the voice LLM rewrites
+        follow-ups as standalone questions, so the answer always comes from
+        fresh searches.
         """
-        try:
-            self.claim_id = claim_id
+        with self._lock:
+            self.matched = []
             self.agent.messages.clear()
-            response = self.agent(user_input)
-            return str(response)
-        except Exception as e:
-            logger.error(f"Error processing query with StrandsAgent: {e}")
-            return "I'm sorry, I encountered an error processing your request."
+            answer = str(self.agent(question)).strip()
+            return answer, [c for c in self.matched if c in answer]
 
+    async def research_async(self, question: str) -> tuple[str, list[str]]:
+        """research on a worker thread.
+
+        The Strands agent blocks until it's done, so on the event loop it
+        would stall the voice pipeline. A caller who interrupts cancels the
+        wait, not the thread, so the lock lives in research: a question still
+        finishing on its thread keeps the next one waiting.
+        """
+        return await asyncio.to_thread(self.research, question)
+
+
+# Who is on the call. The claims UI picks it before the call starts.
+POLICYHOLDER = "policyholder"
+EMPLOYEE = "employee"
+
+# The tools that look up claims, which can take long enough to need a hold line
+CLAIM_TOOLS = {"search_knowledge_base", "search_claims"}
+
+
+def persona_from_body(body) -> str:
+    """The persona the client asked for: employee, or policyholder by default."""
+    if isinstance(body, dict) and body.get("persona") == EMPLOYEE:
+        return EMPLOYEE
+    return POLICYHOLDER
+
+
+GREETINGS = {
+    POLICYHOLDER: (
+        "Thanks for calling Tri-County Insurance auto claims. I can look up the "
+        "status, repair estimate, payments, or adjuster notes on an existing auto "
+        "claim. What's your claim number?"
+    ),
+    EMPLOYEE: "Tri-County claims desk. What would you like to look up?",
+}
+
+
+def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
+    """The system prompt, written for the ear: the agent is heard, not read.
+
+    It's rebuilt whenever the voice changes, since it names the voice and the
+    language to reply in. HOW TO SPEAK, PRIVACY, and VOICE AND LANGUAGE are
+    the same for both personas.
+    """
+    if persona == EMPLOYEE:
+        role = (
+            "You are the internal claims assistant for Tri-County Insurance staff. "
+            "You answer questions across every auto claim on file: which claims "
+            "match, their status, amounts, adjusters, and notes."
+        )
+    else:
+        role = (
+            "You are the auto claims line voice agent for Tri-County Insurance. You "
+            "help callers look up existing auto claims: status, repair estimates, "
+            "payments, dates, the vehicle, and adjuster notes."
+        )
+
+    how_to_speak = (
+        "HOW TO SPEAK:\n"
+        "- You are being heard, not read. Never use markdown, bullet points, "
+        "numbered lists, headings, or emoji.\n"
+        "- Keep replies to one or two sentences, and ask one question at a time.\n"
+        "- Say dollar amounts in words and dates with their weekday, e.g. "
+        "'Monday, September 14th'.\n"
+        "- When you repeat a claim ID back, say the letters, then the digits one "
+        "at a time, e.g. 'C L M, two zero two six, eight four seven two nine one'.\n"
+        "- If you do not know something, say so plainly. Never guess.\n"
+    )
+
+    if persona == EMPLOYEE:
+        work = (
+            "SEARCHING CLAIMS:\n"
+            "- For any question about claims, call search_claims. Never answer "
+            "claim details from memory.\n"
+            "- Pass the question as a standalone question: turn 'what about the "
+            "adjuster on that one?' into 'who is the adjuster on Daniel Mitchell's "
+            "claim?'.\n"
+            "- Say how many claims matched, then the few that matter most. Offer "
+            "to go through the rest instead of listing them all.\n"
+            "- You may answer general auto insurance questions briefly, in general "
+            "terms, without searching.\n"
+            "- Never invent a claim, amount, date, or status.\n"
+        )
+    else:
+        work = (
+            "CLAIM LOOKUPS:\n"
+            "- For any question about a specific claim, call search_knowledge_base. "
+            "Never answer claim details from memory.\n"
+            "- The lookup returns the whole claim record. Answer only what was "
+            "asked, in one or two sentences; leave out the rest of the record.\n"
+            "- Call search_knowledge_base for every question about the claim, "
+            "follow-ups included, even when its record is already in the "
+            "conversation. The call is what shows the caller the answer on their "
+            "screen, so pass the sections the question is about.\n"
+            "- Claim IDs look like CLM-2026-847291: the letters C L M, a four-digit "
+            "year, and a six-digit number. Callers may skip the letters or say the "
+            "year as 'twenty twenty-six'; pass the ID as CLM-2026-847291.\n"
+            "- If you are missing the year or any of the six digits, ask for them. "
+            "Never fill in or change a digit.\n"
+            "- You may answer general auto insurance questions, like what a "
+            "deductible is or how collision and comprehensive differ, briefly and "
+            "in general terms.\n"
+            "- Never invent a claim, amount, date, or status.\n"
+        )
+
+    privacy = (
+        "PRIVACY:\n"
+        "- Never read out a policyholder's address, phone number, or email, or "
+        "a full VIN or license plate. You may say the last four characters. "
+        "Changes to contact details go through the policyholder's Tri-County agent.\n"
+        "- You may say the other driver's name and insurer, never their policy "
+        "number, VIN, or plate.\n"
+        "- Never read map coordinates or photo IDs. You may say how many photos "
+        "are on file.\n"
+    )
+
+    if persona == EMPLOYEE:
+        rules = (
+            "ESCALATION:\n"
+            "- This desk looks up claims; it can't change them. If asked to update "
+            "a claim, say the assigned adjuster makes changes.\n"
+        )
+    else:
+        rules = (
+            "VERIFICATION:\n"
+            "- Before you share anything about a claim, verify the caller. Once you "
+            "have the claim number, ask for the policyholder's last name.\n"
+            "- Call search_knowledge_base only when you have both, and pass both.\n"
+            "- If the lookup says the details don't match, tell the caller the claim "
+            "number and last name don't match our records, and ask them to repeat the "
+            "number and spell the last name.\n"
+            "- Never say, confirm, or hint at the name on a claim, and never share "
+            "details of a claim the caller has not been verified for.\n"
+            "\n"
+            "ESCALATION:\n"
+            "- If the caller wants to file a new claim, dispute a decision, or asks for "
+            "a person, say this line can only look up existing claims and their "
+            "assigned adjuster can help.\n"
+            "- If the caller needs a tow or roadside help, say this line can't send "
+            "it and they should call the roadside assistance number on their "
+            "insurance card.\n"
+            "- If the caller describes an emergency or says someone is hurt, tell them "
+            "to hang up and call 911.\n"
+        )
+
+    voice_rules = (
+        "VOICE AND LANGUAGE:\n"
+        "- If the caller asks for another language, or to speak with a different "
+        "voice, call set_voice. Every language has its own voices.\n"
+        "- Call set_voice before saying anything about the switch; you confirm "
+        "after it.\n"
+        "- Claim records are in English. Translate what you read from them into "
+        "the language you reply in."
+    )
+
+    return "\n".join(
+        [
+            role,
+            voices.voice_intro(voice),
+            f"Today is {today}.",
+            "",
+            how_to_speak,
+            work,
+            privacy,
+            rules,
+            voice_rules,
+        ]
+    )
+
+
+# The parts of a claim the UI can point at, for search_knowledge_base's sections
+CLAIM_SECTIONS = [
+    "overview",
+    "progress",
+    "coverage",
+    "policyholder",
+    "vehicle",
+    "incident",
+    "location",
+    "other_party",
+    "damage",
+    "photos",
+    "estimate",
+    "payments",
+    "adjuster",
+    "notes",
+]
 
 search_function = FunctionSchema(
     name="search_knowledge_base",
@@ -356,6 +527,16 @@ search_function = FunctionSchema(
         "query": {
             "type": "string",
             "description": "The claim ID and what the caller wants to know, e.g. 'claim ID CLM-2026-847291 repair estimate'.",
+        },
+        "sections": {
+            "type": "array",
+            "items": {"type": "string", "enum": CLAIM_SECTIONS},
+            "description": (
+                "The parts of the claim the question is about, e.g. ['damage', "
+                "'photos'] for 'where's the damage?'. The caller's screen "
+                "highlights them. Use 'overview' when the caller first asks for "
+                "the claim."
+            ),
         },
     },
     required=["claim_id", "last_name", "query"],
@@ -398,21 +579,47 @@ reset_voice_function = FunctionSchema(
     required=[],
 )
 
-tools = ToolsSchema(
-    standard_tools=[
-        search_function,
-        set_voice_function,
-        list_voices_function,
-        reset_voice_function,
-    ]
+search_claims_function = FunctionSchema(
+    name="search_claims",
+    description=(
+        "Search every Tri-County auto claim to answer a staff member's question, "
+        "e.g. 'which claims are waiting on a title?' or 'who is adjusting Daniel "
+        "Mitchell's claim?'. A research agent runs as many searches as it needs "
+        "and answers from the claim records."
+    ),
+    properties={
+        "question": {
+            "type": "string",
+            "description": (
+                "The staff member's question as a standalone question. Rewrite a "
+                "follow-up like 'and the adjuster?' with the claim or policyholder "
+                "it refers to."
+            ),
+        },
+    },
+    required=["question"],
 )
 
+VOICE_TOOLS = [set_voice_function, list_voices_function, reset_voice_function]
 
 
-async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    logger.info("Starting Bedrock Knowledge Base Voice Agent with Strands")
+def tools_for(persona: str) -> ToolsSchema:
+    """The pipeline LLM's tools: a claim tool for the persona, plus the voice tools."""
+    claim_tool = search_claims_function if persona == EMPLOYEE else search_function
+    return ToolsSchema(standard_tools=[claim_tool, *VOICE_TOOLS])
 
-    strands_agent = StrandsAgent()
+
+async def run_bot(
+    transport: BaseTransport, runner_args: RunnerArguments, persona: str = POLICYHOLDER
+):
+    logger.info(f"Starting Tri-County claims voice agent ({persona})")
+
+    kb = BedrockKnowledgeBaseClient(KNOWLEDGE_BASE_ID)
+    # Claim records read on this call, by claim ID, so each is read once
+    records: dict[str, dict] = {}
+    # Employees research across claims with a Strands agent; policyholders
+    # look up one record and don't need one
+    research_agent = ClaimsResearchAgent(kb, records) if persona == EMPLOYEE else None
 
     # The voice is the caller's only language setting: it picks the listen
     # model and the reply language too. Every call starts in English.
@@ -435,83 +642,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     now = datetime.now()
     today = f"{now:%A, %B} {now.day}, {now.year}"
 
-    # System instruction, written for the ear: the agent is heard, not read.
-    # It's rebuilt whenever the voice changes, since it names the voice and
-    # the language to reply in.
-    def build_system_instruction(voice: Voice) -> str:
-        return (
-            "You are the auto claims line voice agent for Tri-County Insurance. You "
-            "help callers look up existing auto claims: status, repair estimates, "
-            "payments, dates, the vehicle, and adjuster notes.\n"
-            f"{voices.voice_intro(voice)}\n"
-            f"Today is {today}.\n"
-            "\n"
-            "HOW TO SPEAK:\n"
-            "- You are being heard, not read. Never use markdown, bullet points, "
-            "numbered lists, headings, or emoji.\n"
-            "- Keep replies to one or two sentences, and ask one question at a time.\n"
-            "- Say dollar amounts in words and dates with their weekday, e.g. "
-            "'Monday, September 14th'.\n"
-            "- When you repeat a claim ID back, say the letters, then the digits one "
-            "at a time, e.g. 'C L M, two zero two six, eight four seven two nine one'.\n"
-            "- If you do not know something, say so plainly. Never guess.\n"
-            "\n"
-            "CLAIM LOOKUPS:\n"
-            "- For any question about a specific claim, call search_knowledge_base. "
-            "Never answer claim details from memory.\n"
-            "- Claim IDs look like CLM-2026-847291: the letters C L M, a four-digit "
-            "year, and a six-digit number. Callers may skip the letters or say the "
-            "year as 'twenty twenty-six'; pass the ID as CLM-2026-847291.\n"
-            "- If you are missing the year or any of the six digits, ask for them. "
-            "Never fill in or change a digit.\n"
-            "- You may answer general auto insurance questions, like what a "
-            "deductible is or how collision and comprehensive differ, briefly and "
-            "in general terms.\n"
-            "- Never invent a claim, amount, date, or status.\n"
-            "\n"
-            "PRIVACY:\n"
-            "- Never read out the policyholder's address, phone number, or email, or "
-            "a full VIN or license plate. You may say the last four characters. "
-            "Changes to contact details go through the caller's Tri-County agent.\n"
-            "- You may tell the caller the other driver's name and insurer, never "
-            "their policy number, VIN, or plate.\n"
-            "- Never read map coordinates or photo IDs. You may say how many photos "
-            "are on file.\n"
-            "\n"
-            "VERIFICATION:\n"
-            "- Before you share anything about a claim, verify the caller. Once you "
-            "have the claim number, ask for the policyholder's last name.\n"
-            "- Call search_knowledge_base only when you have both, and pass both.\n"
-            "- If the lookup says the details don't match, tell the caller the claim "
-            "number and last name don't match our records, and ask them to repeat the "
-            "number and spell the last name.\n"
-            "- Never say, confirm, or hint at the name on a claim, and never share "
-            "details of a claim the caller has not been verified for.\n"
-            "\n"
-            "ESCALATION:\n"
-            "- If the caller wants to file a new claim, dispute a decision, or asks for "
-            "a person, say this line can only look up existing claims and their "
-            "assigned adjuster can help.\n"
-            "- If the caller needs a tow or roadside help, say this line can't send "
-            "it and they should call the roadside assistance number on their "
-            "insurance card.\n"
-            "- If the caller describes an emergency or says someone is hurt, tell them "
-            "to hang up and call 911.\n"
-            "\n"
-            "VOICE AND LANGUAGE:\n"
-            "- If the caller asks for another language, or to speak with a different "
-            "voice, call set_voice. Every language has its own voices.\n"
-            "- Call set_voice before saying anything about the switch; you confirm "
-            "after it.\n"
-            "- Claim records are in English. Translate what you read from them into "
-            "the language you reply in."
-        )
-
     llm = AWSBedrockLLMService(
         aws_region="us-east-1",
         settings=AWSBedrockLLMService.Settings(
             model="us.anthropic.claude-haiku-5-5",
-            system_instruction=build_system_instruction(current_voice),
+            system_instruction=build_system_instruction(persona, current_voice, today),
         ),
     )
 
@@ -519,7 +654,37 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     max_verification_attempts = 3
     failed_verifications: dict[str, int] = {}
 
+    # The claim on the caller's screen, so it's sent once per verified claim
+    shown_claim_id: str | None = None
+
+    async def send_to_client(data: dict):
+        """Send a message to the claims UI. task is created below, before any call."""
+        await task.queue_frame(RTVIServerMessageFrame(data=data))
+
+    async def send_voice():
+        await send_to_client(
+            {
+                "type": "voice",
+                "voice": current_voice.name,
+                "language": current_voice.lang,
+                "language_name": voices.language_of(current_voice).name,
+                "stt_model": voices.listen_settings(current_voice)["model"],
+            }
+        )
+
+    async def load_claim(claim_id: str) -> dict | None:
+        """The claim's record, read once per call: one search and one file read."""
+        if claim_id not in records:
+            # boto3 blocks, so it runs on a thread: on the event loop it would
+            # freeze the whole pipeline, hold line included, until it returned
+            record = await asyncio.to_thread(kb.load_claim, claim_id)
+            if record is None:
+                return None
+            records[claim_id] = record
+        return records[claim_id]
+
     async def search_knowledge_base(params: FunctionCallParams):
+        nonlocal shown_claim_id
         query = params.arguments.get("query", "")
         claim_id = normalize_claim_id(str(params.arguments.get("claim_id", "")))
         last_name = params.arguments.get("last_name", "")
@@ -534,6 +699,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             return
 
         if failed_verifications.get(claim_id, 0) >= max_verification_attempts:
+            await send_to_client({"type": "verification", "status": "locked"})
             await params.result_callback(
                 {
                     "verified": False,
@@ -542,7 +708,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             )
             return
 
-        if not latin_letters(last_name):
+        if not claims.latin_letters(last_name):
             # A name in another script can't match the English records. Ask
             # for a spelling instead of counting it as a failed attempt.
             await params.result_callback(
@@ -553,24 +719,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             )
             return
 
-        # Verify before the Strands agent sees the request, so no claim
-        # details are retrieved for an unverified caller
+        # Verify in code, against the record itself, before any of it reaches
+        # the LLM, so no prompt can talk the agent out of it
+        if claim_id != shown_claim_id:
+            await send_to_client({"type": "verification", "status": "checking"})
+        started = time.perf_counter()
         try:
-            verified = strands_agent.bedrock_client.verify_policyholder(
-                claim_id, last_name
-            )
+            record = await load_claim(claim_id)
         except Exception as e:
-            logger.error(f"Error verifying claim {claim_id}: {e}")
+            logger.error(f"Error loading claim {claim_id}: {e}")
+            await send_to_client({"type": "verification", "status": "error"})
             await params.result_callback(
                 {
                     "verified": False,
-                    "response": "The verification lookup failed. Apologize and ask the caller to try again in a moment.",
+                    "response": "The claim lookup failed. Apologize and ask the caller to try again in a moment.",
                 }
             )
             return
 
-        if not verified:
+        if record is None or not claims.policyholder_matches(record, last_name):
             failed_verifications[claim_id] = failed_verifications.get(claim_id, 0) + 1
+            locked = failed_verifications[claim_id] >= max_verification_attempts
+            # The UI learns only that it failed, never why
+            await send_to_client(
+                {"type": "verification", "status": "locked" if locked else "failed"}
+            )
             logger.info(
                 f"Verification failed for claim {claim_id} "
                 f"({failed_verifications[claim_id]}/{max_verification_attempts})"
@@ -585,28 +758,148 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             )
             return
 
-        logger.info(f"Verified caller for claim {claim_id}; using Strands agent for: {query}")
+        logger.info(
+            f"Verified caller for claim {claim_id} in "
+            f"{(time.perf_counter() - started) * 1000:.0f} ms; answering: {query}"
+        )
+        await send_to_client({"type": "verification", "status": "verified"})
+        sections = [
+            s for s in params.arguments.get("sections") or [] if s in CLAIM_SECTIONS
+        ]
+        # Sent before the answer, so the screen points at it as it's spoken
+        await send_to_client(
+            {"type": "claim-focus", "claim_id": claim_id, "sections": sections or ["overview"]}
+        )
 
+        # The masked record, the same one the screen shows: the LLM answers
+        # from it directly, with amounts and dates ready to speak
+        await params.result_callback(
+            {
+                "query": query,
+                "record": await expand_currency(claims.spoken_view(record), "*"),
+            }
+        )
+        # After the answer is on its way. The record is already loaded, so
+        # showing it costs nothing.
+        if claim_id != shown_claim_id:
+            await send_to_client({"type": "claim-loaded", "claim": claims.to_client_view(record)})
+            shown_claim_id = claim_id
+
+    async def search_claims(params: FunctionCallParams):
+        question = str(params.arguments.get("question", "")).strip()
+        if not question:
+            await params.result_callback(
+                {"response": "Ask the staff member what they want to find."}
+            )
+            return
+
+        started = time.perf_counter()
         try:
-            response_text = strands_agent.process_query(
-                f"claim ID {claim_id}: {query}", claim_id=claim_id
-            )
-
-            await params.result_callback(
-                {
-                    "query": query,
-                    "response": response_text,                }
-            )
-
+            answer, matched = await research_agent.research_async(question)
         except Exception as e:
-            logger.error(f"Error with Strands agent for {query}: {e}")
+            logger.error(f"Error researching '{question}': {e}")
             await params.result_callback(
                 {
-                    "query": query,
-                    "response": f"I encountered an error while searching for '{query}'. Please try again.",                }
+                    "question": question,
+                    "response": "The search failed. Apologize and ask them to try again in a moment.",
+                }
             )
+            return
+        logger.info(
+            f"Researched '{question}' in {(time.perf_counter() - started) * 1000:.0f} ms; "
+            f"answer names {matched}"
+        )
 
-    llm.register_function("search_knowledge_base", search_knowledge_base)
+        await params.result_callback({"question": question, "answer": answer})
+        # The claims the answer names, masked like the voice, for the screen
+        await send_to_client(
+            {
+                "type": "search-results",
+                "query": question,
+                "claims": [claims.to_client_view(records[c]) for c in matched if c in records],
+            }
+        )
+
+    # Claim lookups still working, and the hold line waiting to be said
+    lookups_running = 0
+    hold_line_timer: asyncio.Task | None = None
+    last_hold_line: str | None = None
+
+    async def say_hold_line_after_delay():
+        nonlocal last_hold_line
+        await asyncio.sleep(HOLD_LINE_DELAY_SECS)
+        if not lookups_running:
+            return
+        last_hold_line = voices.pick_filler(current_voice, last=last_hold_line)
+        await tts.queue_frame(TTSSpeakFrame(last_hold_line, append_to_context=False))
+
+    def cancel_hold_line():
+        nonlocal hold_line_timer
+        if hold_line_timer is not None:
+            hold_line_timer.cancel()
+            hold_line_timer = None
+
+    def holds_the_line(handler):
+        """Count a lookup as running until its result is handed back.
+
+        The hold line is cancelled before the result reaches the LLM, so a
+        quick answer is never preceded by "one moment".
+        """
+
+        async def counted(params: FunctionCallParams):
+            nonlocal lookups_running
+            lookups_running += 1
+            running = True
+
+            def finish():
+                nonlocal lookups_running, running
+                if running:
+                    running = False
+                    lookups_running -= 1
+                    if not lookups_running:
+                        cancel_hold_line()
+
+            async def result_callback(result, **kwargs):
+                finish()
+                await params.result_callback(result, **kwargs)
+
+            try:
+                await handler(dataclasses.replace(params, result_callback=result_callback))
+            finally:
+                finish()
+
+        return counted
+
+    def reports_timing(handler):
+        """Tell the claims UI how long a function took, for its function call row.
+
+        The bot times it, since only the bot knows when the function really
+        started and finished. The timing goes out just before the result.
+        """
+
+        async def timed(params: FunctionCallParams):
+            started = time.perf_counter()
+
+            async def result_callback(result, **kwargs):
+                await send_to_client(
+                    {
+                        "type": "function-timing",
+                        "tool_call_id": params.tool_call_id,
+                        "ms": round((time.perf_counter() - started) * 1000),
+                    }
+                )
+                await params.result_callback(result, **kwargs)
+
+            await handler(dataclasses.replace(params, result_callback=result_callback))
+
+        return timed
+
+    if persona == EMPLOYEE:
+        llm.register_function("search_claims", holds_the_line(reports_timing(search_claims)))
+    else:
+        llm.register_function(
+            "search_knowledge_base", holds_the_line(reports_timing(search_knowledge_base))
+        )
 
     async def apply_voice(voice: Voice, params: FunctionCallParams):
         """Switch voice, and with it the language, in place.
@@ -622,7 +915,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         await llm.queue_frame(
             LLMUpdateSettingsFrame(
                 delta=AWSBedrockLLMService.Settings(
-                    system_instruction=build_system_instruction(voice)
+                    system_instruction=build_system_instruction(persona, voice, today)
                 )
             )
         )
@@ -645,6 +938,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 STTUpdateSettingsFrame(delta=DeepgramFluxSTTService.Settings(**step))
             )
 
+        await send_voice()
         await params.result_callback(
             {"response": voices.confirmation(voice, language_changed)}
         )
@@ -666,41 +960,48 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def reset_voice(params: FunctionCallParams):
         await apply_voice(voices.DEFAULT_VOICE, params)
 
-    llm.register_function("set_voice", set_voice)
-    llm.register_function("list_voices", list_voices)
-    llm.register_function("reset_voice", reset_voice)
+    llm.register_function("set_voice", reports_timing(set_voice))
+    llm.register_function("list_voices", reports_timing(list_voices))
+    llm.register_function("reset_voice", reports_timing(reset_voice))
 
-    # Speak a filler phrase while the knowledge base lookup runs, so the
-    # caller isn't left in silence. It isn't added to the LLM context, and
-    # it's in the current voice's language. When a voice switch comes in the
-    # same batch, the switch's confirmation takes its place.
+    # If a claim lookup runs long, say a hold line so the caller isn't left
+    # in silence. A lookup that answers within HOLD_LINE_DELAY_SECS skips it.
+    # The line isn't added to the LLM context, it's in the current voice's
+    # language, and it's never the same line twice in a row. When a voice
+    # switch comes in the same batch, the switch's confirmation takes its place.
     @llm.event_handler("on_function_calls_started")
     async def on_function_calls_started(service, function_calls):
+        nonlocal hold_line_timer
         names = {fc.function_name for fc in function_calls}
-        if "search_knowledge_base" not in names or names & {"set_voice", "reset_voice"}:
+        if not names & CLAIM_TOOLS or names & {"set_voice", "reset_voice"}:
             return
-        await tts.queue_frame(
-            TTSSpeakFrame(
-                voices.language_of(current_voice).filler,
-                append_to_context=False,
-            )
-        )
+        cancel_hold_line()
+        hold_line_timer = asyncio.create_task(say_hold_line_after_delay())
+
+    # The caller interrupted, so the lookup is cancelled: nothing to hold for
+    @llm.event_handler("on_function_calls_cancelled")
+    async def on_function_calls_cancelled(service, function_calls):
+        cancel_hold_line()
 
     context = LLMContext(
         messages=[
             {
                 "role": "user",
-                "content": (
-                    "Start by saying exactly this: 'Thanks for calling Tri-County "
-                    "Insurance auto claims. I can look up the status, repair "
-                    "estimate, payments, or adjuster notes on an existing auto "
-                    "claim. What's your claim number?'"
-                ),
+                "content": f"Start by saying exactly this: '{GREETINGS[persona]}'",
             },
         ],
-        tools=tools,
+        tools=tools_for(persona),
     )
-    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
+    # Flux can turn the click and hiss of a microphone opening into a short
+    # word ("two"), which would cut off the greeting and get an answer. The
+    # caller has nothing to say before the greeting ends, so ignore their
+    # audio until then.
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(
+            user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
+        ),
+    )
 
     # Build the pipeline
     pipeline = Pipeline(
@@ -722,19 +1023,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
+        # The claims UI shows which tool ran and with what arguments. Results
+        # stay hidden: they hold the claim passages the LLM reads.
+        rtvi_observer_params=RTVIObserverParams(
+            function_call_report_level={
+                "*": RTVIFunctionCallReportLevel.NAME,
+                "search_knowledge_base": RTVIFunctionCallReportLevel.ARGUMENTS,
+                "search_claims": RTVIFunctionCallReportLevel.ARGUMENTS,
+                "set_voice": RTVIFunctionCallReportLevel.ARGUMENTS,
+            }
+        ),
     )
 
     # Handle client connection event
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info("Client connected to Bedrock Knowledge Base Voice Agent")
+        logger.info(f"Client connected to the Tri-County claims voice agent ({persona})")
+        await send_voice()
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
 
     # Handle client disconnection event
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info("Client disconnected from Bedrock Knowledge Base Voice Agent")
+        logger.info("Client disconnected from the Tri-County claims voice agent")
+        cancel_hold_line()
         await task.cancel()
 
     # Run the pipeline
@@ -759,7 +1072,9 @@ async def bot(runner_args: RunnerArguments):
 
     transport = await create_transport(runner_args, transport_params)
 
-    await run_bot(transport, runner_args)
+    # The claims UI sends the persona with its WebRTC offer, as request_data
+    persona = persona_from_body(getattr(runner_args, "body", None))
+    await run_bot(transport, runner_args, persona)
 
 
 if __name__ == "__main__":

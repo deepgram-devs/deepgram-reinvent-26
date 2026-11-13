@@ -43,10 +43,22 @@ class CatalogTests(unittest.TestCase):
             else:
                 self.assertEqual(len(featured), 1, language.name)
 
-    def test_every_language_has_its_own_filler(self):
-        fillers = [language.filler for language in LANGUAGES.values()]
+    def test_every_language_has_its_own_fillers(self):
+        fillers = [line for language in LANGUAGES.values() for line in language.fillers]
         self.assertTrue(all(fillers))
         self.assertEqual(len(set(fillers)), len(fillers))
+        for language in LANGUAGES.values():
+            self.assertGreaterEqual(len(language.fillers), 3, language.name)
+
+    def test_pick_filler_never_repeats_the_last_line(self):
+        for code in LANGUAGES:
+            voice = voices.voices_for(code)[0]
+            last = None
+            for _ in range(50):
+                line = voices.pick_filler(voice, last=last)
+                self.assertIn(line, LANGUAGES[code].fillers)
+                self.assertNotEqual(line, last)
+                last = line
 
     def test_default_is_english_and_unknown_names_are_refused(self):
         self.assertEqual(DEFAULT_VOICE.lang, "en")

@@ -1,0 +1,1650 @@
+{
+ "CLM-2026-159827": {
+  "v": 1,
+  "claim_id": "CLM-2026-159827",
+  "policyholder": {
+   "name": "Linda Park"
+  },
+  "policy_number": "TCI-AUTO-731562",
+  "claim_type": "Theft",
+  "date_reported": "2026-08-30",
+  "status": "Settlement offered",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$250 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2019",
+   "make": "Honda",
+   "model": "Civic Sport",
+   "body_style": "Hatchback",
+   "color": "Aegean Blue",
+   "vin_last4": "•••• 9827",
+   "plate_last4": "•••• 4402",
+   "lienholder": "Derby City Federal Credit Union"
+  },
+  "incident": {
+   "type": "Theft",
+   "detail": "Vehicle stolen, not recovered",
+   "date": "2026-08-30",
+   "time": "Between 6:10 PM and 8:45 PM",
+   "weather": "Clear",
+   "police_report": "KY-26-077615",
+   "injuries": "None",
+   "fault": "Not applicable"
+  },
+  "location": {
+   "address": "Shopping center parking lot, 5000 Shelbyville Road, Louisville, KY 40207",
+   "description": "I parked near the movie theater entrance and went to a show. When I came out the car was gone. I had both keys with me."
+  },
+  "other_party": null,
+  "damage": {
+   "condition": "Stolen, not recovered; declared a total loss",
+   "exterior_areas": [],
+   "interior_areas": [],
+   "areas_note": "Vehicle not recovered",
+   "description": "Vehicle not recovered",
+   "photo_count": 2,
+   "photos": [
+    "Policyholder's photo of the vehicle from June 2026, driver side",
+    "Policyholder's photo of the odometer from June 2026"
+   ]
+  },
+  "description": "The insured Honda Civic was stolen from a shopping center parking lot during an evening movie. The policyholder had both keys. The theft was reported to police the same night, and the vehicle was entered in the national stolen vehicle database. After 30 days without recovery, the vehicle was declared a total loss.",
+  "estimate": null,
+  "valuation": [
+   {
+    "label": "Actual cash value",
+    "value": "$19,600",
+    "sub": true
+   },
+   {
+    "label": "Sales tax and title fees",
+    "value": "$1,320",
+    "sub": true
+   },
+   {
+    "label": "Total value",
+    "value": "$20,920",
+    "sub": true
+   },
+   {
+    "label": "Less comprehensive deductible",
+    "value": "$250",
+    "sub": true
+   },
+   {
+    "label": "Settlement offer",
+    "value": "$20,670",
+    "sub": false
+   },
+   {
+    "label": "Paid to lienholder, Derby City Federal Credit Union",
+    "value": "$8,410",
+    "sub": true
+   },
+   {
+    "label": "Paid to policyholder",
+    "value": "$12,260",
+    "sub": true
+   }
+  ],
+  "financials": [
+   {
+    "label": "Total value",
+    "value": "$20,920"
+   },
+   {
+    "label": "Deductible",
+    "value": "$250"
+   },
+   {
+    "label": "Settlement offer",
+    "value": "$20,670"
+   },
+   {
+    "label": "Rental paid",
+    "value": "$1,200"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$1,200"
+   }
+  ],
+  "adjuster": {
+   "name": "Luis Ortega",
+   "department": "Total Loss Unit",
+   "reference": "ADJ-583306",
+   "status": "Waiting on the signed title and power of attorney",
+   "next_review": "2026-11-14"
+  },
+  "notes": [
+   {
+    "date": "2026-08-30",
+    "text": "Theft reported. Police report KY-26-077615 confirmed."
+   },
+   {
+    "date": "2026-08-31",
+    "text": "Rental authorized at $40 per day for up to 30 days."
+   },
+   {
+    "date": "2026-09-30",
+    "text": "No recovery after 30 days. Vehicle declared a total loss. Rental ended; $1,200 paid."
+   },
+   {
+    "date": "2026-10-30",
+    "text": "Settlement offer of $20,670 sent, based on three comparable vehicles in the Louisville area."
+   },
+   {
+    "date": "2026-11-06",
+    "text": "Policyholder accepted the offer. Waiting on the signed title and power of attorney from the lienholder before payment is released."
+   }
+  ]
+ },
+ "CLM-2026-215774": {
+  "v": 1,
+  "claim_id": "CLM-2026-215774",
+  "policyholder": {
+   "name": "Kevin Brooks"
+  },
+  "policy_number": "TCI-AUTO-517390",
+  "claim_type": "Uninsured motorist property damage",
+  "date_reported": "2026-10-27",
+  "status": "Pending police follow-up",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$1,000 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Uninsured motorist property damage",
+    "value": "$250 deductible"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$30 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Not carried"
+   }
+  ],
+  "vehicle": {
+   "year": "2020",
+   "make": "Subaru",
+   "model": "Outback Premium",
+   "body_style": "Wagon",
+   "color": "Crimson Red",
+   "vin_last4": "•••• 5774",
+   "plate_last4": "•••• 3391",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while parked",
+   "detail": "Hit and run",
+   "date": "2026-10-27",
+   "time": "Overnight, discovered at 7:15 AM",
+   "weather": "Clear",
+   "police_report": "KY-26-104223",
+   "injuries": "None",
+   "fault": "Unknown driver at fault"
+  },
+  "location": {
+   "address": "Parked on the street in front of the policyholder's home",
+   "description": "I parked on the street in front of my house like always. In the morning the whole driver's side was smashed and there was white paint on it."
+  },
+  "other_party": {
+   "driver": "Unknown, left the scene",
+   "insurer": "Unknown",
+   "vehicle": "Unknown; a neighbor's doorbell camera shows a white pickup truck with a partial plate"
+  },
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Driver Front",
+    "Driver Side"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Driver-side front fender, both driver-side doors, and driver-side mirror, with white paint transfer",
+   "photo_count": 6,
+   "photos": [
+    "Driver side, full length",
+    "Front door dent and paint transfer",
+    "Rear door dent",
+    "Front fender scrape",
+    "Broken driver-side mirror",
+    "Still from the neighbor's doorbell camera"
+   ]
+  },
+  "description": "The insured Subaru was legally parked on the street overnight. The policyholder found damage along the driver's side the next morning, with no note left. A neighbor's doorbell camera recorded a white pickup truck sideswiping the car at about 2:40 AM. The police report was filed the same morning.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Front fender repair and repaint",
+     "value": "$640"
+    },
+    {
+     "label": "Front door replacement",
+     "value": "$1,180"
+    },
+    {
+     "label": "Rear door repair and repaint",
+     "value": "$720"
+    },
+    {
+     "label": "Mirror assembly",
+     "value": "$340"
+    },
+    {
+     "label": "Labor",
+     "value": "$400"
+    }
+   ],
+   "total": "$3,280"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$3,280"
+   },
+   {
+    "label": "Deductible",
+    "value": "$250"
+   },
+   {
+    "label": "Estimated insurance payment",
+    "value": "$3,030"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$0"
+   }
+  ],
+  "adjuster": {
+   "name": "Luis Ortega",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-583306",
+   "status": "Waiting on the police investigation",
+   "next_review": "2026-11-18"
+  },
+  "notes": [
+   {
+    "date": "2026-10-27",
+    "text": "Claim reported online with photos and the doorbell camera clip."
+   },
+   {
+    "date": "2026-10-29",
+    "text": "Police report KY-26-104223 received. Detective is checking the partial plate."
+   },
+   {
+    "date": "2026-11-02",
+    "text": "Estimate from Highlands Auto Body received: $3,280."
+   },
+   {
+    "date": "2026-11-02",
+    "text": "Repairs can go ahead now under uninsured motorist property damage. Policyholder chose to wait two weeks for the police result."
+   },
+   {
+    "date": "2026-11-02",
+    "text": "If the other driver is identified, the claim moves to their liability insurer and the $250 deductible is refunded."
+   }
+  ]
+ },
+ "CLM-2026-364902": {
+  "v": 1,
+  "claim_id": "CLM-2026-364902",
+  "policyholder": {
+   "name": "Marcus Bell"
+  },
+  "policy_number": "TCI-AUTO-158840",
+  "claim_type": "Collision",
+  "date_reported": "2026-08-22",
+  "status": "Denied",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "Not carried"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "Not carried"
+   },
+   {
+    "name": "Liability",
+    "value": "$25,000 per person, $50,000 per accident, $25,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "Not carried"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$1,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "Not carried"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Not carried"
+   }
+  ],
+  "vehicle": {
+   "year": "2014",
+   "make": "Chevrolet",
+   "model": "Malibu LT",
+   "body_style": "Sedan",
+   "color": "Silver Ice",
+   "vin_last4": "•••• 4902",
+   "plate_last4": "•••• 1186",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while driving",
+   "detail": "Single vehicle, hydroplaned into a guardrail",
+   "date": "2026-08-21",
+   "time": "10:50 PM",
+   "weather": "Heavy rain",
+   "police_report": "KY-26-071338",
+   "injuries": "None",
+   "fault": "Policyholder at fault, single vehicle"
+  },
+  "location": {
+   "address": "Westbound Interstate 264 near Poplar Level Road, Louisville, KY 40213",
+   "description": "It was pouring on the Watterson. I hit standing water, the car spun, and I slid into the guardrail on the right."
+  },
+  "other_party": null,
+  "damage": {
+   "condition": "Not drivable; towed to Watterson Tow and Storage",
+   "exterior_areas": [
+    "Front",
+    "Passenger Front",
+    "Passenger Side"
+   ],
+   "interior_areas": [
+    "Airbags"
+   ],
+   "areas_note": "",
+   "description": "Front bumper, passenger fender, passenger door, front suspension, and deployed front passenger airbag",
+   "photo_count": 3,
+   "photos": [
+    "Front and passenger side at the tow yard",
+    "Deployed passenger airbag",
+    "Damaged guardrail section, taken by police"
+   ]
+  },
+  "description": "The policyholder lost control on standing water during heavy rain and slid into the right-side guardrail. No other vehicles were involved and no one was hurt. The policy carries liability coverage only, so it does not pay for damage to the policyholder's own vehicle. It does pay for the damaged state guardrail.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Front bumper and passenger fender",
+     "value": "$1,980"
+    },
+    {
+     "label": "Passenger door",
+     "value": "$1,240"
+    },
+    {
+     "label": "Front suspension and alignment",
+     "value": "$1,610"
+    },
+    {
+     "label": "Airbag replacement",
+     "value": "$1,520"
+    }
+   ],
+   "total": "$6,350"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage to the policyholder's vehicle",
+    "value": "$6,350"
+   },
+   {
+    "label": "Covered for the policyholder's vehicle",
+    "value": "$0, no collision coverage"
+   },
+   {
+    "label": "Guardrail repair, paid under property damage liability",
+    "value": "$2,100"
+   },
+   {
+    "label": "Deductible",
+    "value": "Not applicable"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$2,100, to the Kentucky Transportation Cabinet"
+   }
+  ],
+  "adjuster": {
+   "name": "Samuel Reyes",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-357720",
+   "status": "Denied for vehicle damage; appeal window open",
+   "next_review": "2026-11-27"
+  },
+  "notes": [
+   {
+    "date": "2026-08-22",
+    "text": "Claim reported. Policy is liability only, with no collision coverage."
+   },
+   {
+    "date": "2026-08-29",
+    "text": "Denial letter sent for vehicle damage. Appeal window open until 2026-11-27."
+   },
+   {
+    "date": "2026-09-15",
+    "text": "Kentucky Transportation Cabinet invoice for guardrail repair received: $2,100."
+   },
+   {
+    "date": "2026-10-12",
+    "text": "Guardrail invoice paid under property damage liability."
+   },
+   {
+    "date": "2026-10-12",
+    "text": "Storage fees at the tow yard are $35 per day and are not covered. Policyholder advised to move the vehicle."
+   }
+  ]
+ },
+ "CLM-2026-492036": {
+  "v": 1,
+  "claim_id": "CLM-2026-492036",
+  "policyholder": {
+   "name": "Aisha Rahman"
+  },
+  "policy_number": "TCI-AUTO-366054",
+  "claim_type": "Glass",
+  "date_reported": "2026-09-22",
+  "status": "Closed",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Full glass",
+    "value": "$0 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2022",
+   "make": "Hyundai",
+   "model": "Tucson SEL",
+   "body_style": "SUV",
+   "color": "Amazon Gray",
+   "vin_last4": "•••• 2036",
+   "plate_last4": "•••• 5520",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Glass",
+   "detail": "Windshield damage from road debris",
+   "date": "2026-09-22",
+   "time": "8:05 AM",
+   "weather": "Clear",
+   "police_report": "None filed",
+   "injuries": "None",
+   "fault": "Not applicable"
+  },
+  "location": {
+   "address": "Eastbound Interstate 64 near the Hurstbourne Parkway exit, Louisville, KY 40243",
+   "description": "A gravel truck in front of me on I-64 kicked up a rock. It hit the windshield right in front of me and the crack spread across by the time I got to work."
+  },
+  "other_party": null,
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Windshield"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Rock chip on the driver's side that cracked across the windshield",
+   "photo_count": 2,
+   "photos": [
+    "Windshield crack from inside the car",
+    "Close-up of the rock chip"
+   ]
+  },
+  "description": "While driving to work on Interstate 64, a rock thrown from a gravel truck struck the windshield of the insured Hyundai Tucson. The chip spread into a crack across the driver's line of sight. The windshield was replaced, and the forward camera for lane keeping was recalibrated.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Windshield replacement",
+     "value": "$780"
+    },
+    {
+     "label": "Forward camera recalibration",
+     "value": "$320"
+    },
+    {
+     "label": "Windshield molding",
+     "value": "$45"
+    },
+    {
+     "label": "Labor",
+     "value": "$95"
+    }
+   ],
+   "total": "$1,240"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$1,240"
+   },
+   {
+    "label": "Deductible",
+    "value": "$0"
+   },
+   {
+    "label": "Approved amount",
+    "value": "$1,240"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$1,240"
+   }
+  ],
+  "adjuster": {
+   "name": "Grace Liu",
+   "department": "Auto Glass Unit",
+   "reference": "ADJ-402951",
+   "status": "Closed",
+   "next_review": "None, claim closed"
+  },
+  "notes": [
+   {
+    "date": "2026-09-22",
+    "text": "Claim reported by phone. Full glass coverage applies, so there is no deductible."
+   },
+   {
+    "date": "2026-09-24",
+    "text": "Mobile replacement scheduled with Clearview Auto Glass at the policyholder's workplace."
+   },
+   {
+    "date": "2026-09-26",
+    "text": "Windshield replaced and camera recalibrated. $1,240 paid directly to Clearview Auto Glass."
+   },
+   {
+    "date": "2026-09-26",
+    "text": "Claim closed."
+   }
+  ]
+ },
+ "CLM-2026-527613": {
+  "v": 1,
+  "claim_id": "CLM-2026-527613",
+  "policyholder": {
+   "name": "Rebecca Walsh"
+  },
+  "policy_number": "TCI-AUTO-845213",
+  "claim_type": "Collision",
+  "date_reported": "2026-09-30",
+  "status": "Under investigation, liability disputed",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2022",
+   "make": "Kia",
+   "model": "Telluride EX",
+   "body_style": "SUV",
+   "color": "Gravity Gray",
+   "vin_last4": "•••• 7613",
+   "plate_last4": "•••• 9032",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while driving",
+   "detail": "Incident with multiple vehicles",
+   "date": "2026-09-30",
+   "time": "3:15 PM",
+   "weather": "Clear",
+   "police_report": "KY-26-091562",
+   "injuries": "Policyholder reports a minor neck strain; seen at urgent care on 2026-10-01",
+   "fault": "Disputed; both drivers say they had a green light"
+  },
+  "location": {
+   "address": "Intersection of Preston Highway and Outer Loop, Louisville, KY 40219",
+   "description": "I had a green light going north on Preston. A car coming off Outer Loop ran the light and hit my driver's side, and I got pushed into a car waiting to turn."
+  },
+  "other_party": {
+   "driver": "Brandon Hughes",
+   "insurer": "Riverbend Auto Insurance",
+   "vehicle": "2017 Nissan Altima"
+  },
+  "damage": {
+   "condition": "Not drivable; towed to Southside Collision Center",
+   "exterior_areas": [
+    "Driver Front",
+    "Driver Side",
+    "Front"
+   ],
+   "interior_areas": [
+    "Airbags"
+   ],
+   "areas_note": "",
+   "description": "Driver-side front fender and doors, front bumper, driver-side curtain airbag deployed",
+   "photo_count": 7,
+   "photos": [
+    "Driver side, full length",
+    "Front door intrusion",
+    "Front bumper where it struck the third vehicle",
+    "Deployed curtain airbag",
+    "Intersection and traffic signals",
+    "Other driver's Nissan Altima",
+    "Third vehicle's rear bumper"
+   ]
+  },
+  "description": "The policyholder was northbound on Preston Highway when a Nissan Altima entered the intersection from Outer Loop and struck the driver's side of the insured Kia. The impact pushed the Kia into a third vehicle waiting to turn left. Both drivers say they had a green light. One witness gave a statement. The policyholder reported neck pain the next day.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Driver-side doors, both",
+     "value": "$3,450"
+    },
+    {
+     "label": "Front fender and bumper",
+     "value": "$2,180"
+    },
+    {
+     "label": "Curtain airbag and sensors",
+     "value": "$2,640"
+    },
+    {
+     "label": "Suspension and alignment",
+     "value": "$1,330"
+    },
+    {
+     "label": "Paint and refinish",
+     "value": "$1,400"
+    },
+    {
+     "label": "Labor",
+     "value": "$900"
+    }
+   ],
+   "total": "$11,900"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$11,900"
+   },
+   {
+    "label": "Deductible",
+    "value": "$500"
+   },
+   {
+    "label": "Estimated insurance payment",
+    "value": "$11,400, on hold until liability is decided"
+   },
+   {
+    "label": "Medical payments",
+    "value": "$640 urgent care bill submitted, under review"
+   },
+   {
+    "label": "Rental paid",
+    "value": "$1,200"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$1,200"
+   }
+  ],
+  "adjuster": {
+   "name": "Janet Okafor",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-610247",
+   "status": "Waiting on traffic camera footage",
+   "next_review": "2026-11-13"
+  },
+  "notes": [
+   {
+    "date": "2026-09-30",
+    "text": "Claim reported from the scene. Vehicle towed to Southside Collision Center."
+   },
+   {
+    "date": "2026-10-02",
+    "text": "Rental authorized at $40 per day; the 30-day limit ended 2026-10-31 and $1,200 was paid."
+   },
+   {
+    "date": "2026-10-06",
+    "text": "Witness statement collected. Witness believes the Altima ran a red light."
+   },
+   {
+    "date": "2026-10-08",
+    "text": "Traffic camera footage requested from Louisville Metro."
+   },
+   {
+    "date": "2026-10-14",
+    "text": "Riverbend Auto Insurance disputes liability pending the footage."
+   },
+   {
+    "date": "2026-11-04",
+    "text": "Policyholder may repair now under collision coverage, paying the $500 deductible, and Tri-County will seek it back if Riverbend is found at fault."
+   }
+  ]
+ },
+ "CLM-2026-603118": {
+  "v": 1,
+  "claim_id": "CLM-2026-603118",
+  "policyholder": {
+   "name": "Maria Delgado"
+  },
+  "policy_number": "TCI-AUTO-482135",
+  "claim_type": "Collision",
+  "date_reported": "2026-09-14",
+  "status": "Approved",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$50,000 per person, $100,000 per accident, $50,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$50,000 per person, $100,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$2,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2021",
+   "make": "Honda",
+   "model": "CR-V EX",
+   "body_style": "SUV",
+   "color": "Lunar Silver",
+   "vin_last4": "•••• 3118",
+   "plate_last4": "•••• 2108",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while driving",
+   "detail": "Incident with another vehicle",
+   "date": "2026-09-14",
+   "time": "8:12 AM",
+   "weather": "Clear",
+   "police_report": "KY-26-088214",
+   "injuries": "None",
+   "fault": "Other driver at fault; cited for following too closely"
+  },
+  "location": {
+   "address": "Northbound Dixie Highway at Greenwood Road, Louisville, KY 40258",
+   "description": "I was stopped at the red light on Dixie Highway and a pickup hit me from behind. He said he looked down at his phone."
+  },
+  "other_party": {
+   "driver": "Travis Coleman",
+   "insurer": "Ohio Valley Casualty",
+   "vehicle": "2018 Ford F-150"
+  },
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Rear",
+    "Driver Rear",
+    "Passenger Rear"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Rear bumper cover, liftgate, both tail lights, and rear parking sensors",
+   "photo_count": 4,
+   "photos": [
+    "Rear bumper and liftgate, straight on",
+    "Broken driver-side tail light",
+    "Broken passenger-side tail light",
+    "Other driver's pickup and license plate"
+   ]
+  },
+  "description": "The policyholder was stopped at a red light northbound on Dixie Highway. A pickup truck approaching from behind failed to stop and struck the rear of the insured Honda CR-V. Louisville Metro Police responded and cited the other driver for following too closely. No one was injured.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Rear bumper cover replacement",
+     "value": "$1,150"
+    },
+    {
+     "label": "Liftgate replacement",
+     "value": "$1,640"
+    },
+    {
+     "label": "Tail light assemblies, both sides",
+     "value": "$560"
+    },
+    {
+     "label": "Rear parking sensors",
+     "value": "$420"
+    },
+    {
+     "label": "Paint and refinish",
+     "value": "$780"
+    },
+    {
+     "label": "Labor",
+     "value": "$300"
+    }
+   ],
+   "total": "$4,850"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$4,850"
+   },
+   {
+    "label": "Deductible",
+    "value": "$500"
+   },
+   {
+    "label": "Approved amount",
+    "value": "$4,350"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$4,350"
+   }
+  ],
+  "adjuster": {
+   "name": "Janet Okafor",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-610247",
+   "status": "Subrogation in progress",
+   "next_review": "2026-11-20"
+  },
+  "notes": [
+   {
+    "date": "2026-09-15",
+    "text": "Repair estimate from Cedar Lane Auto Body received: $4,850."
+   },
+   {
+    "date": "2026-09-16",
+    "text": "Rental authorized for 10 days at $35 per day; returned 2026-09-28."
+   },
+   {
+    "date": "2026-09-29",
+    "text": "Repairs complete. $4,350 paid to Cedar Lane Auto Body."
+   },
+   {
+    "date": "2026-10-02",
+    "text": "Subrogation opened against Ohio Valley Casualty for $4,850, including the policyholder's $500 deductible."
+   },
+   {
+    "date": "2026-11-03",
+    "text": "Ohio Valley Casualty accepted liability; payment expected within 30 days. Deductible will be refunded to the policyholder when received."
+   }
+  ]
+ },
+ "CLM-2026-738450": {
+  "v": 1,
+  "claim_id": "CLM-2026-738450",
+  "policyholder": {
+   "name": "Tom Nguyen"
+  },
+  "policy_number": "TCI-AUTO-290817",
+  "claim_type": "Comprehensive",
+  "date_reported": "2026-10-05",
+  "status": "Approved",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$1,000 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$1,000 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$250,000 per person, $500,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$250,000 per person, $500,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$10,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$50 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2024",
+   "make": "Ford",
+   "model": "F-150 XLT",
+   "body_style": "Pickup",
+   "color": "Oxford White",
+   "vin_last4": "•••• 8450",
+   "plate_last4": "•••• 8817",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Weather",
+   "detail": "Hail damage",
+   "date": "2026-10-04",
+   "time": "About 4:20 PM",
+   "weather": "Severe thunderstorm with hail up to 1.5 inches",
+   "police_report": "None filed",
+   "injuries": "None",
+   "fault": "Not applicable"
+  },
+  "location": {
+   "address": "Driveway at the policyholder's home",
+   "description": "The truck was in my driveway when the storm came through. It sounded like rocks hitting it for ten minutes."
+  },
+  "other_party": null,
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Hood",
+    "Roof",
+    "Driver Side",
+    "Passenger Side"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "About 64 small dents across the hood, roof, cab, and bed sides, and a cracked driver-side mirror cap",
+   "photo_count": 8,
+   "photos": [
+    "Hood under inspection light",
+    "Roof dents, driver's side",
+    "Roof dents, passenger's side",
+    "Driver-side cab and bed",
+    "Passenger-side cab and bed",
+    "Cracked mirror cap",
+    "Hail stones in the driveway with a coin for scale",
+    "Inspector's dent count sheet"
+   ]
+  },
+  "description": "A severe thunderstorm passed through Jeffersontown and dropped hail on the insured Ford F-150 while it was parked in the policyholder's driveway. An inspector counted about 64 dents. All of them can be fixed with paintless dent repair, so no panels need to be replaced.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Paintless dent repair, hood",
+     "value": "$1,450"
+    },
+    {
+     "label": "Paintless dent repair, roof",
+     "value": "$1,850"
+    },
+    {
+     "label": "Paintless dent repair, cab and bed sides",
+     "value": "$1,320"
+    },
+    {
+     "label": "Mirror cap replacement",
+     "value": "$180"
+    },
+    {
+     "label": "Remove and reinstall trim, and labor",
+     "value": "$400"
+    }
+   ],
+   "total": "$5,200"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$5,200"
+   },
+   {
+    "label": "Deductible",
+    "value": "$1,000"
+   },
+   {
+    "label": "Approved amount",
+    "value": "$4,200"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$0"
+   }
+  ],
+  "adjuster": {
+   "name": "Priya Shah",
+   "department": "Catastrophe Response Team",
+   "reference": "ADJ-664018",
+   "status": "Repair scheduled",
+   "next_review": "2026-11-19"
+  },
+  "notes": [
+   {
+    "date": "2026-10-05",
+    "text": "Claim reported online after the 2026-10-04 hail storm."
+   },
+   {
+    "date": "2026-10-09",
+    "text": "Drive-in inspection at the Tri-County catastrophe site; 64 dents counted."
+   },
+   {
+    "date": "2026-10-12",
+    "text": "Estimate of $5,200 approved, less the $1,000 comprehensive deductible."
+   },
+   {
+    "date": "2026-10-20",
+    "text": "Repair scheduled for 2026-11-17 at Precision Dent Works. Payment of $4,200 will go to the shop when work is complete."
+   },
+   {
+    "date": "2026-10-20",
+    "text": "Rental authorized at $50 per day for the three days of repair."
+   }
+  ]
+ },
+ "CLM-2026-746209": {
+  "v": 1,
+  "claim_id": "CLM-2026-746209",
+  "policyholder": {
+   "name": "Omar Haddad"
+  },
+  "policy_number": "TCI-AUTO-570268",
+  "claim_type": "Collision and property damage liability",
+  "date_reported": "2026-10-18",
+  "status": "Open, repair in progress",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$1,000 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "Not carried"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2018",
+   "make": "Toyota",
+   "model": "Sienna LE",
+   "body_style": "Minivan",
+   "color": "Predawn Gray",
+   "vin_last4": "•••• 6209",
+   "plate_last4": "•••• 3360",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while driving",
+   "detail": "Backing collision with a parked vehicle",
+   "date": "2026-10-18",
+   "time": "11:20 AM",
+   "weather": "Overcast",
+   "police_report": "None filed; information exchanged at the scene",
+   "injuries": "None",
+   "fault": "Policyholder at fault"
+  },
+  "location": {
+   "address": "Grocery store parking lot, 2200 Hikes Lane, Louisville, KY 40218",
+   "description": "I was backing out of my spot at the grocery store and didn't see the car parked behind me. I hit the side of it."
+  },
+  "other_party": {
+   "driver": "Natalie Ferguson, owner of the parked vehicle",
+   "insurer": "Bluegrass Mutual Insurance",
+   "vehicle": "2021 Honda Accord"
+  },
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Rear",
+    "Driver Rear"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Rear bumper, rear camera, and the lower liftgate panel",
+   "photo_count": 5,
+   "photos": [
+    "Policyholder's rear bumper",
+    "Broken rear camera housing",
+    "Liftgate lower panel",
+    "Parked Honda Accord, driver's side",
+    "Accord rear door and quarter panel close-up"
+   ]
+  },
+  "description": "The policyholder backed out of a parking space and struck the driver's side of a parked Honda Accord. The policyholder is at fault. The Accord owner's damage was paid under the policy's property damage liability coverage. Repairs to the policyholder's minivan are paid under collision coverage, less the $1,000 deductible.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Rear bumper replacement",
+     "value": "$890"
+    },
+    {
+     "label": "Rear camera",
+     "value": "$410"
+    },
+    {
+     "label": "Liftgate lower panel",
+     "value": "$650"
+    },
+    {
+     "label": "Labor",
+     "value": "$380"
+    }
+   ],
+   "total": "$2,330"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage to the policyholder's vehicle",
+    "value": "$2,330"
+   },
+   {
+    "label": "Deductible",
+    "value": "$1,000"
+   },
+   {
+    "label": "Estimated insurance payment for the policyholder's vehicle",
+    "value": "$1,330"
+   },
+   {
+    "label": "Third-party vehicle repair, paid under property damage liability",
+    "value": "$3,560"
+   },
+   {
+    "label": "Third-party rental, paid under property damage liability",
+    "value": "$280"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$3,840"
+   }
+  ],
+  "adjuster": {
+   "name": "Samuel Reyes",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-357720",
+   "status": "Policyholder's repair in progress",
+   "next_review": "2026-11-19"
+  },
+  "notes": [
+   {
+    "date": "2026-10-18",
+    "text": "Claim reported by the policyholder, who accepted fault."
+   },
+   {
+    "date": "2026-10-22",
+    "text": "Bluegrass Mutual Insurance submitted the Accord estimate: $3,560."
+   },
+   {
+    "date": "2026-11-05",
+    "text": "$3,560 paid for the Accord repair and $280 for the owner's rental. Third-party claim closed."
+   },
+   {
+    "date": "2026-11-09",
+    "text": "Policyholder's minivan dropped off at Hikes Point Collision. Repair expected to be done 2026-11-18."
+   },
+   {
+    "date": "2026-11-09",
+    "text": "No rental coverage on this policy."
+   }
+  ]
+ },
+ "CLM-2026-847291": {
+  "v": 1,
+  "claim_id": "CLM-2026-847291",
+  "policyholder": {
+   "name": "Daniel Mitchell"
+  },
+  "policy_number": "TCI-AUTO-482977",
+  "claim_type": "Collision",
+  "date_reported": "2026-11-10",
+  "status": "Under investigation",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$250 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2023",
+   "make": "Toyota",
+   "model": "Camry SE",
+   "body_style": "Sedan",
+   "color": "Midnight Black",
+   "vin_last4": "•••• 7291",
+   "plate_last4": "•••• 4829",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Vehicle incident while driving",
+   "detail": "Incident with another vehicle",
+   "date": "2026-11-09",
+   "time": "5:42 PM",
+   "weather": "Light rain",
+   "police_report": "KY-26-119847",
+   "injuries": "None",
+   "fault": "Pending; the driver behind the policyholder is believed to be at fault"
+  },
+  "location": {
+   "address": "Eastbound Bardstown Road at Taylorsville Road, Louisville, KY 40205",
+   "description": "Traffic stopped fast on Bardstown Road in the rain. The truck behind me didn't stop in time and pushed me into the SUV in front of me."
+  },
+  "other_party": {
+   "driver": "Kyle Brennan",
+   "insurer": "Falls City Insurance",
+   "vehicle": "2016 Chevrolet Silverado"
+  },
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Front",
+    "Hood",
+    "Passenger Front",
+    "Rear"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Front bumper, hood, grille, right headlight, and rear bumper",
+   "photo_count": 5,
+   "photos": [
+    "Front bumper and grille, straight on",
+    "Hood crease, driver's side view",
+    "Cracked right headlight assembly",
+    "Rear bumper impact from the pickup truck",
+    "Scene photo of all three vehicles, taken by the policyholder"
+   ]
+  },
+  "description": "The policyholder was traveling eastbound when traffic slowed suddenly. A pickup truck traveling behind the insured vehicle failed to stop in time and struck the rear of the Toyota Camry. The impact pushed the Camry forward into the SUV ahead, damaging both the front and rear of the insured vehicle. The SUV driver reported no damage and left the scene after exchanging information.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Front bumper replacement",
+     "value": "$1,250"
+    },
+    {
+     "label": "Hood repair and repaint",
+     "value": "$875"
+    },
+    {
+     "label": "Grille replacement",
+     "value": "$420"
+    },
+    {
+     "label": "Headlight assembly",
+     "value": "$680"
+    },
+    {
+     "label": "Rear bumper repair",
+     "value": "$950"
+    },
+    {
+     "label": "Labor and diagnostics",
+     "value": "$725"
+    }
+   ],
+   "total": "$4,900"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$4,900"
+   },
+   {
+    "label": "Deductible",
+    "value": "$500"
+   },
+   {
+    "label": "Estimated insurance payment",
+    "value": "$4,400"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$0"
+   }
+  ],
+  "adjuster": {
+   "name": "Rebecca Thompson",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-729184",
+   "status": "Awaiting vehicle inspection",
+   "next_review": "2026-11-16"
+  },
+  "notes": [
+   {
+    "date": "2026-11-10",
+    "text": "Claim reported by phone. Policyholder uninjured; vehicle drivable."
+   },
+   {
+    "date": "2026-11-10",
+    "text": "Police report KY-26-119847 requested from Louisville Metro Police."
+   },
+   {
+    "date": "2026-11-11",
+    "text": "Inspection scheduled for 2026-11-14 at Highlands Auto Body."
+   },
+   {
+    "date": "2026-11-11",
+    "text": "Rental authorized at $40 per day while the vehicle is in the shop."
+   },
+   {
+    "date": "2026-11-11",
+    "text": "If Falls City Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder."
+   }
+  ]
+ },
+ "CLM-2026-981345": {
+  "v": 1,
+  "claim_id": "CLM-2026-981345",
+  "policyholder": {
+   "name": "Sofia Marino"
+  },
+  "policy_number": "TCI-AUTO-624409",
+  "claim_type": "Comprehensive",
+  "date_reported": "2026-10-02",
+  "status": "Closed",
+  "coverage": [
+   {
+    "name": "Collision",
+    "value": "$500 deductible"
+   },
+   {
+    "name": "Comprehensive",
+    "value": "$250 deductible"
+   },
+   {
+    "name": "Liability",
+    "value": "$100,000 per person, $300,000 per accident, $100,000 property damage"
+   },
+   {
+    "name": "Uninsured motorist",
+    "value": "$100,000 per person, $300,000 per accident"
+   },
+   {
+    "name": "Medical payments",
+    "value": "$5,000 per person"
+   },
+   {
+    "name": "Rental reimbursement",
+    "value": "$40 per day, up to 30 days"
+   },
+   {
+    "name": "Roadside assistance",
+    "value": "Included"
+   }
+  ],
+  "vehicle": {
+   "year": "2020",
+   "make": "Mazda",
+   "model": "CX-5 Touring",
+   "body_style": "SUV",
+   "color": "Soul Red",
+   "vin_last4": "•••• 1345",
+   "plate_last4": "•••• 2074",
+   "lienholder": ""
+  },
+  "incident": {
+   "type": "Animal strike",
+   "detail": "Collision with a deer",
+   "date": "2026-10-02",
+   "time": "6:35 AM",
+   "weather": "Clear, before sunrise",
+   "police_report": "None filed",
+   "injuries": "None",
+   "fault": "Not applicable"
+  },
+  "location": {
+   "address": "Brownsboro Road near Covered Bridge Road, Prospect, KY 40059",
+   "description": "A deer ran out from the trees on the right side of Brownsboro Road. I braked but hit it with the front passenger corner."
+  },
+  "other_party": null,
+  "damage": {
+   "condition": "Damaged but safe to drive",
+   "exterior_areas": [
+    "Front",
+    "Passenger Front",
+    "Hood"
+   ],
+   "interior_areas": [],
+   "areas_note": "",
+   "description": "Front bumper cover, grille, passenger headlight, and a dent in the hood",
+   "photo_count": 4,
+   "photos": [
+    "Front of the vehicle, straight on",
+    "Passenger headlight and bumper corner",
+    "Hood dent",
+    "Roadside where the deer was struck"
+   ]
+  },
+  "description": "While driving to work before sunrise, the policyholder struck a deer that ran into the road from the right. The front passenger corner of the insured Mazda took the impact. Hitting an animal is covered under comprehensive, not collision, so the lower $250 deductible applied.",
+  "estimate": {
+   "items": [
+    {
+     "label": "Front bumper cover",
+     "value": "$980"
+    },
+    {
+     "label": "Grille",
+     "value": "$410"
+    },
+    {
+     "label": "Passenger LED headlight assembly",
+     "value": "$1,150"
+    },
+    {
+     "label": "Hood repair",
+     "value": "$620"
+    },
+    {
+     "label": "Paint and refinish",
+     "value": "$540"
+    },
+    {
+     "label": "Labor",
+     "value": "$400"
+    }
+   ],
+   "total": "$4,100"
+  },
+  "valuation": null,
+  "financials": [
+   {
+    "label": "Estimated damage",
+    "value": "$4,100"
+   },
+   {
+    "label": "Deductible",
+    "value": "$250"
+   },
+   {
+    "label": "Approved amount",
+    "value": "$3,850"
+   },
+   {
+    "label": "Paid to date",
+    "value": "$3,850"
+   }
+  ],
+  "adjuster": {
+   "name": "Grace Liu",
+   "department": "Auto Claims Division",
+   "reference": "ADJ-402951",
+   "status": "Closed",
+   "next_review": "None, claim closed"
+  },
+  "notes": [
+   {
+    "date": "2026-10-02",
+    "text": "Claim reported by phone. Animal strike, covered under comprehensive."
+   },
+   {
+    "date": "2026-10-06",
+    "text": "Estimate from Prospect Collision received: $4,100."
+   },
+   {
+    "date": "2026-10-07",
+    "text": "Rental authorized at $40 per day; returned 2026-10-20."
+   },
+   {
+    "date": "2026-10-21",
+    "text": "Repairs complete. $3,850 paid to Prospect Collision. Claim closed."
+   }
+  ]
+ }
+}

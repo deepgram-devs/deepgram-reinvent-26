@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* Tri-County design tokens, taken from the claims UI mockups */
+@theme {
+  --color-ink: #1c1b1a;
+  --color-ink-2: #2a2927;
+  --color-ink-3: #3a3835;
+  --color-paper: #f8f7f5;
+  --color-card: #ffffff;
+  --color-line: #e8e5e0;
+  --color-muted: #6b6862;
+  --color-faint: #a19d96;
+
+  --color-violet: #7a2cf2;
+  --color-violet-2: #9152f6;
+  --color-violet-3: #a874ff;
+  --color-magenta: #d946ef;
+  --color-magenta-2: #c13be0;
+  --color-orange: #f97316;
+  --color-lime: #7ed957;
+  --color-red: #ef4444;
+  --color-ring-blue: #38bdf8;
+  --color-yellow: #ffe600;
+
+  --font-sans: var(--font-geist), var(--font-devanagari), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), var(--font-devanagari), ui-monospace, monospace;
+
+  --radius-card: 1.25rem;
+
+  --animate-ring: ring 2.4s ease-out infinite;
+  --animate-caret: caret 1s steps(1) infinite;
+  --animate-glow: glow 2.6s ease-out 1;
+  --animate-rise: rise 0.45s ease-out both;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-slide: slide 0.25s ease-out both;
+
+  @keyframes ring {
+    0% { transform: scale(0.85); opacity: 0.9; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+  @keyframes caret {
+    50% { opacity: 0; }
+  }
+  @keyframes glow {
+    0% { box-shadow: 0 0 0 0 rgb(217 70 239 / 0.55); }
+    25% { box-shadow: 0 0 0 6px rgb(217 70 239 / 0.35); }
+    100% { box-shadow: 0 0 0 0 rgb(217 70 239 / 0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide {
+    from { transform: translateX(100%); }
+    to { transform: none; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+}
+
+/* Letter-spaced uppercase labels, as in the mockups */
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

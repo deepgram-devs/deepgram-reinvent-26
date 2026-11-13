@@ -137,8 +137,9 @@ async def probe_language(code: str) -> bool:
     secs = len(audio) / (RATE * 2)
     print(f"\n[{code}] {language.name}: speak {voice.model}: {speak_status}, {len(audio)} bytes ({secs:.1f}s)")
 
-    filler_audio, filler_status = await speak(voice.model, language.filler)
-    print(f"[{code}]   filler: {filler_status}, {len(filler_audio) / (RATE * 2):.1f}s")
+    for filler in language.fillers:
+        filler_audio, filler_status = await speak(voice.model, filler)
+        print(f"[{code}]   filler: {filler_status}, {len(filler_audio) / (RATE * 2):.1f}s  {filler}")
 
     if not audio:
         return False

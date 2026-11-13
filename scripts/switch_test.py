@@ -49,10 +49,10 @@ SCRIPT = [
     ("flux-alfredo-es", "¿Qué información necesitan para buscar mi reclamación?", None),
     ("flux-cole-en", "Can you speak French, with a man's voice?", "a French man"),
     ("flux-cole-en", "Julien, please.", "julien"),
-    ("flux-cole-en", "English, please.", "heather"),
+    ("flux-cole-en", "English, please.", "brooke"),
     # Speech before the switch must not be cut off by the TTS reconnect
     ("flux-cole-en", "Say hello, then switch to Spanish.", "carmen"),
-    ("flux-cole-en", "English, please.", "heather"),
+    ("flux-cole-en", "English, please.", "brooke"),
     # A switch batched with a lookup: no filler in the outgoing voice
     ("flux-cole-en", "In Spanish please: what's the status of claim C L M two zero two six five two seven six one three? The last name is Walsh.", "carmen"),
 ]

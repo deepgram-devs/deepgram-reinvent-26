@@ -11,6 +11,7 @@ can talk back to.
 Voices come from https://developers.deepgram.com/docs/flux-tts/voices
 """
 
+import random
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -22,9 +23,11 @@ from pipecat.transcriptions.language import Language as PipecatLanguage
 class Language:
     code: str  # ISO code: the model suffix and the Flux language hint
     name: str  # used in the prompt and tool text
-    # Spoken while a claim lookup runs. Written in the language itself, since
-    # the voice would otherwise read the English text with a foreign accent.
-    filler: str
+    # Hold lines, one spoken when a claim lookup runs long. Written in the
+    # language itself, since the voice would otherwise read the English text
+    # with a foreign accent. Each is neutral about the speaker's gender, since
+    # any voice in the language may say it.
+    fillers: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -39,22 +42,68 @@ class Voice:
 LANGUAGES: dict[str, Language] = {
     lang.code: lang
     for lang in [
-        Language("en", "English", "Let me look that up for you, one second please."),
-        Language("es", "Spanish", "Permítame buscarlo, un momento, por favor."),
-        Language("fr", "French", "Je vérifie cela pour vous, un instant, s'il vous plaît."),
-        Language("de", "German", "Ich sehe das für Sie nach, einen Moment bitte."),
-        Language("hi", "Hindi", "कृपया एक क्षण रुकिए, जानकारी देखी जा रही है।"),
-        Language("ru", "Russian", "Сейчас посмотрю, одну секунду, пожалуйста."),
-        Language("pt", "Portuguese", "Vou verificar isso, um momento, por favor."),
-        Language("it", "Italian", "Controllo subito, un momento, per favore."),
-        Language("nl", "Dutch", "Ik zoek het even voor u op, een moment alstublieft."),
+        Language("en", "English", (
+            "Let me look that up for you.",
+            "One moment while I pull that up.",
+            "Sure, checking on that now.",
+            "Give me just a second.",
+            "Bear with me one moment.",
+        )),
+        Language("es", "Spanish", (
+            "Permítame buscarlo, un momento, por favor.",
+            "Un momento, lo estoy consultando.",
+            "Déjeme revisarlo.",
+            "Enseguida lo verifico.",
+        )),
+        Language("fr", "French", (
+            "Je vérifie cela pour vous, un instant, s'il vous plaît.",
+            "Un instant, je regarde.",
+            "Laissez-moi vérifier.",
+            "Je consulte le dossier, un moment.",
+        )),
+        Language("de", "German", (
+            "Ich sehe das für Sie nach, einen Moment bitte.",
+            "Einen Augenblick, ich schaue nach.",
+            "Moment, ich prüfe das kurz.",
+            "Ich rufe das gleich auf.",
+        )),
+        Language("hi", "Hindi", (
+            "कृपया एक क्षण रुकिए, जानकारी देखी जा रही है।",
+            "बस एक क्षण दीजिए।",
+            "ज़रा रुकिए, विवरण निकाला जा रहा है।",
+            "जी, अभी जाँच की जा रही है।",
+        )),
+        Language("ru", "Russian", (
+            "Сейчас посмотрю, одну секунду, пожалуйста.",
+            "Минутку, проверяю.",
+            "Одну секунду, уточняю.",
+            "Сейчас проверю для вас.",
+        )),
+        Language("pt", "Portuguese", (
+            "Vou verificar isso, um momento, por favor.",
+            "Só um instante, estou verificando.",
+            "Deixe-me consultar.",
+            "Um momento, vou conferir.",
+        )),
+        Language("it", "Italian", (
+            "Controllo subito, un momento, per favore.",
+            "Un attimo, verifico.",
+            "Mi lasci controllare.",
+            "Un istante, sto cercando.",
+        )),
+        Language("nl", "Dutch", (
+            "Ik zoek het even voor u op, een moment alstublieft.",
+            "Een ogenblikje, ik kijk het na.",
+            "Momentje, ik controleer het even.",
+            "Ik zoek het meteen op.",
+        )),
     ]
-}
+}  # fmt: skip
 
 # Featured voices are named in the set_voice description; the rest are only
 # reachable through list_voices, which keeps the tool definitions small.
 FEATURED = {
-    "heather", "alexis", "kit", "cliff", "colin", "miles",  # English
+    "brooke", "alexis", "kit", "cliff", "colin", "miles",  # English
     "carmen", "camille", "janine", "anjali", "natalia",
     "bianca", "chiara", "anouk",
 }  # fmt: skip
@@ -106,7 +155,7 @@ _BY_KEY: dict[str, Voice] = {
     key: voice for voice in VOICES for key in (voice.name, voice.model)
 }
 
-DEFAULT_VOICE: Voice = _BY_KEY["heather"]
+DEFAULT_VOICE: Voice = _BY_KEY["brooke"]
 
 
 def ascii_fold(text: str) -> str:
@@ -135,6 +184,12 @@ def find_voice(name_or_model: str) -> Voice | None:
 
 def language_of(voice: Voice) -> Language:
     return LANGUAGES[voice.lang]
+
+
+def pick_filler(voice: Voice, last: str | None = None) -> str:
+    """A hold line in the voice's language, never the one spoken last."""
+    fillers = language_of(voice).fillers
+    return random.choice([line for line in fillers if line != last] or fillers)
 
 
 def voices_for(code: str) -> list[Voice]:
