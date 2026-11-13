@@ -108,7 +108,7 @@ function Desk({
           </section>
         ) : (
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center pt-8 text-center">
-            <ListeningOrb />
+            <ListeningOrb paused={paused} busy={searching} />
             <p className="label mt-6 text-white/90" aria-live="polite">
               {paused ? (
                 t.call.paused

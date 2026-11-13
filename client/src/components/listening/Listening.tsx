@@ -1,10 +1,11 @@
 "use client";
 
-import { MicIcon, StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
+import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyMark } from "@/components/chrome/TriCountyMark";
-import { useAudioLevel } from "@/hooks/useAudioLevel";
+import { useTurnState } from "@/hooks/useTurnState";
+import { useVoiceLevelRef } from "@/hooks/useVoiceLevelRef";
 import { useLocale, useT, type Messages } from "@/i18n";
 import {
   deriveProgress,
@@ -18,6 +19,7 @@ import { useConversationTurns } from "@/lib/conversation";
 import { usePersonaCopy } from "@/lib/persona";
 import { useSession, type Verification } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
+import { ForegroundRing } from "@/vendor/voice-hero/components/Ring";
 
 function statusText(verification: Verification, t: Messages): string {
   return verification === "checking" ? t.call.verifying : t.call.listening;
@@ -36,19 +38,18 @@ function noticeText(verification: Verification, t: Messages): string | null {
   }
 }
 
-export function ListeningOrb({ muted = false }: { muted?: boolean }) {
-  const level = useAudioLevel("local");
-  const scale = 1 + (muted ? 0 : level) * 0.35;
+/**
+ * Deepgram's voice ring (vendored from deepgram-voice-hero): glass beads that ripple inward with the
+ * caller's voice, breathe while the agent thinks (or while `busy`), and push outward as the agent speaks.
+ * While `paused` it holds its listening shape and ignores the audio.
+ */
+export function ListeningOrb({ busy = false, paused = false }: { busy?: boolean; paused?: boolean }) {
+  const turn = useTurnState();
+  const level = useVoiceLevelRef(paused);
+  const state = paused ? "listening" : busy ? "thinking" : turn;
   return (
-    <div className="relative grid size-64 place-items-center" aria-hidden="true">
-      <span className="absolute inset-0 animate-ring rounded-full border border-white/25" />
-      <span className="absolute inset-0 animate-ring rounded-full border border-white/20 [animation-delay:1.2s]" />
-      <span
-        className="absolute inset-8 rounded-full border border-white/25 transition-transform duration-150"
-        style={{ transform: `scale(${scale})` }}
-      />
-      <span className="absolute inset-16 rounded-full border border-white/30 bg-white/15 shadow-[inset_0_0_30px] shadow-white/10 backdrop-blur" />
-      <MicIcon className="relative size-10 text-white" />
+    <div className="relative size-64" aria-hidden="true">
+      <ForegroundRing state={state} audioLevel={level} />
     </div>
   );
 }
@@ -152,7 +153,7 @@ export function Listening({
         </header>
 
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center pt-8 text-center">
-          <ListeningOrb />
+          <ListeningOrb paused={paused} busy={verification === "checking"} />
           <p className="label mt-6 text-white/90" aria-live="polite">
             {paused ? t.call.paused : statusText(verification, t)}
             {!paused && verification === "checking" && <span className="animate-caret">…</span>}
