@@ -14,8 +14,8 @@ const pt: Messages = {
   persona: {
     policyholder: {
       label: "Segurado",
-      kicker: "Nenhum sinistro carregado",
-      title: "Peça um sinistro, em voz alta.",
+      kicker: "Vamos encontrar seu sinistro",
+      title: "Consulte seu sinistro por voz.",
       intro: "Diga o número do sinistro e seu sobrenome. Vamos encontrá-lo e ler para você o que precisar.",
       trySaying: ["“Abra o sinistro CLM-2026-847291.”", "“O sobrenome é Mitchell.”"],
       prompts: ["Abra o sinistro CLM-2026-847291", "O sobrenome é Mitchell"],
@@ -25,8 +25,8 @@ const pt: Messages = {
     },
     employee: {
       label: "Equipe Tri-County",
-      kicker: "Central de sinistros",
-      title: "Pesquise todos os sinistros, em voz alta.",
+      kicker: "Busca na central de sinistros",
+      title: "Pesquise todos os sinistros registrados fazendo uma pergunta.",
       intro: "Pergunte sobre qualquer sinistro registrado. Vamos pesquisar todos e mostrar os que correspondem.",
       trySaying: ["“Quais sinistros aguardam o documento do veículo?”", "“Quais sinistros o Luis Ortega está regulando?”"],
       prompts: [

@@ -19,6 +19,7 @@ import { useConversationTurns } from "@/lib/conversation";
 import { usePersonaCopy } from "@/lib/persona";
 import { useSession, type Verification } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
+import { DOCK_CLEARANCE, SessionDock } from "@/components/voice/VoiceSessionPanel";
 import { ForegroundRing } from "@/vendor/voice-hero/components/Ring";
 
 function statusText(verification: Verification, t: Messages): string {
@@ -130,9 +131,14 @@ export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: ()
 export function Listening({
   onOpenClaim,
   aside,
+  live,
+  onEnd,
 }: {
   onOpenClaim: () => void;
+  /** The session panel beside the screen, on wide screens only */
   aside?: React.ReactNode;
+  live: boolean;
+  onEnd: () => void;
 }) {
   const { claim, verification } = useSession();
   const { paused } = useSettings();
@@ -140,7 +146,9 @@ export function Listening({
   const notice = noticeText(verification, t);
   return (
     <main className="flex min-h-dvh bg-ink text-white">
-      <div className="relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 pb-6 sm:px-8">
+      <div
+        className={`relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 sm:px-8 ${aside ? "pb-6" : DOCK_CLEARANCE}`}
+      >
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2.5">
             <TriCountyMark className="size-8" />
@@ -175,7 +183,10 @@ export function Listening({
           </div>
         </div>
       </div>
-      {aside}
+      {aside ?? (
+        // Narrow screens have no session panel: its prompts and controls dock at the bottom
+        <SessionDock onEnd={onEnd} live={live} />
+      )}
     </main>
   );
 }

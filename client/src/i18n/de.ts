@@ -15,8 +15,8 @@ const de: Messages = {
   persona: {
     policyholder: {
       label: "Versicherte",
-      kicker: "Kein Schadenfall geladen",
-      title: "Fragen Sie laut nach Ihrem Schadenfall.",
+      kicker: "Finden wir Ihren Schadenfall",
+      title: "Prüfen Sie Ihren Schadenfall per Stimme.",
       intro: "Nennen Sie Ihre Schadennummer und Ihren Nachnamen. Wir rufen den Fall auf und lesen Ihnen vor, was Sie brauchen.",
       trySaying: ["„Rufen Sie den Schadenfall CLM-2026-847291 auf.“", "„Der Nachname ist Mitchell.“"],
       prompts: ["Rufen Sie den Schadenfall CLM-2026-847291 auf", "Der Nachname ist Mitchell"],
@@ -26,8 +26,8 @@ const de: Messages = {
     },
     employee: {
       label: "Tri-County-Team",
-      kicker: "Schadenabteilung",
-      title: "Durchsuchen Sie alle Schadenfälle per Stimme.",
+      kicker: "Suche in der Schadenabteilung",
+      title: "Durchsuchen Sie alle erfassten Schadenfälle mit einer Frage.",
       intro: "Fragen Sie nach jedem erfassten Schadenfall. Wir durchsuchen alle und zeigen die passenden.",
       trySaying: ["„Welche Schadenfälle warten auf den Fahrzeugbrief?“", "„Welche Schadenfälle bearbeitet Luis Ortega?“"],
       prompts: [

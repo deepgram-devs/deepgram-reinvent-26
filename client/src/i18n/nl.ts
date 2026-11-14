@@ -14,8 +14,8 @@ const nl: Messages = {
   persona: {
     policyholder: {
       label: "Verzekerde",
-      kicker: "Geen claim geladen",
-      title: "Vraag een claim op, hardop.",
+      kicker: "We zoeken uw claim op",
+      title: "Bekijk uw claim met uw stem.",
       intro: "Noem uw claimnummer en achternaam. Wij zoeken de claim op en lezen voor wat u nodig hebt.",
       trySaying: ["“Zoek claim CLM-2026-847291 op.”", "“De achternaam is Mitchell.”"],
       prompts: ["Zoek claim CLM-2026-847291 op", "De achternaam is Mitchell"],
@@ -25,8 +25,8 @@ const nl: Messages = {
     },
     employee: {
       label: "Tri-County-team",
-      kicker: "Claimsdesk",
-      title: "Doorzoek alle claims, hardop.",
+      kicker: "Zoeken in de claimsdesk",
+      title: "Doorzoek alle claims in het systeem door een vraag te stellen.",
       intro: "Vraag naar elke claim in het systeem. Wij doorzoeken ze allemaal en tonen de claims die passen.",
       trySaying: ["“Welke claims wachten op het kentekenbewijs?”", "“Welke claims behandelt Luis Ortega?”"],
       prompts: [

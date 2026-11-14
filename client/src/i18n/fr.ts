@@ -15,8 +15,8 @@ const fr: Messages = {
   persona: {
     policyholder: {
       label: "Assuré",
-      kicker: "Aucun dossier chargé",
-      title: "Demandez un dossier, à voix haute.",
+      kicker: "Trouvons votre dossier",
+      title: "Suivez votre dossier à la voix.",
       intro: "Indiquez votre numéro de dossier et votre nom. Nous le retrouvons et vous lisons ce dont vous avez besoin.",
       trySaying: ["« Ouvrez le dossier CLM-2026-847291. »", "« Le nom de famille est Mitchell. »"],
       prompts: ["Ouvrez le dossier CLM-2026-847291", "Le nom de famille est Mitchell"],
@@ -26,8 +26,8 @@ const fr: Messages = {
     },
     employee: {
       label: "Équipe Tri-County",
-      kicker: "Service sinistres",
-      title: "Cherchez dans tous les dossiers, à voix haute.",
+      kicker: "Recherche au service sinistres",
+      title: "Cherchez dans tous les dossiers en posant une question.",
       intro: "Posez une question sur n’importe quel dossier. Nous les parcourons tous et affichons ceux qui correspondent.",
       trySaying: ["« Quels dossiers attendent le titre de propriété ? »", "« Quels dossiers gère Luis Ortega ? »"],
       prompts: [

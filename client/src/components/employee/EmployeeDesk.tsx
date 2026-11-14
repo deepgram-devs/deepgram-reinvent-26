@@ -9,7 +9,7 @@ import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyMark } from "@/components/chrome/TriCountyMark";
 import { ClaimReview } from "@/components/claim/ClaimReview";
 import { LiveCaption, ListeningOrb } from "@/components/listening/Listening";
-import { EndButton, MicButton } from "@/components/voice/VoiceSessionPanel";
+import { DOCK_CLEARANCE, SessionDock } from "@/components/voice/VoiceSessionPanel";
 import { useT } from "@/i18n";
 import { vehicleName, type ClaimView } from "@/lib/claim";
 import { useConversationTurns } from "@/lib/conversation";
@@ -66,7 +66,7 @@ function Desk({
   return (
     <main className="flex min-h-dvh bg-ink text-white">
       <div
-        className={`relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 sm:px-8 ${aside ? "pb-6" : "pb-28"}`}
+        className={`relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 sm:px-8 ${aside ? "pb-6" : DOCK_CLEARANCE}`}
       >
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2.5">
@@ -132,11 +132,8 @@ function Desk({
         </div>
       </div>
       {aside ?? (
-        // Narrow screens have no session panel, so the call controls dock at the bottom
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-white/10 bg-violet p-4 text-white">
-          <MicButton live={live} />
-          <EndButton onEnd={onEnd} live={live} />
-        </div>
+        // Narrow screens have no session panel: its prompts and controls dock at the bottom
+        <SessionDock onEnd={onEnd} live={live} />
       )}
     </main>
   );

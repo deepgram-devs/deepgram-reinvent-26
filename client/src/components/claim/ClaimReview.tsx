@@ -7,7 +7,7 @@ import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyLogo } from "@/components/chrome/TriCountyMark";
-import { EndButton, MicButton, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
+import { SessionDock, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import { useLocale, useT } from "@/i18n";
 import {
   deriveProgress,
@@ -235,7 +235,7 @@ export function ClaimReview({
     <div className="min-h-dvh bg-paper">
       <TopBar claim={claim} live={live} onBack={onBack} />
 
-      <div className="mx-auto grid max-w-[100rem] gap-8 px-5 pt-8 pb-36 sm:px-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:pb-16 xl:px-12">
+      <div className="mx-auto grid max-w-[100rem] gap-8 px-5 pt-8 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_24rem] xl:px-12">
         <main className="min-w-0 space-y-7">
           <ClaimHeader claim={claim} />
           <ProgressStepper claim={claim} />
@@ -255,19 +255,25 @@ export function ClaimReview({
 
         {/* Wide screens: the session stays beside the claim */}
         <aside className="hidden space-y-5 lg:block">
-          <div className="sticky top-24 space-y-5">
-            <VoiceSessionPanel onEnd={onEnd} live={live} claim={claim} />
+          {/* Fills the window below the 4.5rem top bar, less 1.5rem above and
+              below. On short windows the panel keeps the height its controls
+              need, and the note drops below the fold. */}
+          <div className="sticky top-24 flex h-[calc(100dvh-7.5rem)] min-h-[40rem] flex-col gap-5">
+            <div className="min-h-[34rem] flex-1">
+              <VoiceSessionPanel onEnd={onEnd} live={live} claim={claim} />
+            </div>
             <ViewOnlyNote />
           </div>
         </aside>
       </div>
 
-      <footer className="bg-ink py-10">
+      {/* On phones the dark footer runs on under the dock, so its logos clear it */}
+      <footer className="bg-ink pt-10 pb-66 lg:pb-10">
         <PartnerFooter />
       </footer>
 
-      {/* Phones: a dock with the caption and controls, and the session as a sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-violet p-4 text-white lg:hidden">
+      {/* Phones: a dock with the caption, prompts, and controls, and the session as a sheet */}
+      <SessionDock onEnd={onEnd} live={live} claim={claim} className="lg:hidden">
         <button
           type="button"
           onClick={() => setSheet(true)}
@@ -278,13 +284,10 @@ export function ClaimReview({
           <span className="min-w-0 flex-1 truncate">{caption?.text ? `“${caption.text}”` : t.review.dockLive}</span>
           <span className="label text-[0.65rem] text-white/80">{t.review.transcript}</span>
         </button>
-        <div className="mt-3 flex items-center gap-3">
-          <MicButton live={live} />
-          <EndButton onEnd={onEnd} live={live} />
-        </div>
-      </div>
+      </SessionDock>
       {sheet && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-ink/60 p-3 pt-16 backdrop-blur-sm lg:hidden" role="dialog" aria-label={t.review.conversation}>
+        // Above the top bar (z-50), which would otherwise hide the close button
+        <div className="fixed inset-0 z-[60] flex flex-col bg-ink/60 p-3 pt-16 backdrop-blur-sm lg:hidden" role="dialog" aria-label={t.review.conversation}>
           <button
             type="button"
             onClick={() => setSheet(false)}

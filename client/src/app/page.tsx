@@ -116,7 +116,9 @@ function Screens({
   }
   const aside = wide ? (
     <aside className="w-[26rem] shrink-0 p-6">
-      <div className="sticky top-6">
+      {/* The panel fills the window's height, less the aside's p-6 above and
+          below, but keeps the height its controls need on short windows */}
+      <div className="sticky top-6 h-[calc(100dvh-3rem)] min-h-[34rem]">
         <VoiceSessionPanel onEnd={onEnd} live={live || !!forced} />
       </div>
     </aside>
@@ -131,7 +133,7 @@ function Screens({
     return <ClaimReview claim={claim} live={live || !!forced} onEnd={onEnd} />;
   }
   return (
-    <Listening onOpenClaim={() => setDetails(true)} aside={aside} />
+    <Listening onOpenClaim={() => setDetails(true)} aside={aside} live={live || !!forced} onEnd={onEnd} />
   );
 }
 

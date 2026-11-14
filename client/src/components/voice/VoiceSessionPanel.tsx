@@ -1,7 +1,7 @@
 "use client";
 
 import { usePipecatClientMicControl } from "@pipecat-ai/client-react";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { LockIcon, MicIcon, MicOffIcon, WaveIcon } from "@/components/chrome/Pills";
 import { useLocale, useT, type Locale } from "@/i18n";
@@ -314,7 +314,7 @@ export function VoiceSessionPanel({ onEnd, live, claim: open }: { onEnd: () => v
     .join(" · ");
 
   return (
-    <section aria-label={t.session.title} className="flex max-h-[calc(100dvh-7rem)] flex-col rounded-[1.75rem] bg-violet p-6 text-white">
+    <section aria-label={t.session.title} className="flex h-full min-h-0 flex-col rounded-[1.75rem] bg-violet p-6 text-white">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{t.session.title}</h2>
@@ -355,7 +355,14 @@ export function VoiceSessionPanel({ onEnd, live, claim: open }: { onEnd: () => v
  * the review screen shows. Staff prompts follow it, not the session's claim,
  * which stays set after a staff member goes back to the results.
  */
-function TryAsking({ claim: open }: { claim?: ClaimView }) {
+function TryAsking({
+  claim: open,
+  className = "mt-4 shrink-0 border-t border-white/25 pt-4",
+}: {
+  claim?: ClaimView;
+  /** Where it sits: under the log in the panel by default */
+  className?: string;
+}) {
   const { claim } = useSession();
   const { sendText } = useConversationTurns();
   const persona = usePersona();
@@ -381,7 +388,7 @@ function TryAsking({ claim: open }: { claim?: ClaimView }) {
   if (!prompts.length) return null;
   const pill = "inline-block whitespace-nowrap rounded-full border border-white/30 bg-white/12 px-4 py-2 text-white";
   return (
-    <div className="mt-4 shrink-0 border-t border-white/25 pt-4">
+    <div className={className}>
       <h3 className="label text-[0.65rem] text-white/80">{t.session.tryAsking}</h3>
       {/* One row that scrolls sideways, so the prompts don't crowd the log.
           It runs to the panel's edges, and a thin scrollbar shows there's more. */}
@@ -401,6 +408,41 @@ function TryAsking({ claim: open }: { claim?: ClaimView }) {
     </div>
   );
 }
+
+/**
+ * Narrow screens have no session panel, so its prompts and call controls dock
+ * at the bottom instead. Its px-6 matches the panel's, which the prompt row's
+ * edge-to-edge scrolling counts on. Pages that show it pad their bottom by
+ * DOCK_CLEARANCE so their last content clears it.
+ */
+export function SessionDock({
+  onEnd,
+  live,
+  claim,
+  className = "",
+  children,
+}: {
+  onEnd: () => void;
+  live: boolean;
+  claim?: ClaimView;
+  className?: string;
+  /** A row above the prompts, such as the claim review's caption */
+  children?: ReactNode;
+}) {
+  return (
+    <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-violet px-6 pt-4 pb-4 text-white ${className}`}>
+      {children && <div className="mb-3">{children}</div>}
+      <TryAsking claim={claim} className="mb-2" />
+      <div className="flex items-center gap-3">
+        <MicButton live={live} />
+        <EndButton onEnd={onEnd} live={live} />
+      </div>
+    </div>
+  );
+}
+
+/** Bottom padding that clears the SessionDock */
+export const DOCK_CLEARANCE = "pb-56";
 
 export function ViewOnlyNote() {
   const copy = usePersonaCopy();

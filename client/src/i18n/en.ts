@@ -22,8 +22,8 @@ const en = {
   persona: {
     policyholder: {
       label: "Policyholder",
-      kicker: "No claim loaded",
-      title: "Ask for a claim, out loud.",
+      kicker: "Let’s find your claim",
+      title: "Check on your claim by voice.",
       intro: "Say your claim number and last name. We’ll pull it up and read back what you need.",
       trySaying: ["“Pull up claim CLM-2026-847291.”", "“The last name is Mitchell.”"],
       prompts: ["Pull up claim CLM-2026-847291", "The last name is Mitchell"],
@@ -33,8 +33,8 @@ const en = {
     },
     employee: {
       label: "Tri-County staff",
-      kicker: "Claims desk",
-      title: "Search every claim, out loud.",
+      kicker: "Claims desk search",
+      title: "Search every claim on file by asking.",
       intro: "Ask about any claim on file. We’ll search them all and show the ones that match.",
       trySaying: ["“Which claims are waiting on a title?”", "“Which claims is Luis Ortega adjusting?”"],
       prompts: [

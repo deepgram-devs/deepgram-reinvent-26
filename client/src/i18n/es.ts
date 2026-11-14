@@ -13,8 +13,8 @@ const es: Messages = {
   persona: {
     policyholder: {
       label: "Asegurado",
-      kicker: "Ninguna reclamación cargada",
-      title: "Pida una reclamación, en voz alta.",
+      kicker: "Busquemos su reclamación",
+      title: "Consulte su reclamación por voz.",
       intro: "Diga su número de reclamación y su apellido. La buscaremos y le leeremos lo que necesite.",
       trySaying: ["“Busque la reclamación CLM-2026-847291.”", "“El apellido es Mitchell.”"],
       prompts: ["Busque la reclamación CLM-2026-847291", "El apellido es Mitchell"],
@@ -24,8 +24,8 @@ const es: Messages = {
     },
     employee: {
       label: "Personal Tri-County",
-      kicker: "Mesa de reclamaciones",
-      title: "Busque en todas las reclamaciones, en voz alta.",
+      kicker: "Búsqueda en la mesa de reclamaciones",
+      title: "Busque en todas las reclamaciones registradas preguntando.",
       intro: "Pregunte por cualquier reclamación registrada. Las revisaremos todas y le mostraremos las que coincidan.",
       trySaying: ["“¿Qué reclamaciones esperan el título?”", "“¿Qué reclamaciones lleva Luis Ortega?”"],
       prompts: [

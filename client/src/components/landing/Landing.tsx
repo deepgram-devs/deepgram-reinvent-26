@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-import { MicIcon, ViewOnlyPill } from "@/components/chrome/Pills";
+import { MicIcon } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
 import { TriCountyMark } from "@/components/chrome/TriCountyMark";
@@ -100,7 +100,7 @@ export function Landing({
           sizes="100vw"
           className="object-cover object-[70%_center] lg:object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/10 to-ink lg:bg-gradient-to-r lg:from-ink lg:via-ink/70 lg:to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/10 to-ink lg:from-ink/70 lg:via-ink/60 lg:to-ink" />
       </div>
 
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-5 sm:p-8">
@@ -108,13 +108,10 @@ export function Landing({
           <TriCountyMark className="size-7" />
           <span className="text-lg font-semibold tracking-tight">Tri-County</span>
         </span>
-        <div className="flex items-center gap-3">
-          <ViewOnlyPill tone="glass" />
-          <SettingsButton />
-        </div>
+        <SettingsButton />
       </header>
 
-      <div className="relative z-10 -mt-6 flex flex-1 flex-col px-5 pb-6 sm:px-8 lg:mt-0 lg:max-w-xl lg:justify-center lg:px-16 lg:pt-28">
+      <div className="relative z-10 -mt-6 flex w-full flex-1 flex-col items-center px-5 pb-6 text-center sm:px-8 lg:mx-auto lg:mt-0 lg:max-w-xl lg:justify-center lg:px-0 lg:pt-28">
         <PersonaToggle persona={persona} onChange={onPersonaChange} disabled={connecting} />
         <p className="label mt-6 text-white/80">{copy.kicker}</p>
         <h1 className="mt-4 text-[2.6rem] leading-[1.05] font-semibold tracking-tight sm:text-5xl lg:text-6xl">
@@ -122,19 +119,7 @@ export function Landing({
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-white/85">{copy.intro}</p>
 
-        <p className="label mt-8 text-white/80">{t.landing.trySaying}</p>
-        <ul className="mt-3 space-y-3">
-          {copy.trySaying.map((line) => (
-            <li
-              key={line}
-              className="rounded-2xl border border-white/15 bg-white/5 px-5 py-3.5 text-lg backdrop-blur-sm"
-            >
-              {line}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-auto pt-10 lg:mt-10">
+        <div className="mt-auto w-full pt-10 lg:mt-10">
           {error && (
             <p role="alert" className="mb-4 rounded-2xl border border-red/40 bg-red/15 px-4 py-3 text-sm">
               {error}
