@@ -27,7 +27,7 @@ function Field({ label, children, mono = false }: { label: string; children: Rea
   return (
     <div>
       <dt className="text-sm text-muted">{label}</dt>
-      <dd className={`mt-0.5 text-lg leading-snug ${mono ? "font-mono text-base" : ""}`}>{children}</dd>
+      <dd className={`mt-0.5 text-lg leading-snug ${mono ? "tabular-nums text-base" : ""}`}>{children}</dd>
     </div>
   );
 }
@@ -43,13 +43,13 @@ function Rows({ rows, total }: { rows: { label: string; value: string; sub?: boo
       {rows.map((row, i) => (
         <div key={`${row.label}-${i}`} className={`flex items-baseline justify-between gap-4 py-2.5 ${row.sub ? "pl-3 text-muted" : ""}`}>
           <dt className="min-w-0 text-[0.95rem]">{fieldLabel(t, row.label)}</dt>
-          <dd className="max-w-[60%] shrink-0 text-right font-mono text-[0.95rem] text-balance">{row.value}</dd>
+          <dd className="max-w-[60%] shrink-0 text-right tabular-nums text-[0.95rem] text-balance">{row.value}</dd>
         </div>
       ))}
       {total && (
         <div className="flex items-baseline justify-between gap-4 pt-3">
           <dt className="font-semibold">{fieldLabel(t, total.label)}</dt>
-          <dd className="font-mono text-lg font-semibold">{total.value}</dd>
+          <dd className="tabular-nums text-lg font-semibold">{total.value}</dd>
         </div>
       )}
     </dl>

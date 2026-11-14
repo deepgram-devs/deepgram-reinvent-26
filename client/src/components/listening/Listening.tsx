@@ -85,7 +85,7 @@ export function ClaimFoundCard({ claim, onOpen }: { claim: ClaimView; onOpen: ()
       </p>
       <div className="mt-4 rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-mono text-lg font-medium">{claim.claim_id}</span>
+          <span className="tabular-nums text-lg font-medium">{claim.claim_id}</span>
           <StatusPill status={claim.status} />
         </div>
         <h2 className="mt-4 text-3xl font-semibold tracking-tight">{vehicleName(claim)}</h2>

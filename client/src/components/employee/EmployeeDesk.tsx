@@ -25,7 +25,7 @@ function ResultCard({ claim, onOpen }: { claim: ClaimView; onOpen: () => void })
       className="block h-full w-full animate-rise rounded-3xl border border-white/20 bg-white/10 p-5 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-magenta"
     >
       <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <span className="font-mono font-medium whitespace-nowrap">{claim.claim_id}</span>
+        <span className="tabular-nums font-medium whitespace-nowrap">{claim.claim_id}</span>
         <StatusPill status={claim.status} />
       </span>
       <span className="mt-3 block text-2xl font-semibold tracking-tight">{claim.policyholder.name}</span>

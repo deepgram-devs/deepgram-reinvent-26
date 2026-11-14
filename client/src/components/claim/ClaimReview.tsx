@@ -79,7 +79,7 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
           )}
         </div>
         <div className="ml-auto flex items-center gap-4 md:ml-0">
-          <span className="hidden font-mono text-sm text-white/80 xl:inline">{t.chrome.voiceAiBy}</span>
+          <span className="hidden text-sm text-white/80 xl:inline">{t.chrome.voiceAiBy}</span>
           <SettingsButton tone="solid" />
           <span className="label grid size-10 place-items-center rounded-full bg-violet text-[0.7rem] tracking-[0.06em]">
             {persona === "policyholder" ? initials(claim.policyholder.name) : t.chrome.you}
@@ -107,7 +107,7 @@ function ProgressStepper({ claim }: { claim: ClaimView }) {
         {steps.map((step, i) => (
           <li key={step.title} className="relative">
             <div className="flex items-center">
-              <span className={`grid size-8 shrink-0 place-items-center rounded-full font-mono text-sm font-semibold ${STEP_DOT[step.state]}`}>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-full tabular-nums text-sm font-semibold ${STEP_DOT[step.state]}`}>
                 {step.state === "done" ? "✓" : step.state === "stopped" ? "✕" : i + 1}
               </span>
               {i < steps.length - 1 && (
@@ -169,13 +169,13 @@ function SummaryBand({ claim }: { claim: ClaimView }) {
       <div className="grid gap-4 md:grid-cols-2">
         <GlassCard label={t.claim.policyholder}>
           <p className="mt-3 text-3xl font-semibold tracking-tight">{claim.policyholder.name}</p>
-          <p className="mt-3 font-mono">{t.review.policy(claim.policy_number)}</p>
+          <p className="mt-3 tabular-nums">{t.review.policy(claim.policy_number)}</p>
           <p className="mt-1 text-ink/75">{t.review.reported(formatDate(claim.date_reported, locale))}</p>
         </GlassCard>
         <GlassCard label={t.claim.insuredVehicle} icon={<CarIcon />}>
           <p className="mt-3 text-3xl font-semibold tracking-tight">{vehicleName(claim)}</p>
-          <p className="mt-3 font-mono">VIN {claim.vehicle.vin_last4}</p>
-          <p className="mt-1 font-mono">
+          <p className="mt-3 tabular-nums">VIN {claim.vehicle.vin_last4}</p>
+          <p className="mt-1 tabular-nums">
             {t.review.plate} {claim.vehicle.plate_last4}
           </p>
         </GlassCard>
@@ -207,7 +207,7 @@ function ClaimHeader({ claim }: { claim: ClaimView }) {
         <ViewOnlyPill />
       </div>
       <p className="mt-3 text-muted">
-        {t.review.claim} <span className="font-mono font-medium text-ink">{claim.claim_id}</span>
+        {t.review.claim} <span className="tabular-nums font-medium text-ink">{claim.claim_id}</span>
         <span className="mx-3">{t.review.lastUpdated(formatDate(updated, locale))}</span>
       </p>
     </FocusCard>
