@@ -1,0 +1,73 @@
+# Deploys the claims agent to Fly.io (the app named in fly.toml).
+#
+# Runs on pushes to main that change the app, or by hand from the Actions tab.
+# Tests run first, and a failure stops the deploy, so a broken push never
+# reaches a live demo. Deploying restarts the machine and ends any call in
+# progress, so avoid merging during a demo.
+#
+# Needs one repository secret, FLY_API_TOKEN, a deploy token for this app only:
+#   fly tokens create deploy -a <app> -x 8760h | gh secret set FLY_API_TOKEN
+
+name: Deploy to Fly
+
+on:
+  push:
+    branches: [main]
+    # Docs, the README, and the sample claims don't change what's deployed
+    paths:
+      - agent.py
+      - claims.py
+      - voices.py
+      - requirements.txt
+      - client/**
+      - Dockerfile
+      - .dockerignore
+      - start.sh
+      - fly.toml
+      - .github/workflows/fly-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time. A newer push waits instead of cutting one off mid-rollout.
+concurrency:
+  group: fly-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover tests
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      - run: npm run typecheck
+        working-directory: client
+      - run: npm run lint
+        working-directory: client
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

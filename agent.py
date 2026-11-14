@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from urllib.parse import unquote, urlparse
 
@@ -15,11 +16,16 @@ from loguru import logger
 from pipecat.adapters.llm.schemas.function_schema import FunctionSchema
 from pipecat.adapters.llm.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    EndFrame,
+    Frame,
+    InputAudioRawFrame,
+    LLMMessagesAppendFrame,
     LLMRunFrame,
     LLMUpdateSettingsFrame,
     STTUpdateSettingsFrame,
     TTSSpeakFrame,
     TTSUpdateSettingsFrame,
+    UserIdleTimeoutUpdateFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -28,6 +34,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.frameworks.rtvi.frames import RTVIServerMessageFrame
 from pipecat.processors.frameworks.rtvi.observer import (
     RTVIFunctionCallReportLevel,
@@ -41,7 +48,6 @@ from pipecat.services.deepgram.flux.tts import DeepgramFluxTTSService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
-from pipecat.turns.user_mute import MuteUntilFirstBotCompleteUserMuteStrategy
 from pipecat.utils.text.transforms import expand_currency
 from pipecat.workers.runner import WorkerRunner
 from strands import Agent, tool
@@ -61,6 +67,18 @@ KNOWLEDGE_BASE_ID = os.getenv("KB_ID")
 # that answers sooner goes straight to the answer: a hold line before an
 # instant answer is a delay, not a courtesy.
 HOLD_LINE_DELAY_SECS = 1.0
+
+# How much of the caller's first audio Flux hears as silence. Opening a
+# microphone can click, and Flux can hear the click as a word ("two"). It's
+# over in a few tens of milliseconds, and a caller can't start talking in less
+# than 200, so nothing they say is lost.
+MIC_OPEN_GATE_MS = 200
+
+# How long the caller can stay quiet after the agent finishes speaking before
+# it asks if they're still there. Another stretch that long and it says goodbye
+# and hangs up, so an abandoned call doesn't hold a session open. 0 turns it
+# off, and an empty value in .env means the default.
+USER_IDLE_TIMEOUT_SECS = float(os.getenv("USER_IDLE_TIMEOUT_SECS") or "15")
 
 _MARKUP_SYMBOLS = re.compile(r"[*#`]")
 
@@ -336,6 +354,17 @@ def persona_from_body(body) -> str:
     return POLICYHOLDER
 
 
+def voice_from_body(body) -> Voice:
+    """The voice the call starts in: the one picked in Settings, if it's one we have.
+
+    The browser remembers the pick, so a stale or hand-edited name can arrive
+    here. Anything that isn't in the catalog starts the call in the default.
+    """
+    if isinstance(body, dict) and isinstance(body.get("voice"), str):
+        return voices.find_voice(body["voice"]) or voices.DEFAULT_VOICE
+    return voices.DEFAULT_VOICE
+
+
 GREETINGS = {
     POLICYHOLDER: (
         "Thanks for calling Tri-County Insurance auto claims. I can look up the "
@@ -346,12 +375,67 @@ GREETINGS = {
 }
 
 
-def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
+async def on_screen_view(record: dict) -> dict:
+    """The claim a staff member has open, as the prompt gets it.
+
+    The masked record, with dates and dollar amounts ready to speak, the same
+    view the policyholder lookup returns. It's built from the record the
+    server read, never from anything the browser sent.
+    """
+    return {
+        "claim_id": record["claim_id"],
+        "record": await expand_currency(claims.spoken_view(record), "*"),
+    }
+
+
+def on_screen_section(on_screen: dict) -> str:
+    """The ON SCREEN block: the claim a staff member has open, and how to use it.
+
+    It lives in the system prompt, not the conversation, so it always matches
+    the screen: opening another claim replaces it, and closing one removes it.
+    """
+    return (
+        "ON SCREEN:\n"
+        f"- The staff member has claim {on_screen['claim_id']} open and can see "
+        "it. Its record is below.\n"
+        "- 'This claim', 'this one', 'what I'm looking at', or 'on screen' means "
+        "this record.\n"
+        "- Answer questions about it from this record, without calling "
+        "search_claims. Call search_claims only when they ask about other "
+        "claims, or about something this record doesn't have.\n"
+        "- They're reading along, so show them the answer instead of telling "
+        "them where it is: before you answer, call show_on_screen with the "
+        "sections the answer is in, and their screen highlights them. Never "
+        "name a card or say where something is on the screen.\n"
+        "- Answer only what was asked; they can read the rest.\n"
+        f"RECORD: {on_screen['record']}"
+    )
+
+
+def greeting_instruction(persona: str, voice: Voice) -> str:
+    """The first turn's instruction: the persona's greeting, in the voice's language.
+
+    The greeting is written in English. In English it's said word for word;
+    in any other language the model translates it, since a Spanish voice
+    reading English text sounds like an accent, not a greeting.
+    """
+    greeting = GREETINGS[persona]
+    if voice.lang == "en":
+        return f"Start by saying exactly this: '{greeting}'"
+    return f"Start by saying this, in {voices.language_of(voice).name}: '{greeting}'"
+
+
+def build_system_instruction(
+    persona: str, voice: Voice, today: str, on_screen: dict | None = None
+) -> str:
     """The system prompt, written for the ear: the agent is heard, not read.
 
     It's rebuilt whenever the voice changes, since it names the voice and the
-    language to reply in. HOW TO SPEAK, PRIVACY, and VOICE AND LANGUAGE are
-    the same for both personas.
+    language to reply in, and whenever a staff member opens or closes a claim.
+    HOW TO SPEAK, PRIVACY, and VOICE AND LANGUAGE are the same for both
+    personas. on_screen, from on_screen_view, is the claim a staff member has
+    open; policyholders see only their own verified claim, so it's ignored
+    for them.
     """
     if persona == EMPLOYEE:
         role = (
@@ -390,6 +474,9 @@ def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
             "to go through the rest instead of listing them all.\n"
             "- You may answer general auto insurance questions briefly, in general "
             "terms, without searching.\n"
+            "- Staff can open one claim from the results. If they ask about 'this "
+            "claim' or what's on screen and there's no ON SCREEN section below, "
+            "say no claim is open and ask which one they mean.\n"
             "- Never invent a claim, amount, date, or status.\n"
         )
     else:
@@ -464,19 +551,20 @@ def build_system_instruction(persona: str, voice: Voice, today: str) -> str:
         "the language you reply in."
     )
 
-    return "\n".join(
-        [
-            role,
-            voices.voice_intro(voice),
-            f"Today is {today}.",
-            "",
-            how_to_speak,
-            work,
-            privacy,
-            rules,
-            voice_rules,
-        ]
-    )
+    blocks = [
+        role,
+        voices.voice_intro(voice),
+        f"Today is {today}.",
+        "",
+        how_to_speak,
+        work,
+        privacy,
+        rules,
+        voice_rules,
+    ]
+    if persona == EMPLOYEE and on_screen:
+        blocks += ["", on_screen_section(on_screen)]
+    return "\n".join(blocks)
 
 
 # The parts of a claim the UI can point at, for search_knowledge_base's sections
@@ -600,17 +688,79 @@ search_claims_function = FunctionSchema(
     required=["question"],
 )
 
+# Staff answer from the open claim without a lookup, so nothing would point
+# their screen at the answer. This does, as the policyholder lookup's
+# sections do.
+show_on_screen_function = FunctionSchema(
+    name="show_on_screen",
+    description=(
+        "Highlight parts of the claim the staff member has open, so their screen "
+        "shows the answer while you say it. Call it before answering any "
+        "question about the open claim."
+    ),
+    properties={
+        "sections": {
+            "type": "array",
+            "items": {"type": "string", "enum": CLAIM_SECTIONS},
+            "description": (
+                "The parts of the claim the answer is in, e.g. ['estimate'] for "
+                "'how much is the repair?' or ['adjuster', 'notes'] for 'who's "
+                "handling it?'."
+            ),
+        },
+    },
+    required=["sections"],
+)
+
 VOICE_TOOLS = [set_voice_function, list_voices_function, reset_voice_function]
 
 
 def tools_for(persona: str) -> ToolsSchema:
-    """The pipeline LLM's tools: a claim tool for the persona, plus the voice tools."""
-    claim_tool = search_claims_function if persona == EMPLOYEE else search_function
-    return ToolsSchema(standard_tools=[claim_tool, *VOICE_TOOLS])
+    """The pipeline LLM's tools: the persona's claim tools, plus the voice tools."""
+    claim_tools = (
+        [search_claims_function, show_on_screen_function]
+        if persona == EMPLOYEE
+        else [search_function]
+    )
+    return ToolsSchema(standard_tools=[*claim_tools, *VOICE_TOOLS])
+
+
+class MicGate(FrameProcessor):
+    """Sends speech-to-text silence for the first moment the microphone is open.
+
+    The click of a microphone opening can come back from Flux as a word
+    ("two"). The RTVI observer would send that transcript to the screen as the
+    caller's first message, and the agent would answer it. The click is over
+    within MIC_OPEN_GATE_MS, so only that much audio is replaced. After it,
+    the caller can talk over the greeting like any other reply. The time is
+    counted in audio, not on the clock, so it starts with the first audio the
+    caller sends, however long the call took to connect.
+    """
+
+    def __init__(self, gate_ms: int = MIC_OPEN_GATE_MS):
+        super().__init__()
+        self._gate_ms = gate_ms
+        # Counted in samples, which are whole numbers: summing frame lengths
+        # in seconds drifts, and ten 20 ms frames would fall short of 200 ms
+        self._heard_samples = 0
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+        if isinstance(frame, InputAudioRawFrame):
+            gate_samples = frame.sample_rate * self._gate_ms // 1000
+            if self._heard_samples < gate_samples:
+                self._heard_samples += frame.num_frames
+                # In place, so a transport's subclass (Daily's carries the
+                # participant) and its fields stay as they were
+                frame.audio = bytes(len(frame.audio))
+        await self.push_frame(frame, direction)
 
 
 async def run_bot(
-    transport: BaseTransport, runner_args: RunnerArguments, persona: str = POLICYHOLDER
+    transport: BaseTransport,
+    runner_args: RunnerArguments,
+    persona: str = POLICYHOLDER,
+    voice: Voice = voices.DEFAULT_VOICE,
 ):
     logger.info(f"Starting Tri-County claims voice agent ({persona})")
 
@@ -622,8 +772,9 @@ async def run_bot(
     research_agent = ClaimsResearchAgent(kb, records) if persona == EMPLOYEE else None
 
     # The voice is the caller's only language setting: it picks the listen
-    # model and the reply language too. Every call starts in English.
-    current_voice = voices.DEFAULT_VOICE
+    # model and the reply language too. The call starts in the voice picked
+    # in Settings, English by default.
+    current_voice = voice
 
     stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
@@ -656,6 +807,29 @@ async def run_bot(
 
     # The claim on the caller's screen, so it's sent once per verified claim
     shown_claim_id: str | None = None
+
+    # Staff only: the claim open on their screen, from on_screen_view, for
+    # the prompt's ON SCREEN section. The browser only ever sends its ID.
+    on_screen: dict | None = None
+    # Bumped each time a claim is opened or closed, so a slow load can't put
+    # back a claim the staff member has already closed or moved on from
+    screen_changes = 0
+
+    async def refresh_prompt():
+        """Rebuild the system prompt for the current voice and the claim on screen.
+
+        It replaces the old prompt rather than adding to the conversation, so
+        the model never answers from a claim that's no longer open.
+        """
+        await llm.queue_frame(
+            LLMUpdateSettingsFrame(
+                delta=AWSBedrockLLMService.Settings(
+                    system_instruction=build_system_instruction(
+                        persona, current_voice, today, on_screen
+                    )
+                )
+            )
+        )
 
     async def send_to_client(data: dict):
         """Send a message to the claims UI. task is created below, before any call."""
@@ -820,6 +994,74 @@ async def run_bot(
             }
         )
 
+    async def claim_opened(data: dict):
+        """A staff member opened a claim card: put its record in the prompt.
+
+        Only the claim ID is taken from the browser. The record comes from
+        this call's cache, where the search that showed the card put it, or
+        from the knowledge base, so the browser can't put words in the prompt.
+        """
+        nonlocal on_screen, screen_changes
+        claim_id = normalize_claim_id(
+            str(data.get("claim_id", "")) if isinstance(data, dict) else ""
+        )
+        if not claim_id:
+            logger.warning(f"Ignoring claim-opened without a valid claim ID: {data}")
+            return
+        screen_changes += 1
+        change = screen_changes
+        try:
+            record = await load_claim(claim_id)
+        except Exception as e:
+            logger.error(f"Error loading on-screen claim {claim_id}: {e}")
+            return
+        if record is None:
+            logger.warning(f"Ignoring claim-opened for unknown claim {claim_id}")
+            return
+        view = await on_screen_view(record)
+        if change != screen_changes:
+            return
+        on_screen = view
+        logger.info(f"Staff opened claim {claim_id}")
+        await refresh_prompt()
+        # The session's claim, which the review screen's focus and highlights
+        # use. The staff desk routes on its own open claim, not on this.
+        await send_to_client({"type": "claim-loaded", "claim": claims.to_client_view(record)})
+
+    async def claim_closed(data: dict):
+        """A staff member went back to the results: take the claim out of the prompt."""
+        nonlocal on_screen, screen_changes
+        screen_changes += 1
+        if on_screen is None:
+            return
+        logger.info(f"Staff closed claim {on_screen['claim_id']}")
+        on_screen = None
+        await refresh_prompt()
+
+    async def show_on_screen(params: FunctionCallParams):
+        """Highlight the cards the answer is in, on the claim a staff member has open."""
+        if on_screen is None:
+            await params.result_callback(
+                {"response": "No claim is open. Say so, and ask which claim they mean."}
+            )
+            return
+        sections = [
+            s for s in params.arguments.get("sections") or [] if s in CLAIM_SECTIONS
+        ]
+        await send_to_client(
+            {
+                "type": "claim-focus",
+                "claim_id": on_screen["claim_id"],
+                "sections": sections or ["overview"],
+            }
+        )
+        await params.result_callback(
+            {
+                "response": "Highlighted on their screen. Answer from the record "
+                "now, briefly, without saying where it is on the screen."
+            }
+        )
+
     # Claim lookups still working, and the hold line waiting to be said
     lookups_running = 0
     hold_line_timer: asyncio.Task | None = None
@@ -896,29 +1138,25 @@ async def run_bot(
 
     if persona == EMPLOYEE:
         llm.register_function("search_claims", holds_the_line(reports_timing(search_claims)))
+        llm.register_function("show_on_screen", reports_timing(show_on_screen))
     else:
         llm.register_function(
             "search_knowledge_base", holds_the_line(reports_timing(search_knowledge_base))
         )
 
-    async def apply_voice(voice: Voice, params: FunctionCallParams):
-        """Switch voice, and with it the language, in place.
+    async def switch_voice(voice: Voice) -> bool:
+        """Switch voice, and with it the language, in place. True if the language changed.
 
-        The prompt, voice, and listen updates are queued before the function
-        result, so the confirmation is the first turn in the new voice.
+        Both the set_voice tool and the Settings panel switch through here,
+        so the prompt, the voice, the listen settings, and the UI stay in step.
         """
         nonlocal current_voice
         old_voice, current_voice = current_voice, voice
         language_changed = voice.lang != old_voice.lang
         logger.info(f"Switching voice to {voice.model} (language changed: {language_changed})")
 
-        await llm.queue_frame(
-            LLMUpdateSettingsFrame(
-                delta=AWSBedrockLLMService.Settings(
-                    system_instruction=build_system_instruction(persona, voice, today)
-                )
-            )
-        )
+        # The new voice and language, keeping any claim a staff member has open
+        await refresh_prompt()
         # A voice change reconnects Flux TTS, which would cut off speech still
         # streaming in the old voice, so let that finish first
         waited = 0.0
@@ -939,6 +1177,15 @@ async def run_bot(
             )
 
         await send_voice()
+        return language_changed
+
+    async def apply_voice(voice: Voice, params: FunctionCallParams):
+        """Switch voice for the set_voice and reset_voice tools.
+
+        The prompt, voice, and listen updates are queued before the function
+        result, so the confirmation is the first turn in the new voice.
+        """
+        language_changed = await switch_voice(voice)
         await params.result_callback(
             {"response": voices.confirmation(voice, language_changed)}
         )
@@ -985,28 +1232,32 @@ async def run_bot(
 
     context = LLMContext(
         messages=[
-            {
-                "role": "user",
-                "content": f"Start by saying exactly this: '{GREETINGS[persona]}'",
-            },
+            {"role": "user", "content": greeting_instruction(persona, current_voice)},
         ],
         tools=tools_for(persona),
     )
-    # Flux can turn the click and hiss of a microphone opening into a short
-    # word ("two"), which would cut off the greeting and get an answer. The
-    # caller has nothing to say before the greeting ends, so ignore their
-    # audio until then.
+    # The caller can interrupt the greeting like any other reply. The click of
+    # their microphone opening, which Flux can hear as a word, never reaches
+    # Flux: MicGate, at the front of the pipeline, sends silence in its place.
+    #
+    # The idle timer starts each time the agent stops speaking, and the
+    # caller speaking, the agent speaking, or a lookup in progress stops it.
+    # So it never runs before the greeting ends or while a hold line covers a
+    # slow lookup.
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
-            user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
+            user_idle_timeout=USER_IDLE_TIMEOUT_SECS,
         ),
     )
+
+    mic_gate = MicGate()
 
     # Build the pipeline
     pipeline = Pipeline(
         [
             transport.input(),
+            mic_gate,
             stt,
             user_aggregator,
             llm,
@@ -1031,9 +1282,117 @@ async def run_bot(
                 "search_knowledge_base": RTVIFunctionCallReportLevel.ARGUMENTS,
                 "search_claims": RTVIFunctionCallReportLevel.ARGUMENTS,
                 "set_voice": RTVIFunctionCallReportLevel.ARGUMENTS,
+                "show_on_screen": RTVIFunctionCallReportLevel.ARGUMENTS,
             }
         ),
     )
+
+    # Messages the claims UI sends during a call, by type
+    client_handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
+
+    @task.rtvi.event_handler("on_client_message")
+    async def on_client_message(rtvi, msg):
+        handler = client_handlers.get(msg.type)
+        if handler is None:
+            logger.warning(f"Ignoring unknown client message: {msg.type}")
+            return
+        await handler(msg.data or {})
+
+    # Staff tell the agent which claim they have open. Policyholders only see
+    # the claim they were verified for, so their calls don't accept these.
+    if persona == EMPLOYEE:
+        client_handlers["claim-opened"] = claim_opened
+        client_handlers["claim-closed"] = claim_closed
+
+    # Silences in a row with no answer from the caller, and whether the agent
+    # has given up and is saying goodbye
+    idle_strikes = 0
+    hanging_up = False
+
+    # The caller went quiet after the agent spoke. The first time, check they're
+    # still there. The second time, say goodbye and end the call, so a caller
+    # who walked away doesn't keep a session open. Both lines are in the
+    # current voice's language.
+    @user_aggregator.event_handler("on_user_turn_idle")
+    async def on_user_turn_idle(aggregator):
+        nonlocal idle_strikes, hanging_up
+        if hanging_up:
+            return
+        idle_strikes += 1
+        if idle_strikes == 1:
+            logger.info(f"Caller quiet for {USER_IDLE_TIMEOUT_SECS:g}s; checking in")
+            # The timer starts again when this line finishes. Unlike the hold
+            # line, it goes in the LLM context, so a "yes, I'm here" reaches the
+            # model as the answer to it.
+            await task.queue_frame(TTSSpeakFrame(voices.still_there(current_voice)))
+            return
+
+        logger.info("Caller still quiet after the check-in; hanging up")
+        hanging_up = True
+        # Before the goodbye, so the screen can say why the call ended
+        await send_to_client({"type": "call-ended", "reason": "idle"})
+        cancel_hold_line()
+        # The goodbye stays out of the context: nothing answers it
+        goodbye = TTSSpeakFrame(voices.goodbye(current_voice), append_to_context=False)
+        # The call ends either way, so a word from the caller mustn't cut the
+        # goodbye short
+        goodbye.interruptible = False
+        # EndFrame, not CancelFrame: it queues behind the goodbye, the TTS
+        # service holds it until the goodbye's audio is done, and the output
+        # transport plays everything queued before it. Only then does the bot
+        # leave the call.
+        await task.queue_frames([goodbye, EndFrame(reason="idle")])
+
+    # The caller spoke, so any check-in was answered
+    @user_aggregator.event_handler("on_user_turn_started")
+    async def on_user_turn_started(aggregator, strategy):
+        nonlocal idle_strikes
+        idle_strikes = 0
+
+    async def on_mic(data: dict):
+        """Pause the idle timer while the caller's microphone is off.
+
+        The caller mutes, or opens Settings, which turns the microphone off.
+        Either way the agent can't hear them, so their silence isn't a sign
+        they've left. The update reaches the user aggregator's idle timer, which
+        stops at 0 and, on the way back, starts a full timeout over.
+        """
+        nonlocal idle_strikes
+        if hanging_up:
+            return
+        enabled = bool(data.get("enabled"))
+        if enabled:
+            idle_strikes = 0
+        await task.queue_frame(
+            UserIdleTimeoutUpdateFrame(timeout=USER_IDLE_TIMEOUT_SECS if enabled else 0)
+        )
+
+    client_handlers["mic"] = on_mic
+
+    async def on_set_voice(data: dict):
+        """A voice picked in the Settings panel during the call.
+
+        It switches like set_voice, but nothing is said: the microphone is off
+        while Settings is open. A note in the context tells the model the
+        change was the caller's, so its next reply is in the new language.
+        """
+        name = data.get("voice") if isinstance(data, dict) else None
+        voice = voices.find_voice(name) if isinstance(name, str) else None
+        if voice is None:
+            logger.warning(f"Ignoring set-voice for unknown voice: {name!r}")
+            await send_voice()  # puts the picker back on the voice in use
+            return
+        if voice == current_voice:
+            return
+        await switch_voice(voice)
+        await task.queue_frame(
+            LLMMessagesAppendFrame(
+                messages=[{"role": "user", "content": voices.settings_switch_note(voice)}],
+                run_llm=False,
+            )
+        )
+
+    client_handlers["set-voice"] = on_set_voice
 
     # Handle client connection event
     @transport.event_handler("on_client_connected")
@@ -1072,9 +1431,10 @@ async def bot(runner_args: RunnerArguments):
 
     transport = await create_transport(runner_args, transport_params)
 
-    # The claims UI sends the persona with its WebRTC offer, as request_data
-    persona = persona_from_body(getattr(runner_args, "body", None))
-    await run_bot(transport, runner_args, persona)
+    # The claims UI sends the persona and the starting voice with its WebRTC
+    # offer, as request_data
+    body = getattr(runner_args, "body", None)
+    await run_bot(transport, runner_args, persona_from_body(body), voice_from_body(body))
 
 
 if __name__ == "__main__":
