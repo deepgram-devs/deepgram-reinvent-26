@@ -34,7 +34,7 @@ export function StylizedMap({ address }: { address: string }) {
       {roads[0] && (
         <>
           <path d="M-10 150 L310 96" stroke="#fff" strokeWidth="16" />
-          <text x="18" y="132" transform="rotate(-9.6 18 132)" className="fill-[#6b6862] font-mono text-[9px] tracking-[0.14em] uppercase">
+          <text x="18" y="132" transform="rotate(-9.6 18 132)" className="fill-[#6b6862] text-[9px] tracking-[0.14em] uppercase">
             {roads[0]}
           </text>
         </>
@@ -42,13 +42,13 @@ export function StylizedMap({ address }: { address: string }) {
       {roads[1] && (
         <>
           <path d="M150 -10 L132 220" stroke="#fff" strokeWidth="14" />
-          <text x="166" y="36" className="fill-[#6b6862] font-mono text-[9px] tracking-[0.14em] uppercase">
+          <text x="166" y="36" className="fill-[#6b6862] text-[9px] tracking-[0.14em] uppercase">
             {roads[1]}
           </text>
         </>
       )}
       {city && (
-        <text x="288" y="198" textAnchor="end" className="fill-[#8a857d] font-mono text-[9px] tracking-[0.14em] uppercase">
+        <text x="288" y="198" textAnchor="end" className="fill-[#8a857d] text-[9px] tracking-[0.14em] uppercase">
           {city}
         </text>
       )}

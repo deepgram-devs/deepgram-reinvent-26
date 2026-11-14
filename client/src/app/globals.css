@@ -22,8 +22,11 @@
   --color-ring-blue: #38bdf8;
   --color-yellow: #ffe600;
 
-  --font-sans: var(--font-geist), var(--font-devanagari), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), var(--font-devanagari), ui-monospace, monospace;
+  /* Set on <html> in layout.tsx: the brand face, then Noto for the scripts it lacks (Devanagari for
+     Hindi, Cyrillic for Russian), then a size-matched Arial and the system fonts */
+  --font-sans: var(--font-brand-sans);
+  /* Code only, such as the function-call blocks */
+  --font-mono: var(--font-brand-mono);
 
   --radius-card: 1.25rem;
 
@@ -68,7 +71,7 @@ body {
 
 /* Letter-spaced uppercase labels, as in the mockups */
 @utility label {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;

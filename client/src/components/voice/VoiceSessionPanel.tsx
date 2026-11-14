@@ -318,7 +318,7 @@ export function VoiceSessionPanel({ onEnd, live, claim: open }: { onEnd: () => v
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{t.session.title}</h2>
-          <p className="mt-2 font-mono text-sm text-white/85">{meta}</p>
+          <p className="mt-2 text-sm text-white/85 tabular-nums">{meta}</p>
         </div>
         <span
           className={`label inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.7rem] ${live ? "bg-lime text-ink" : "bg-white/20 text-white"}`}

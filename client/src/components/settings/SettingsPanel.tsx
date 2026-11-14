@@ -266,7 +266,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <h3 className="label text-ink/80">{t.settings.sourceCode}</h3>
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-line bg-card py-1.5 pr-1.5 pl-4">
               <GitHubIcon className="size-5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate font-mono text-[0.9rem]" title={REPO_URL}>
+              <span className="min-w-0 flex-1 truncate text-[0.9rem]" title={REPO_URL}>
                 {REPO_LABEL}
               </span>
               <CopyRepoButton />
