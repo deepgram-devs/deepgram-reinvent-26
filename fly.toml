@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for dg-tri-county-claims on 2026-11-13T13:27:43-05:00
+# fly.toml app configuration file generated for dg-wreckless-claims on 2026-11-13T13:27:43-05:00
 #
 # See https://docs.fly.io/reference/configuration for information about how to use this file.
 #
 
-app = 'dg-tri-county-claims'
+app = 'dg-wreckless-claims'
 primary_region = 'iad'
 
 [build]

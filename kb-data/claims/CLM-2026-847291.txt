@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-847291
 Policyholder: Daniel Mitchell
-Policy number: TCI-AUTO-482977
+Policy number: WRK-AUTO-482977
 Claim type: Collision
 Date reported: 2026-11-10
 Claim status: Under investigation
@@ -48,8 +48,8 @@ Location description: "Traffic stopped fast on Bardstown Road in the rain. The t
 
 Other party for Claim ID CLM-2026-847291:
 Other driver: Kyle Brennan
-Other driver's insurer: Falls City Insurance
-Other driver's policy number: FCI-5017-338402
+Other driver's insurer: Lakeshore Mutual Insurance
+Other driver's policy number: LMI-5017-338402
 Other driver's vehicle: 2016 Chevrolet Silverado, VIN FICTIONAL-VIN-338402, plate KY JRT-5531
 
 Vehicle condition and damage for Claim ID CLM-2026-847291:
@@ -94,4 +94,4 @@ Adjuster notes for Claim ID CLM-2026-847291:
 - 2026-11-10: Police report KY-26-119847 requested from Louisville Metro Police.
 - 2026-11-11: Inspection scheduled for 2026-11-14 at Highlands Auto Body.
 - 2026-11-11: Rental authorized at $40 per day while the vehicle is in the shop.
-- 2026-11-11: If Falls City Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder.
+- 2026-11-11: If Lakeshore Mutual Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder.

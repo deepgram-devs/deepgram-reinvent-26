@@ -5,7 +5,7 @@
   "policyholder": {
    "name": "Linda Park"
   },
-  "policy_number": "TCI-AUTO-731562",
+  "policy_number": "WRK-AUTO-731562",
   "claim_type": "Theft",
   "date_reported": "2026-08-30",
   "status": "Settlement offered",
@@ -173,7 +173,7 @@
   "policyholder": {
    "name": "Kevin Brooks"
   },
-  "policy_number": "TCI-AUTO-517390",
+  "policy_number": "WRK-AUTO-517390",
   "claim_type": "Uninsured motorist property damage",
   "date_reported": "2026-10-27",
   "status": "Pending police follow-up",
@@ -340,7 +340,7 @@
   "policyholder": {
    "name": "Marcus Bell"
   },
-  "policy_number": "TCI-AUTO-158840",
+  "policy_number": "WRK-AUTO-158840",
   "claim_type": "Collision",
   "date_reported": "2026-08-22",
   "status": "Denied",
@@ -499,7 +499,7 @@
   "policyholder": {
    "name": "Aisha Rahman"
   },
-  "policy_number": "TCI-AUTO-366054",
+  "policy_number": "WRK-AUTO-366054",
   "claim_type": "Glass",
   "date_reported": "2026-09-22",
   "status": "Closed",
@@ -649,7 +649,7 @@
   "policyholder": {
    "name": "Rebecca Walsh"
   },
-  "policy_number": "TCI-AUTO-845213",
+  "policy_number": "WRK-AUTO-845213",
   "claim_type": "Collision",
   "date_reported": "2026-09-30",
   "status": "Under investigation, liability disputed",
@@ -822,7 +822,7 @@
    },
    {
     "date": "2026-11-04",
-    "text": "Policyholder may repair now under collision coverage, paying the $500 deductible, and Tri-County will seek it back if Riverbend is found at fault."
+    "text": "Policyholder may repair now under collision coverage, paying the $500 deductible, and Wreckless will seek it back if Riverbend is found at fault."
    }
   ]
  },
@@ -832,7 +832,7 @@
   "policyholder": {
    "name": "Maria Delgado"
   },
-  "policy_number": "TCI-AUTO-482135",
+  "policy_number": "WRK-AUTO-482135",
   "claim_type": "Collision",
   "date_reported": "2026-09-14",
   "status": "Approved",
@@ -998,7 +998,7 @@
   "policyholder": {
    "name": "Tom Nguyen"
   },
-  "policy_number": "TCI-AUTO-290817",
+  "policy_number": "WRK-AUTO-290817",
   "claim_type": "Comprehensive",
   "date_reported": "2026-10-05",
   "status": "Approved",
@@ -1139,7 +1139,7 @@
    },
    {
     "date": "2026-10-09",
-    "text": "Drive-in inspection at the Tri-County catastrophe site; 64 dents counted."
+    "text": "Drive-in inspection at the Wreckless catastrophe site; 64 dents counted."
    },
    {
     "date": "2026-10-12",
@@ -1161,7 +1161,7 @@
   "policyholder": {
    "name": "Omar Haddad"
   },
-  "policy_number": "TCI-AUTO-570268",
+  "policy_number": "WRK-AUTO-570268",
   "claim_type": "Collision and property damage liability",
   "date_reported": "2026-10-18",
   "status": "Open, repair in progress",
@@ -1327,7 +1327,7 @@
   "policyholder": {
    "name": "Daniel Mitchell"
   },
-  "policy_number": "TCI-AUTO-482977",
+  "policy_number": "WRK-AUTO-482977",
   "claim_type": "Collision",
   "date_reported": "2026-11-10",
   "status": "Under investigation",
@@ -1387,7 +1387,7 @@
   },
   "other_party": {
    "driver": "Kyle Brennan",
-   "insurer": "Falls City Insurance",
+   "insurer": "Lakeshore Mutual Insurance",
    "vehicle": "2016 Chevrolet Silverado"
   },
   "damage": {
@@ -1485,7 +1485,7 @@
    },
    {
     "date": "2026-11-11",
-    "text": "If Falls City Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder."
+    "text": "If Lakeshore Mutual Insurance accepts liability, subrogation will seek the $500 deductible for the policyholder."
    }
   ]
  },
@@ -1495,7 +1495,7 @@
   "policyholder": {
    "name": "Sofia Marino"
   },
-  "policy_number": "TCI-AUTO-624409",
+  "policy_number": "WRK-AUTO-624409",
   "claim_type": "Comprehensive",
   "date_reported": "2026-10-02",
   "status": "Closed",

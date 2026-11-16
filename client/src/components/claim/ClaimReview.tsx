@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
-import { TriCountyLogo } from "@/components/chrome/TriCountyMark";
+import { WrecklessLogo } from "@/components/chrome/WrecklessMark";
 import { SessionDock, ViewOnlyNote, VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import { useLocale, useT } from "@/i18n";
 import {
@@ -45,7 +45,7 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
     // Above the settings drawer's backdrop, so "Paused" stays in view
     <header data-top-bar className="sticky top-0 z-50 bg-ink text-white">
       <div className="mx-auto flex h-[4.5rem] max-w-[100rem] items-center gap-6 px-5 sm:px-8">
-        <TriCountyLogo />
+        <WrecklessLogo />
         {onBack && (
           <button
             type="button"

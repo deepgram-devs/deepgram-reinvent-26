@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-364902
 Policyholder: Marcus Bell
-Policy number: TCI-AUTO-158840
+Policy number: WRK-AUTO-158840
 Claim type: Collision
 Date reported: 2026-08-22
 Claim status: Denied

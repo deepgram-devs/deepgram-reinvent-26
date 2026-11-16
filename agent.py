@@ -281,7 +281,7 @@ class ClaimsResearchAgent:
             # The answer goes back to the voice LLM; don't print it to the console
             callback_handler=None,
             system_prompt=(
-                "You research Tri-County Insurance auto claims for a staff "
+                "You research Wreckless Insurance auto claims for a staff "
                 "member. Another assistant speaks your answer, so write plain "
                 "sentences: no markdown, bullet points, headings, or emoji. "
                 "Call search_claims to find claims. Search as many times as you "
@@ -367,11 +367,11 @@ def voice_from_body(body) -> Voice:
 
 GREETINGS = {
     POLICYHOLDER: (
-        "Thanks for calling Tri-County Insurance auto claims. I can look up the "
+        "Thanks for calling Wreckless Insurance auto claims. I can look up the "
         "status, repair estimate, payments, or adjuster notes on an existing auto "
         "claim. What's your claim number?"
     ),
-    EMPLOYEE: "Tri-County claims desk. What would you like to look up?",
+    EMPLOYEE: "Wreckless claims desk. What would you like to look up?",
 }
 
 
@@ -439,13 +439,13 @@ def build_system_instruction(
     """
     if persona == EMPLOYEE:
         role = (
-            "You are the internal claims assistant for Tri-County Insurance staff. "
+            "You are the internal claims assistant for Wreckless Insurance staff. "
             "You answer questions across every auto claim on file: which claims "
             "match, their status, amounts, adjusters, and notes."
         )
     else:
         role = (
-            "You are the auto claims line voice agent for Tri-County Insurance. You "
+            "You are the auto claims line voice agent for Wreckless Insurance. You "
             "help callers look up existing auto claims: status, repair estimates, "
             "payments, dates, the vehicle, and adjuster notes."
         )
@@ -505,7 +505,7 @@ def build_system_instruction(
         "PRIVACY:\n"
         "- Never read out a policyholder's address, phone number, or email, or "
         "a full VIN or license plate. You may say the last four characters. "
-        "Changes to contact details go through the policyholder's Tri-County agent.\n"
+        "Changes to contact details go through the policyholder's Wreckless agent.\n"
         "- You may say the other driver's name and insurer, never their policy "
         "number, VIN, or plate.\n"
         "- Never read map coordinates or photo IDs. You may say how many photos "
@@ -588,7 +588,7 @@ CLAIM_SECTIONS = [
 search_function = FunctionSchema(
     name="search_knowledge_base",
     description=(
-        "Look up an existing Tri-County Insurance auto claim by its claim ID. Use "
+        "Look up an existing Wreckless Insurance auto claim by its claim ID. Use "
         "this whenever the caller asks about a specific claim: its status, the "
         "vehicle, the accident, the other driver, the damage, the repair estimate, "
         "the deductible, rental, payments, the police report, the adjuster, or "
@@ -670,7 +670,7 @@ reset_voice_function = FunctionSchema(
 search_claims_function = FunctionSchema(
     name="search_claims",
     description=(
-        "Search every Tri-County auto claim to answer a staff member's question, "
+        "Search every Wreckless auto claim to answer a staff member's question, "
         "e.g. 'which claims are waiting on a title?' or 'who is adjusting Daniel "
         "Mitchell's claim?'. A research agent runs as many searches as it needs "
         "and answers from the claim records."
@@ -762,7 +762,7 @@ async def run_bot(
     persona: str = POLICYHOLDER,
     voice: Voice = voices.DEFAULT_VOICE,
 ):
-    logger.info(f"Starting Tri-County claims voice agent ({persona})")
+    logger.info(f"Starting Wreckless claims voice agent ({persona})")
 
     kb = BedrockKnowledgeBaseClient(KNOWLEDGE_BASE_ID)
     # Claim records read on this call, by claim ID, so each is read once
@@ -877,7 +877,7 @@ async def run_bot(
             await params.result_callback(
                 {
                     "verified": False,
-                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Tri-County agent for help.",
+                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Wreckless agent for help.",
                 }
             )
             return
@@ -1397,7 +1397,7 @@ async def run_bot(
     # Handle client connection event
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info(f"Client connected to the Tri-County claims voice agent ({persona})")
+        logger.info(f"Client connected to the Wreckless claims voice agent ({persona})")
         await send_voice()
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
@@ -1405,7 +1405,7 @@ async def run_bot(
     # Handle client disconnection event
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info("Client disconnected from the Tri-County claims voice agent")
+        logger.info("Client disconnected from the Wreckless claims voice agent")
         cancel_hold_line()
         await task.cancel()
 

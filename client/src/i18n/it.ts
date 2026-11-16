@@ -24,7 +24,7 @@ const it: Messages = {
         "Sola lettura. Può cercare e ascoltare i sinistri a voce, ma non modificarli. Gli aggiornamenti li gestisce il Suo liquidatore.",
     },
     employee: {
-      label: "Staff Tri-County",
+      label: "Staff Wreckless",
       kicker: "Ricerca ufficio sinistri",
       title: "Cerchi tra tutti i sinistri in archivio facendo una domanda.",
       intro: "Chieda di qualsiasi sinistro in archivio. Li cerchiamo tutti e mostriamo quelli corrispondenti.",
@@ -62,7 +62,7 @@ const it: Messages = {
     ended: "Terminata",
     closeSettingsToTalk: "Chiuda le impostazioni per continuare",
     failed: "Il numero di sinistro e il cognome non corrispondono ai nostri dati. Riprovi.",
-    locked: "Troppi tentativi per questo sinistro. Il Suo agente Tri-County può aiutarLa.",
+    locked: "Troppi tentativi per questo sinistro. Il Suo agente Wreckless può aiutarLa.",
     error: "La ricerca non è andata a buon fine. Chieda di nuovo tra poco.",
     foundOne: "1 sinistro trovato",
     viewDetails: "Vedi i dettagli del sinistro",
@@ -253,7 +253,7 @@ const it: Messages = {
     voiceNoteConnecting: "Potrà cambiare voce quando la chiamata sarà connessa.",
     whatItDoes: "Cosa fa",
     about:
-      "Tri-County Claims è un assistente vocale per i sinistri auto. Gli assicurati chiedono il proprio sinistro con numero e cognome, e l’assistente legge ciò che serve. Lo staff Tri-County fa una domanda, e l’assistente cerca la risposta in tutti i sinistri.",
+      "Wreckless Claims è un assistente vocale per i sinistri auto. Gli assicurati chiedono il proprio sinistro con numero e cognome, e l’assistente legge ciò che serve. Lo staff Wreckless fa una domanda, e l’assistente cerca la risposta in tutti i sinistri.",
     viewOnly: "È in sola lettura. Può trovare e ascoltare i dettagli dei sinistri, ma non modificarli.",
     builtWith: "Realizzato con il riconoscimento e la sintesi vocale di Deepgram, Pipecat, Amazon Bedrock e AWS Strands.",
     sourceCode: "Codice sorgente",

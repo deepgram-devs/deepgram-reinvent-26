@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-603118
 Policyholder: Maria Delgado
-Policy number: TCI-AUTO-482135
+Policy number: WRK-AUTO-482135
 Claim type: Collision
 Date reported: 2026-09-14
 Claim status: Approved

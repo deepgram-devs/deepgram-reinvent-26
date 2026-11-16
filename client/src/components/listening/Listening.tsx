@@ -3,7 +3,7 @@
 import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
-import { TriCountyMark } from "@/components/chrome/TriCountyMark";
+import { WrecklessMark } from "@/components/chrome/WrecklessMark";
 import { useTurnState } from "@/hooks/useTurnState";
 import { useVoiceLevelRef } from "@/hooks/useVoiceLevelRef";
 import { useLocale, useT, type Messages } from "@/i18n";
@@ -151,8 +151,8 @@ export function Listening({
       >
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2.5">
-            <TriCountyMark className="size-8" />
-            <span className="text-xl font-semibold tracking-tight">Tri-County</span>
+            <WrecklessMark className="size-8" />
+            <span className="text-xl font-semibold tracking-tight">Wreckless</span>
           </span>
           <div className="flex items-center gap-3">
             <ViewOnlyPill tone="dark" />

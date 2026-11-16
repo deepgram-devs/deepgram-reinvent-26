@@ -25,7 +25,7 @@ const de: Messages = {
         "Nur Ansicht. Sie können Schadenfälle per Stimme abrufen und anhören, aber nicht ändern. Änderungen übernimmt Ihr Sachbearbeiter.",
     },
     employee: {
-      label: "Tri-County-Team",
+      label: "Wreckless-Team",
       kicker: "Suche in der Schadenabteilung",
       title: "Durchsuchen Sie alle erfassten Schadenfälle mit einer Frage.",
       intro: "Fragen Sie nach jedem erfassten Schadenfall. Wir durchsuchen alle und zeigen die passenden.",
@@ -63,7 +63,7 @@ const de: Messages = {
     ended: "Beendet",
     closeSettingsToTalk: "Einstellungen schließen, um weiterzusprechen",
     failed: "Schadennummer und Nachname stimmen nicht mit unseren Daten überein. Versuchen Sie es erneut.",
-    locked: "Zu viele Versuche für diesen Schadenfall. Ihr Tri-County-Vertreter hilft Ihnen weiter.",
+    locked: "Zu viele Versuche für diesen Schadenfall. Ihr Wreckless-Vertreter hilft Ihnen weiter.",
     error: "Die Abfrage ist fehlgeschlagen. Fragen Sie gleich noch einmal.",
     foundOne: "1 Schadenfall gefunden",
     viewDetails: "Details zum Schadenfall",
@@ -254,7 +254,7 @@ const de: Messages = {
     voiceNoteConnecting: "Sie können die Stimme ändern, sobald der Anruf verbunden ist.",
     whatItDoes: "Was sie kann",
     about:
-      "Tri-County Claims ist ein Sprachassistent für Kfz-Schadenfälle. Versicherte fragen mit Schadennummer und Nachnamen nach ihrem Fall, und er liest ihnen vor, was sie brauchen. Das Tri-County-Team stellt eine Frage, und er durchsucht alle Schadenfälle nach der Antwort.",
+      "Wreckless Claims ist ein Sprachassistent für Kfz-Schadenfälle. Versicherte fragen mit Schadennummer und Nachnamen nach ihrem Fall, und er liest ihnen vor, was sie brauchen. Das Wreckless-Team stellt eine Frage, und er durchsucht alle Schadenfälle nach der Antwort.",
     viewOnly: "Nur zur Ansicht: Sie können Details zu Schadenfällen finden und anhören, aber nicht ändern.",
     builtWith: "Entwickelt mit Spracherkennung und Sprachsynthese von Deepgram, Pipecat, Amazon Bedrock und AWS Strands.",
     sourceCode: "Quellcode",

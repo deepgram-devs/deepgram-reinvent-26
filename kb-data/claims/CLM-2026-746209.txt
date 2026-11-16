@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-746209
 Policyholder: Omar Haddad
-Policy number: TCI-AUTO-570268
+Policy number: WRK-AUTO-570268
 Claim type: Collision and property damage liability
 Date reported: 2026-10-18
 Claim status: Open, repair in progress

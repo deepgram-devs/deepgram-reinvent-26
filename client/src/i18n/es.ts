@@ -23,7 +23,7 @@ const es: Messages = {
         "Solo lectura. Puede consultar y escuchar reclamaciones por voz, pero no modificarlas. Su ajustador se encarga de los cambios.",
     },
     employee: {
-      label: "Personal Tri-County",
+      label: "Personal Wreckless",
       kicker: "Búsqueda en la mesa de reclamaciones",
       title: "Busque en todas las reclamaciones registradas preguntando.",
       intro: "Pregunte por cualquier reclamación registrada. Las revisaremos todas y le mostraremos las que coincidan.",
@@ -61,7 +61,7 @@ const es: Messages = {
     ended: "Finalizada",
     closeSettingsToTalk: "Cierre los ajustes para seguir hablando",
     failed: "Ese número de reclamación y ese apellido no coinciden con nuestros registros. Inténtelo de nuevo.",
-    locked: "Demasiados intentos para esa reclamación. Su agente de Tri-County puede ayudarle.",
+    locked: "Demasiados intentos para esa reclamación. Su agente de Wreckless puede ayudarle.",
     error: "La consulta no se completó. Vuelva a preguntar en un momento.",
     foundOne: "1 reclamación encontrada",
     viewDetails: "Ver detalles de la reclamación",
@@ -252,7 +252,7 @@ const es: Messages = {
     voiceNoteConnecting: "Podrá cambiar la voz cuando se conecte la llamada.",
     whatItDoes: "Qué hace",
     about:
-      "Tri-County Claims es un asistente de voz para reclamaciones de seguros de auto. Los asegurados piden su reclamación por número y apellido, y les lee lo que necesitan. El personal de Tri-County hace una pregunta, y busca la respuesta en todas las reclamaciones.",
+      "Wreckless Claims es un asistente de voz para reclamaciones de seguros de auto. Los asegurados piden su reclamación por número y apellido, y les lee lo que necesitan. El personal de Wreckless hace una pregunta, y busca la respuesta en todas las reclamaciones.",
     viewOnly: "Es de solo lectura. Puede consultar y escuchar los detalles de una reclamación, pero no modificarlos.",
     builtWith:
       "Creado con la conversión de voz a texto y de texto a voz de Deepgram, Pipecat, Amazon Bedrock y AWS Strands.",

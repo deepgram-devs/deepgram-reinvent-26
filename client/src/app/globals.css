@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Tri-County design tokens, taken from the claims UI mockups */
+/* Wreckless design tokens, taken from the claims UI mockups */
 @theme {
   --color-ink: #1c1b1a;
   --color-ink-2: #2a2927;

@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, 
 
 import { DEFAULT_VOICE, findVoice, type VoiceEntry } from "./voices";
 
-const STORAGE_KEY = "tri-county.voice";
+const STORAGE_KEY = "wreckless.voice";
 
 // The voice picked on this page. It wins over storage, so a pick still holds
 // when the browser refuses to store it (private windows, blocked storage).
