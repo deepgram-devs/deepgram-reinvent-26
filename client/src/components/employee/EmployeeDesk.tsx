@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
-import { TriCountyMark } from "@/components/chrome/TriCountyMark";
+import { WrecklessMark } from "@/components/chrome/WrecklessMark";
 import { ClaimReview } from "@/components/claim/ClaimReview";
 import { LiveCaption, ListeningOrb } from "@/components/listening/Listening";
 import { DOCK_CLEARANCE, SessionDock } from "@/components/voice/VoiceSessionPanel";
@@ -70,8 +70,8 @@ function Desk({
       >
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2.5">
-            <TriCountyMark className="size-8" />
-            <span className="text-xl font-semibold tracking-tight">Tri-County</span>
+            <WrecklessMark className="size-8" />
+            <span className="text-xl font-semibold tracking-tight">Wreckless</span>
             <span className="label ml-1 hidden text-white/70 sm:inline">{t.desk.title}</span>
           </span>
           <div className="flex items-center gap-3">

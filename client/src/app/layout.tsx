@@ -31,7 +31,7 @@ const FONT_STACKS = {
 } as CSSProperties;
 
 export const metadata: Metadata = {
-  title: "Tri-County Claims",
+  title: "Wreckless Claims",
   description: "Look up an auto claim by voice. Built with Deepgram, AWS, and Pipecat.",
 };
 

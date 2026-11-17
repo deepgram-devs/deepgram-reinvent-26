@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-527613
 Policyholder: Rebecca Walsh
-Policy number: TCI-AUTO-845213
+Policy number: WRK-AUTO-845213
 Claim type: Collision
 Date reported: 2026-09-30
 Claim status: Under investigation, liability disputed
@@ -99,4 +99,4 @@ Adjuster notes for Claim ID CLM-2026-527613:
 - 2026-10-06: Witness statement collected. Witness believes the Altima ran a red light.
 - 2026-10-08: Traffic camera footage requested from Louisville Metro.
 - 2026-10-14: Riverbend Auto Insurance disputes liability pending the footage.
-- 2026-11-04: Policyholder may repair now under collision coverage, paying the $500 deductible, and Tri-County will seek it back if Riverbend is found at fault.
+- 2026-11-04: Policyholder may repair now under collision coverage, paying the $500 deductible, and Wreckless will seek it back if Riverbend is found at fault.

@@ -10,7 +10,7 @@ import re
 import unicodedata
 from datetime import date
 
-RECORD_TITLE = "Tri-County Insurance - Automobile Claim Record"
+RECORD_TITLE = "Wreckless Insurance - Automobile Claim Record"
 
 # "Coverage for Claim ID CLM-2026-847291:"
 _SECTION = re.compile(r"^(?P<name>.+?) for Claim ID (?P<id>CLM-\d{4}-\d{6}):\s*$")

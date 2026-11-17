@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-492036
 Policyholder: Aisha Rahman
-Policy number: TCI-AUTO-366054
+Policy number: WRK-AUTO-366054
 Claim type: Glass
 Date reported: 2026-09-22
 Claim status: Closed

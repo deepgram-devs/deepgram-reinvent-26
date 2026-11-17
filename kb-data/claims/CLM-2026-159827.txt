@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-159827
 Policyholder: Linda Park
-Policy number: TCI-AUTO-731562
+Policy number: WRK-AUTO-731562
 Claim type: Theft
 Date reported: 2026-08-30
 Claim status: Settlement offered

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { MicIcon } from "@/components/chrome/Pills";
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
-import { TriCountyMark } from "@/components/chrome/TriCountyMark";
+import { WrecklessMark } from "@/components/chrome/WrecklessMark";
 import { useT } from "@/i18n";
 import { PERSONAS, type Persona } from "@/lib/persona";
 
@@ -105,8 +105,8 @@ export function Landing({
 
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-5 sm:p-8">
         <span className="flex items-center gap-2.5 rounded-full border border-white/20 bg-black/35 py-2 pr-5 pl-3 backdrop-blur-md">
-          <TriCountyMark className="size-7" />
-          <span className="text-lg font-semibold tracking-tight">Tri-County</span>
+          <WrecklessMark className="size-7" />
+          <span className="text-lg font-semibold tracking-tight">Wreckless</span>
         </span>
         <SettingsButton />
       </header>

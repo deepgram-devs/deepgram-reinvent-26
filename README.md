@@ -1,6 +1,6 @@
 # Pipecat voice agent with Deepgram, AWS Bedrock, and AWS Strands
 
-Tri-County Claims is a voice agent for auto insurance claims. Policyholders call to hear where their claim stands, and Tri-County staff ask questions that search every claim at once. It's built with Deepgram Flux speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands, and a Next.js claims UI shows the claim on screen while the agent talks about it.
+Wreckless Claims is a voice agent for auto insurance claims. Policyholders call to hear where their claim stands, and Wreckless staff ask questions that search every claim at once. It's built with Deepgram Flux speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands, and a Next.js claims UI shows the claim on screen while the agent talks about it.
 
 ### Built from the AWS and Deepgram workshop
 
@@ -124,7 +124,7 @@ Back in your `agent.py` file, we'll create a function called `run_bot`. This fun
 
 * The `transport` parameter describes how your bot should connect to the user. By passing in different transport objects and configurations, you can use this same `run_bot` logic through a direct WebRTC connection using a `SmallWebRTCTransport`, or through Daily's hosted WebRTC service using `DailyTransport`, or through a websocket to Twilio using a `WebsocketTransport`.
 * The `runner_args` parameter includes information unique to this bot session. For example, you can use `runner_args` to greet each user by name, or even pass the bot's system prompt in through `runner_args`.
-* The `persona` parameter says who's on the call: a policyholder or a Tri-County employee.
+* The `persona` parameter says who's on the call: a policyholder or a Wreckless employee.
 
 ### Two personas
 
@@ -133,9 +133,9 @@ Two kinds of people use this agent, and they need different tools, prompts, and 
 | Persona | Who | What the agent does |
 |---|---|---|
 | `policyholder` | A customer calling about their own claim | Verifies the caller with a claim number and last name, reads that one claim record, and answers from it directly |
-| `employee` | Tri-County staff | Searches every claim on file. The pipeline LLM hands each question to a Strands research agent that runs as many knowledge base searches as it needs |
+| `employee` | Wreckless staff | Searches every claim on file. The pipeline LLM hands each question to a Strands research agent that runs as many knowledge base searches as it needs |
 
-The persona travels with the call. The claims UI has a **Policyholder / Tri-County staff** toggle on its landing screen, and it sends the choice with the WebRTC offer. Pipecat's runner hands it to the bot as `runner_args.body`, and the `bot()` entry point at the bottom of the file reads it with `persona_from_body` before calling `run_bot`. Anything other than `"employee"`, including no body at all, gets the policyholder persona, so a client that knows nothing about personas still works. The body also carries the voice picked in the UI's Settings panel, which `voice_from_body` reads the same way; see [Picking a voice in Settings](#picking-a-voice-in-settings). Add the persona names just above where `run_bot` will go:
+The persona travels with the call. The claims UI has a **Policyholder / Wreckless staff** toggle on its landing screen, and it sends the choice with the WebRTC offer. Pipecat's runner hands it to the bot as `runner_args.body`, and the `bot()` entry point at the bottom of the file reads it with `persona_from_body` before calling `run_bot`. Anything other than `"employee"`, including no body at all, gets the policyholder persona, so a client that knows nothing about personas still works. The body also carries the voice picked in the UI's Settings panel, which `voice_from_body` reads the same way; see [Picking a voice in Settings](#picking-a-voice-in-settings). Add the persona names just above where `run_bot` will go:
 
 ```python
 # Who is on the call. The claims UI picks it before the call starts.
@@ -173,7 +173,7 @@ async def run_bot(
     persona: str = POLICYHOLDER,
     voice: Voice = voices.DEFAULT_VOICE,
 ):
-    logger.info(f"Starting Tri-County claims voice agent ({persona})")
+    logger.info(f"Starting Wreckless claims voice agent ({persona})")
 ```
 
 The heart of your botfile is the **Pipeline**. This is where you define the series of processors that will receive input from the user, process it, and generate output. Let's define our pipeline now, inside the `run_bot` function:
@@ -258,11 +258,11 @@ Each service takes its configuration through a `Settings` object. The LLM's `sys
 ```python
 GREETINGS = {
     POLICYHOLDER: (
-        "Thanks for calling Tri-County Insurance auto claims. I can look up the "
+        "Thanks for calling Wreckless Insurance auto claims. I can look up the "
         "status, repair estimate, payments, or adjuster notes on an existing auto "
         "claim. What's your claim number?"
     ),
-    EMPLOYEE: "Tri-County claims desk. What would you like to look up?",
+    EMPLOYEE: "Wreckless claims desk. What would you like to look up?",
 }
 
 
@@ -330,13 +330,13 @@ def build_system_instruction(
     """
     if persona == EMPLOYEE:
         role = (
-            "You are the internal claims assistant for Tri-County Insurance staff. "
+            "You are the internal claims assistant for Wreckless Insurance staff. "
             "You answer questions across every auto claim on file: which claims "
             "match, their status, amounts, adjusters, and notes."
         )
     else:
         role = (
-            "You are the auto claims line voice agent for Tri-County Insurance. You "
+            "You are the auto claims line voice agent for Wreckless Insurance. You "
             "help callers look up existing auto claims: status, repair estimates, "
             "payments, dates, the vehicle, and adjuster notes."
         )
@@ -396,7 +396,7 @@ def build_system_instruction(
         "PRIVACY:\n"
         "- Never read out a policyholder's address, phone number, or email, or "
         "a full VIN or license plate. You may say the last four characters. "
-        "Changes to contact details go through the policyholder's Tri-County agent.\n"
+        "Changes to contact details go through the policyholder's Wreckless agent.\n"
         "- You may say the other driver's name and insurer, never their policy "
         "number, VIN, or plate.\n"
         "- Never read map coordinates or photo IDs. You may say how many photos "
@@ -541,7 +541,7 @@ Our main LLM, the one in the pipeline, is the one that talks to the caller. It r
             await params.result_callback(
                 {
                     "verified": False,
-                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Tri-County agent for help.",
+                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Wreckless agent for help.",
                 }
             )
             return
@@ -939,7 +939,7 @@ async def strip_markup_symbols(text: str, text_type: str) -> str:
     return _MARKUP_SYMBOLS.sub("", text)
 ```
 
-Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in claim IDs like `CLM-2026-847291` and policy numbers like `TCI-AUTO-482977`.
+Flux TTS streams the LLM's output to Deepgram token by token, so a `**` often arrives on its own. Pipecat's built-in `strip_markdown` transform only removes paired markers like `**bold**`, which is why this transform drops the symbols one character at a time instead. Text transforms change only what's sent to TTS; the conversation context keeps the LLM's original text. Hyphens stay, because the claim data uses them in claim IDs like `CLM-2026-847291` and policy numbers like `WRK-AUTO-482977`.
 
 ### Switching languages by voice
 
@@ -1037,7 +1037,7 @@ With the main LLM speaking for the ear, the research agent behind the employee p
 
 ### The employee persona: research with a Strands agent
 
-A policyholder asks about one record they've already proved is theirs. Staff ask questions like "which claims are waiting on a title?" or "which claims is Luis Ortega adjusting, and where do they stand?" No single search answers those reliably. The right claims might only match on a second wording, or the answer might combine what two searches found. That's a loop: search, read, decide whether to search again, then answer. It's exactly the job [Strands Agents](https://strandsagents.com/) is built for, so the employee persona hands each question to one. Just above the persona names, create a `ClaimsResearchAgent` class:
+A policyholder asks about one record they've already proved is theirs. Staff ask questions like "which claims are waiting on a title?" or "which claims are being adjusted by Luis Ortega, and where do they stand?" No single search answers those reliably. The right claims might only match on a second wording, or the answer might combine what two searches found. That's a loop: search, read, decide whether to search again, then answer. It's exactly the job [Strands Agents](https://strandsagents.com/) is built for, so the employee persona hands each question to one. Just above the persona names, create a `ClaimsResearchAgent` class:
 
 ```python
 class ClaimsResearchAgent:
@@ -1065,7 +1065,7 @@ class ClaimsResearchAgent:
             # The answer goes back to the voice LLM; don't print it to the console
             callback_handler=None,
             system_prompt=(
-                "You research Tri-County Insurance auto claims for a staff "
+                "You research Wreckless Insurance auto claims for a staff "
                 "member. Another assistant speaks your answer, so write plain "
                 "sentences: no markdown, bullet points, headings, or emoji. "
                 "Call search_claims to find claims. Search as many times as you "
@@ -1153,7 +1153,7 @@ CLAIM_SECTIONS = [
 search_function = FunctionSchema(
     name="search_knowledge_base",
     description=(
-        "Look up an existing Tri-County Insurance auto claim by its claim ID. Use "
+        "Look up an existing Wreckless Insurance auto claim by its claim ID. Use "
         "this whenever the caller asks about a specific claim: its status, the "
         "vehicle, the accident, the other driver, the damage, the repair estimate, "
         "the deductible, rental, payments, the police report, the adjuster, or "
@@ -1235,7 +1235,7 @@ reset_voice_function = FunctionSchema(
 search_claims_function = FunctionSchema(
     name="search_claims",
     description=(
-        "Search every Tri-County auto claim to answer a staff member's question, "
+        "Search every Wreckless auto claim to answer a staff member's question, "
         "e.g. 'which claims are waiting on a title?' or 'who is adjusting Daniel "
         "Mitchell's claim?'. A research agent runs as many searches as it needs "
         "and answers from the claim records."
@@ -1710,7 +1710,7 @@ Next, we need to add some event handlers so the pipeline knows how to handle the
     # Handle client connection event
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info(f"Client connected to the Tri-County claims voice agent ({persona})")
+        logger.info(f"Client connected to the Wreckless claims voice agent ({persona})")
         await send_voice()
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
@@ -1722,7 +1722,7 @@ And when the user disconnects, we'll cancel any waiting hold line and tell the b
     # Handle client disconnection event
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info("Client disconnected from the Tri-County claims voice agent")
+        logger.info("Client disconnected from the Wreckless claims voice agent")
         cancel_hold_line()
         await task.cancel()
 ```
@@ -1781,7 +1781,7 @@ A voice agent answers one question at a time, and a caller only hears what they 
 
 ### Choosing a persona
 
-The landing screen has a **Policyholder / Tri-County staff** toggle above the claim examples. The choice changes the landing copy and example questions, and it rides along with the call: [client/src/app/page.tsx](client/src/app/page.tsx) keeps one set of connect parameters per persona, each with `requestData: { persona }` on its `webrtcRequestParams`. The small WebRTC transport sends `requestData` in the body of its offer to `/api/offer`. There's a catch: the runner's `/api/offer` endpoint only reads the snake_case `request_data` field and silently drops `requestData`, so every call would start as a policyholder. [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) sits in front of the agent's endpoint, renames the field, and passes the offer and its ICE candidates through. The agent then reads the persona as `runner_args.body`. The persona is fixed once the call starts. Changing the connect parameters makes the Voice UI Kit build a new client, which is fine between calls and would end one in progress, so the toggle is disabled while connecting. The starting voice rides along too, as `voice` next to `persona`, but it's written into the persona's existing parameters at **Start conversation** rather than making new ones. New parameters would rebuild the client, which mid-call drops the call, and between calls remounts the screens and closes Settings while a voice is being picked. The copy for each persona, including the **Try asking** prompts, lives in [client/src/lib/persona.tsx](client/src/lib/persona.tsx).
+The landing screen has a **Policyholder / Wreckless staff** toggle above the claim examples. The choice changes the landing copy and example questions, and it rides along with the call: [client/src/app/page.tsx](client/src/app/page.tsx) keeps one set of connect parameters per persona, each with `requestData: { persona }` on its `webrtcRequestParams`. The small WebRTC transport sends `requestData` in the body of its offer to `/api/offer`. There's a catch: the runner's `/api/offer` endpoint only reads the snake_case `request_data` field and silently drops `requestData`, so every call would start as a policyholder. [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) sits in front of the agent's endpoint, renames the field, and passes the offer and its ICE candidates through. The agent then reads the persona as `runner_args.body`. The persona is fixed once the call starts. Changing the connect parameters makes the Voice UI Kit build a new client, which is fine between calls and would end one in progress, so the toggle is disabled while connecting. The starting voice rides along too, as `voice` next to `persona`, but it's written into the persona's existing parameters at **Start conversation** rather than making new ones. New parameters would rebuild the client, which mid-call drops the call, and between calls remounts the screens and closes Settings while a voice is being picked. The copy for each persona, including the **Try asking** prompts, lives in [client/src/lib/persona.tsx](client/src/lib/persona.tsx).
 
 ### How the agent talks to the screen
 
@@ -1957,7 +1957,7 @@ npm run dev
 Open http://localhost:3000 and select **Start conversation**. The UI sends its WebRTC offer to `/api/offer`, and [client/src/app/api/offer/route.ts](client/src/app/api/offer/route.ts) passes it to the agent on port 7860, with the persona renamed to the field the runner reads. [client/next.config.ts](client/next.config.ts) passes the agent's other endpoints through. Set `BOT_URL` to point the UI at an agent somewhere else. Pipecat's prebuilt test client still works at http://localhost:7860/client.
 
 Say a claim number, such as "C L M, two zero two six, eight four seven two nine one," and the last name "Mitchell" when the agent asks for it. The **Try asking** prompts also send their question as text, which helps in a noisy room.
-For the staff persona, select **Tri-County staff** before you start, and ask a question across the claims, such as "Which claims are waiting on a title?" or "Which claims is Luis Ortega adjusting?" Then open one of the claims and ask "What am I looking at?" or "Who's the adjuster on this one?" The agent answers from the open claim without searching again.
+For the staff persona, select **Wreckless staff** before you start, and ask a question across the claims, such as "Which claims are waiting on a title?" or "Which claims are being adjusted by Luis Ortega?" Then open one of the claims and ask "What am I looking at?" or "Who's the adjuster on this one?" The agent answers from the open claim without searching again.
 
 To work on the screens without a call, open http://localhost:3000/?fixture=CLM-2026-847291&screen=review. The `screen` can be `landing`, `listening`, `found`, or `review`, and any sample claim ID works. For the staff desk, open http://localhost:3000/?persona=employee&fixture=search, with `screen=listening` for the desk before its first search or `screen=landing` for the staff landing screen. The fixtures in `client/src/fixtures/claims.json` are the same masked view the agent sends; regenerate them after changing a claim record or `to_client_view`:
 

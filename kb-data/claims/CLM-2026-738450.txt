@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-738450
 Policyholder: Tom Nguyen
-Policy number: TCI-AUTO-290817
+Policy number: WRK-AUTO-290817
 Claim type: Comprehensive
 Date reported: 2026-10-05
 Claim status: Approved
@@ -87,7 +87,7 @@ Next review date: 2026-11-19
 
 Adjuster notes for Claim ID CLM-2026-738450:
 - 2026-10-05: Claim reported online after the 2026-10-04 hail storm.
-- 2026-10-09: Drive-in inspection at the Tri-County catastrophe site; 64 dents counted.
+- 2026-10-09: Drive-in inspection at the Wreckless catastrophe site; 64 dents counted.
 - 2026-10-12: Estimate of $5,200 approved, less the $1,000 comprehensive deductible.
 - 2026-10-20: Repair scheduled for 2026-11-17 at Precision Dent Works. Payment of $4,200 will go to the shop when work is complete.
 - 2026-10-20: Rental authorized at $50 per day for the three days of repair.

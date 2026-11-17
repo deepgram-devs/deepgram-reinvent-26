@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-981345
 Policyholder: Sofia Marino
-Policy number: TCI-AUTO-624409
+Policy number: WRK-AUTO-624409
 Claim type: Comprehensive
 Date reported: 2026-10-02
 Claim status: Closed

@@ -1,8 +1,8 @@
-Tri-County Insurance - Automobile Claim Record
+Wreckless Insurance - Automobile Claim Record
 
 Claim ID CLM-2026-215774
 Policyholder: Kevin Brooks
-Policy number: TCI-AUTO-517390
+Policy number: WRK-AUTO-517390
 Claim type: Uninsured motorist property damage
 Date reported: 2026-10-27
 Claim status: Pending police follow-up
