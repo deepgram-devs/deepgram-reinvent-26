@@ -279,6 +279,13 @@ const en = {
     qrLabel: (address: string) => `QR code for ${address}`,
     scanToOpen: "Scan to open",
     scanHint: "Point your phone’s camera here to open the repo.",
+    appearance: "Appearance",
+    themeDark: "Dark",
+    themeLight: "Light",
+    themeSystem: "System",
+    themeNote: "Changes the claim page and this panel. The call screens stay dark.",
+    themeNoteSystemDark: "Follows your device, which is set to dark right now.",
+    themeNoteSystemLight: "Follows your device, which is set to light right now.",
   },
 };
 

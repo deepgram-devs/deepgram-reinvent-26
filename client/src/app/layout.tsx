@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
 import { Azeret_Mono, Noto_Sans, Noto_Sans_Devanagari, Noto_Sans_Mono, Work_Sans } from "next/font/google";
 
+import { THEME_SCRIPT } from "@/lib/theme-script";
+
 import "./globals.css";
 
 // Deepgram's brand faces: Work Sans for everything, Azeret Mono for code (the function-call blocks)
@@ -41,7 +43,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" style={FONT_STACKS}>
+    // The theme script changes data-theme before React hydrates, so React keeps the DOM's value
+    <html lang="en" data-theme="light" style={FONT_STACKS} suppressHydrationWarning>
+      <head>
+        {/* Sets the theme before the first paint, so a saved dark theme never flashes light */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

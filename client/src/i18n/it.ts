@@ -264,6 +264,13 @@ const it: Messages = {
     qrLabel: (address: string) => `Codice QR per ${address}`,
     scanToOpen: "Scansioni per aprire",
     scanHint: "Inquadri il codice con la fotocamera del telefono per aprire il repository.",
+    appearance: "Aspetto",
+    themeDark: "Scuro",
+    themeLight: "Chiaro",
+    themeSystem: "Sistema",
+    themeNote: "Vale per la pagina del sinistro e per questo pannello. Le schermate di chiamata restano scure.",
+    themeNoteSystemDark: "Segue il dispositivo, ora impostato sul tema scuro.",
+    themeNoteSystemLight: "Segue il dispositivo, ora impostato sul tema chiaro.",
   },
 };
 

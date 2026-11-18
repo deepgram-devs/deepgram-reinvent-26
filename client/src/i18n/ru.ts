@@ -274,6 +274,13 @@ const ru: Messages = {
     qrLabel: (address: string) => `QR-код для ${address}`,
     scanToOpen: "Отсканируйте",
     scanHint: "Наведите камеру телефона, чтобы открыть репозиторий.",
+    appearance: "Оформление",
+    themeDark: "Тёмная",
+    themeLight: "Светлая",
+    themeSystem: "Системная",
+    themeNote: "Меняет страницу заявления и эту панель. Экраны звонка всегда тёмные.",
+    themeNoteSystemDark: "Как на устройстве: сейчас там тёмная тема.",
+    themeNoteSystemLight: "Как на устройстве: сейчас там светлая тема.",
   },
 };
 

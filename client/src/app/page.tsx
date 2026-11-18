@@ -19,6 +19,7 @@ import { isPersona, PersonaProvider, usePersona, type Persona } from "@/lib/pers
 import { PreferencesProvider, usePreferences } from "@/lib/preferences";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SettingsProvider } from "@/lib/settings";
+import { ThemeProvider } from "@/lib/theme";
 
 // Locally, the browser talks to the bot directly over SmallWebRTC. A deployed
 // build sets NEXT_PUBLIC_PIPECAT_TRANSPORT=daily, and the call goes through a
@@ -318,8 +319,10 @@ export default function Page() {
     <Suspense>
       {/* Outside PipecatAppBase: the starting voice goes out with the connect request */}
       <PreferencesProvider>
-        <DocumentLanguage />
-        <App />
+        <ThemeProvider>
+          <DocumentLanguage />
+          <App />
+        </ThemeProvider>
       </PreferencesProvider>
     </Suspense>
   );

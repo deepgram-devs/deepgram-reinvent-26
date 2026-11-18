@@ -29,8 +29,8 @@ export const AREA_NAMES = { exterior: Object.keys(EXTERIOR), interior: Object.ke
 
 function Body() {
   return (
-    <g fill="none" stroke="#3a3835" strokeWidth="1.5">
-      <path d="M50 14 H280 Q312 14 314 46 V114 Q312 146 280 146 H50 Q8 146 8 104 V56 Q8 14 50 14Z" fill="#fff" />
+    <g fill="none" stroke="var(--diagram-stroke)" strokeWidth="1.5">
+      <path d="M50 14 H280 Q312 14 314 46 V114 Q312 146 280 146 H50 Q8 146 8 104 V56 Q8 14 50 14Z" fill="var(--color-card)" />
       <path d="M92 30 Q84 80 92 130 L134 124 Q128 80 134 36Z" />
       <rect x="140" y="34" width="68" height="92" rx="6" />
       <path d="M216 36 L250 40 Q256 80 250 120 L216 124Z" />
@@ -41,8 +41,8 @@ function Body() {
 
 function Cabin() {
   return (
-    <g fill="none" stroke="#3a3835" strokeWidth="1.5">
-      <path d="M50 14 H280 Q312 14 314 46 V114 Q312 146 280 146 H50 Q8 146 8 104 V56 Q8 14 50 14Z" fill="#fff" />
+    <g fill="none" stroke="var(--diagram-stroke)" strokeWidth="1.5">
+      <path d="M50 14 H280 Q312 14 314 46 V114 Q312 146 280 146 H50 Q8 146 8 104 V56 Q8 14 50 14Z" fill="var(--color-card)" />
       <rect x="84" y="24" width="190" height="112" rx="12" strokeDasharray="4 4" />
       <rect x="94" y="30" width="18" height="100" rx="5" />
       <circle cx="122" cy="112" r="12" />
@@ -69,8 +69,8 @@ export function CarDiagram({ view, damaged, label }: { view: "exterior" | "inter
               cx={x}
               cy={y}
               r={hit ? 6.5 : 3}
-              fill={hit ? "#ef4444" : "#d6d2cb"}
-              stroke={hit ? "#fff" : "none"}
+              fill={hit ? "#ef4444" : "var(--diagram-idle)"}
+              stroke={hit ? "var(--color-card)" : "none"}
               strokeWidth="2"
             />
           </g>

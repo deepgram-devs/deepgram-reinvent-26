@@ -266,6 +266,13 @@ const hi: Messages = {
     qrLabel: (address: string) => `${address} का QR कोड`,
     scanToOpen: "खोलने के लिए स्कैन करें",
     scanHint: "रिपॉज़िटरी खोलने के लिए अपने फ़ोन का कैमरा यहाँ रखें।",
+    appearance: "दिखावट",
+    themeDark: "डार्क",
+    themeLight: "लाइट",
+    themeSystem: "सिस्टम",
+    themeNote: "यह क्लेम पेज और इस पैनल पर लागू होता है। कॉल स्क्रीन हमेशा डार्क रहती हैं।",
+    themeNoteSystemDark: "आपके डिवाइस के अनुसार, जो अभी डार्क पर सेट है।",
+    themeNoteSystemLight: "आपके डिवाइस के अनुसार, जो अभी लाइट पर सेट है।",
   },
 };
 

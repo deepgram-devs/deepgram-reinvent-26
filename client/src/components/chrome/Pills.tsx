@@ -33,7 +33,7 @@ export function LockIcon({ className = "size-3.5" }: { className?: string }) {
 export function ViewOnlyPill({ tone = "light" }: { tone?: "light" | "dark" | "glass" }) {
   const t = useT();
   const styles = {
-    light: "border-ink text-ink",
+    light: "border-fg text-fg",
     dark: "border-white/50 text-white",
     glass: "border-white/20 bg-black/35 text-white backdrop-blur-md",
   }[tone];

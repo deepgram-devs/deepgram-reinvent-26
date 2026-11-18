@@ -14,18 +14,18 @@ export function StylizedMap({ address }: { address: string }) {
   return (
     <svg
       viewBox="0 0 300 210"
-      className="h-auto w-full rounded-2xl bg-[#f1eee9]"
+      className="h-auto w-full rounded-2xl bg-(--map-ground)"
       role="img"
       aria-label={roads.length ? t.claim.mapOf(roads) : t.claim.mapOfLocation}
     >
       <defs>
         <pattern id="map-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M30 0H0V30" fill="none" stroke="#e2ded7" strokeWidth="1" />
+          <path d="M30 0H0V30" fill="none" stroke="var(--map-grid)" strokeWidth="1" />
         </pattern>
       </defs>
       <rect width="300" height="210" fill="url(#map-grid)" />
       {roads.length === 0 && (
-        <g fill="#e6e1d9">
+        <g fill="var(--map-block)">
           <rect x="40" y="40" width="90" height="56" rx="4" />
           <rect x="170" y="40" width="90" height="56" rx="4" />
           <rect x="40" y="120" width="220" height="50" rx="4" />
@@ -33,22 +33,22 @@ export function StylizedMap({ address }: { address: string }) {
       )}
       {roads[0] && (
         <>
-          <path d="M-10 150 L310 96" stroke="#fff" strokeWidth="16" />
-          <text x="18" y="132" transform="rotate(-9.6 18 132)" className="fill-[#6b6862] text-[9px] tracking-[0.14em] uppercase">
+          <path d="M-10 150 L310 96" stroke="var(--map-road)" strokeWidth="16" />
+          <text x="18" y="132" transform="rotate(-9.6 18 132)" className="fill-(--map-label) text-[9px] tracking-[0.14em] uppercase">
             {roads[0]}
           </text>
         </>
       )}
       {roads[1] && (
         <>
-          <path d="M150 -10 L132 220" stroke="#fff" strokeWidth="14" />
-          <text x="166" y="36" className="fill-[#6b6862] text-[9px] tracking-[0.14em] uppercase">
+          <path d="M150 -10 L132 220" stroke="var(--map-road)" strokeWidth="14" />
+          <text x="166" y="36" className="fill-(--map-label) text-[9px] tracking-[0.14em] uppercase">
             {roads[1]}
           </text>
         </>
       )}
       {city && (
-        <text x="288" y="198" textAnchor="end" className="fill-[#8a857d] text-[9px] tracking-[0.14em] uppercase">
+        <text x="288" y="198" textAnchor="end" className="fill-(--map-city) text-[9px] tracking-[0.14em] uppercase">
           {city}
         </text>
       )}
