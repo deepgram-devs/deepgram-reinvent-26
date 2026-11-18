@@ -8,6 +8,8 @@ import { type ComponentProps, type KeyboardEvent as ReactKeyboardEvent, useEffec
 import { PartnerFooter } from "@/components/chrome/PartnerFooter";
 import { blurb, nativeLanguageName, useT } from "@/i18n";
 import { usePreferences } from "@/lib/preferences";
+import { useTheme, type ThemePreference } from "@/lib/theme";
+import { THEME_PREFERENCES } from "@/lib/theme-script";
 import { LANGUAGES, voicesFor, voiceTitle } from "@/lib/voices";
 
 // This app's source. The QR code below encodes the same address.
@@ -89,9 +91,9 @@ function CopyRepoButton() {
         navigator.clipboard?.writeText(REPO_URL).then(() => setCopied(true), () => {});
       }}
       aria-label={copied ? t.settings.copied : t.settings.copy}
-      className="grid size-11 shrink-0 place-items-center rounded-full border border-line bg-card text-ink transition hover:bg-paper"
+      className="grid size-11 shrink-0 place-items-center rounded-full border border-line bg-card text-fg transition hover:bg-paper"
     >
-      {copied ? <CheckIcon className="size-4 text-violet" /> : <CopyIcon />}
+      {copied ? <CheckIcon className="size-4 text-violet dark:text-violet-3" /> : <CopyIcon />}
     </button>
   );
 }
@@ -105,12 +107,12 @@ function Select(props: ComponentProps<"select">) {
     <div className="relative mt-2">
       <select
         {...props}
-        className="peer h-12 w-full appearance-none truncate rounded-full border border-line bg-card pr-11 pl-4 text-[1.05rem] text-ink transition hover:border-ink/40 disabled:cursor-not-allowed disabled:opacity-60"
+        className="peer h-12 w-full appearance-none truncate rounded-full border border-line bg-card pr-11 pl-4 text-[1.05rem] text-fg transition hover:border-fg/40 disabled:cursor-not-allowed disabled:opacity-60"
       />
       <svg
         aria-hidden
         viewBox="0 0 16 16"
-        className="pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2 text-ink/70 peer-disabled:opacity-60"
+        className="pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2 text-fg/70 peer-disabled:opacity-60"
       >
         <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -271,7 +273,7 @@ function LanguageSelect({
         disabled={disabled}
         onClick={() => (shown ? setOpen(false) : show())}
         onKeyDown={onKeyDown}
-        className="flex h-12 w-full items-center gap-2.5 rounded-full border border-line bg-card pr-11 pl-3 text-left text-[1.05rem] text-ink transition hover:border-ink/40 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-12 w-full items-center gap-2.5 rounded-full border border-line bg-card pr-11 pl-3 text-left text-[1.05rem] text-fg transition hover:border-fg/40 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Flag code={LANGUAGES[selected].code} />
         <span className="truncate" lang={LANGUAGES[selected].code}>
@@ -281,7 +283,7 @@ function LanguageSelect({
       <svg
         aria-hidden
         viewBox="0 0 16 16"
-        className={`pointer-events-none absolute top-6 right-4 size-4 -translate-y-1/2 text-ink/70 transition-transform ${shown ? "rotate-180" : ""} ${disabled ? "opacity-60" : ""}`}
+        className={`pointer-events-none absolute top-6 right-4 size-4 -translate-y-1/2 text-fg/70 transition-transform ${shown ? "rotate-180" : ""} ${disabled ? "opacity-60" : ""}`}
       >
         <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -303,11 +305,11 @@ function LanguageSelect({
               lang={language.code}
               onPointerEnter={() => setActive(index)}
               onClick={() => choose(index)}
-              className={`flex cursor-pointer items-center gap-2.5 rounded-full py-2 pr-3 pl-2 text-[1.05rem] text-ink ${index === active ? "bg-ink/[0.06]" : ""}`}
+              className={`flex cursor-pointer items-center gap-2.5 rounded-full py-2 pr-3 pl-2 text-[1.05rem] text-fg ${index === active ? "bg-fg/[0.06]" : ""}`}
             >
               <Flag code={language.code} />
               <span className="flex-1 truncate">{names[index]}</span>
-              {index === selected && <CheckIcon className="size-4 shrink-0 text-ink/70" />}
+              {index === selected && <CheckIcon className="size-4 shrink-0 text-fg/70" />}
             </li>
           ))}
         </ul>
@@ -346,7 +348,7 @@ function VoicePicker() {
 
   return (
     <section>
-      <h3 className="label text-ink/80">{t.settings.voice}</h3>
+      <h3 className="label text-fg/80">{t.settings.voice}</h3>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <div>
           <label id={`${languageId}-label`} htmlFor={languageId} className="text-sm text-muted">
@@ -380,6 +382,84 @@ function VoicePicker() {
       </div>
       <p className="mt-3 leading-relaxed text-muted">
         {connecting ? t.settings.voiceNoteConnecting : live ? t.settings.voiceNoteLive : t.settings.voiceNoteIdle}
+      </p>
+    </section>
+  );
+}
+
+function MoonIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7Z" />
+    </svg>
+  );
+}
+
+function SunIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+      <circle cx="10" cy="10" r="3.5" />
+      <path d="M10 1.75v1.5M10 16.75v1.5M1.75 10h1.5M16.75 10h1.5M4.2 4.2l1.06 1.06M14.74 14.74l1.06 1.06M4.2 15.8l1.06-1.06M14.74 5.26l1.06-1.06" />
+    </svg>
+  );
+}
+
+function MonitorIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2.5" y="3.5" width="15" height="10" rx="1.5" />
+      <path d="M7 17h6M10 13.5V17" />
+    </svg>
+  );
+}
+
+const THEME_ICON: Record<ThemePreference, typeof MoonIcon> = { dark: MoonIcon, light: SunIcon, system: MonitorIcon };
+
+/**
+ * Dark, light, or the device's setting. Only the paper areas change: the
+ * claim page and this drawer. The call screens and bars are dark in both.
+ */
+function AppearancePicker() {
+  const t = useT();
+  const { preference, resolved, setPreference } = useTheme();
+  const labelId = useId();
+  const names: Record<ThemePreference, string> = {
+    dark: t.settings.themeDark,
+    light: t.settings.themeLight,
+    system: t.settings.themeSystem,
+  };
+  return (
+    <section>
+      <h3 id={labelId} className="label text-fg/80">
+        {t.settings.appearance}
+      </h3>
+      <div role="radiogroup" aria-labelledby={labelId} className="mt-3 flex w-fit rounded-full border border-line bg-card p-1">
+        {THEME_PREFERENCES.map((option) => {
+          const on = option === preference;
+          const Icon = THEME_ICON[option];
+          return (
+            <button
+              key={option}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setPreference(option)}
+              className={`label flex items-center gap-2 rounded-full px-4 py-2.5 text-[0.7rem] transition ${
+                on ? "bg-fg text-card" : "text-muted hover:text-fg"
+              }`}
+            >
+              <Icon />
+              {names[option]}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 leading-relaxed text-muted">
+        {preference === "system"
+          ? resolved === "dark"
+            ? t.settings.themeNoteSystemDark
+            : t.settings.themeNoteSystemLight
+          : t.settings.themeNote}
       </p>
     </section>
   );
@@ -444,11 +524,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="absolute inset-y-0 right-0 flex w-full max-w-[30rem] animate-slide lg:max-w-xl 2xl:max-w-2xl flex-col bg-paper text-ink shadow-2xl"
+        className="absolute inset-y-0 right-0 flex w-full max-w-[30rem] animate-slide lg:max-w-xl 2xl:max-w-2xl flex-col bg-paper text-fg shadow-2xl dark:border-l dark:border-line"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-7 pt-7 pb-6">
           <div>
-            <p className="label text-ink/80">{t.chrome.settings}</p>
+            <p className="label text-fg/80">{t.chrome.settings}</p>
             <h2 id="settings-title" className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">
               {t.settings.title}
             </h2>
@@ -458,7 +538,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t.settings.close}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-ink transition hover:bg-card"
+            className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-fg transition hover:bg-card"
           >
             <CloseIcon />
           </button>
@@ -467,15 +547,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="flex-1 space-y-8 overflow-y-auto px-7 py-7">
           <VoicePicker />
 
+          <AppearancePicker />
+
           <section>
-            <h3 className="label text-ink/80">{t.settings.whatItDoes}</h3>
+            <h3 className="label text-fg/80">{t.settings.whatItDoes}</h3>
             <p className="mt-3 text-[1.1rem] leading-relaxed">{t.settings.about}</p>
             <p className="mt-4 text-[1.1rem] leading-relaxed">{t.settings.viewOnly}</p>
             <p className="mt-4 leading-relaxed text-muted">{t.settings.builtWith}</p>
           </section>
 
           <section>
-            <h3 className="label text-ink/80">{t.settings.sourceCode}</h3>
+            <h3 className="label text-fg/80">{t.settings.sourceCode}</h3>
             <div className="mt-3 flex items-center gap-3 rounded-full border border-line bg-card py-1.5 pr-1.5 pl-5">
               <GitHubIcon className="size-5 shrink-0" />
               <span className="min-w-0 flex-1 truncate text-[0.9rem]" title={REPO_URL}>
@@ -496,7 +578,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <div className="mt-6 flex items-center gap-6 rounded-[1.75rem] border border-line bg-card p-5">
               <RepoQrCode className="size-36 shrink-0 rounded-xl border border-line" />
               <div>
-                <p className="label text-ink/80">{t.settings.scanToOpen}</p>
+                <p className="label text-fg/80">{t.settings.scanToOpen}</p>
                 <p className="mt-2 leading-relaxed">{t.settings.scanHint}</p>
               </div>
             </div>

@@ -17,7 +17,7 @@ import { StylizedMap } from "./StylizedMap";
 function Card({ id, title, children, className = "" }: { id: string; title: string; children: ReactNode; className?: string }) {
   return (
     <FocusCard id={id} className={`card p-6 ${className}`}>
-      <h2 className="label text-ink/80">{title}</h2>
+      <h2 className="label text-fg/80">{title}</h2>
       <div className="mt-5">{children}</div>
     </FocusCard>
   );
@@ -135,7 +135,7 @@ export function VehicleConditionCard({ claim }: { claim: ClaimView }) {
             type="button"
             aria-selected={view === tab}
             onClick={() => setView(tab)}
-            className={`label rounded-full px-4 py-2 transition ${view === tab ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+            className={`label rounded-full px-4 py-2 transition ${view === tab ? "bg-fg text-card" : "text-muted hover:text-fg"}`}
           >
             {tab === "exterior" ? t.claim.exterior : t.claim.interior}
             {(tab === "exterior" ? damage.exterior_areas : damage.interior_areas).length > 0 && (
@@ -180,7 +180,7 @@ export function VehicleConditionCard({ claim }: { claim: ClaimView }) {
             <li
               key={caption}
               title={caption}
-              className="flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-ink/25 bg-paper p-2 text-center text-xs leading-tight text-muted"
+              className="flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-fg/25 bg-paper p-2 text-center text-xs leading-tight text-muted"
             >
               <span className="line-clamp-3">{caption}</span>
             </li>

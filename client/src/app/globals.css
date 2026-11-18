@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
-/* Wreckless design tokens, taken from the claims UI mockups */
+/* dark: utilities follow the theme on <html>, not the OS alone (see src/lib/theme-script.ts) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Wreckless design tokens, taken from the claims UI mockups.
+   ink and the brand colors are the same in both themes: ink is the dark surfaces (top bars, footers,
+   the voice panel, the stage) and text on fixed light things (white pills, the magenta band).
+   The paper tokens below flip in the dark theme. */
 @theme {
   --color-ink: #1c1b1a;
   --color-ink-2: #2a2927;
   --color-ink-3: #3a3835;
+  /* Paper: the claim review page, its cards, and the Settings drawer. fg is the text on them. */
+  --color-fg: #1c1b1a;
   --color-paper: #f8f7f5;
   --color-card: #ffffff;
   --color-line: #e8e5e0;
@@ -58,9 +66,42 @@
   }
 }
 
+/* The incident map and the car diagram, which aren't Tailwind utilities */
+:root {
+  color-scheme: light;
+  --map-ground: #f1eee9;
+  --map-grid: #e2ded7;
+  --map-block: #e6e1d9;
+  --map-road: #ffffff;
+  --map-label: #6b6862;
+  --map-city: #8a857d;
+  --diagram-stroke: #3a3835;
+  --diagram-idle: #d6d2cb;
+}
+
+/* Set on <html> before the first paint (src/lib/theme-script.ts) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-fg: #f3f1ee;
+  --color-paper: #141312;
+  --color-card: #1f1e1c;
+  --color-line: #34322f;
+  --color-muted: #a19d96;
+  --color-faint: #6b6862;
+
+  --map-ground: #262422;
+  --map-grid: #2f2d2a;
+  --map-block: #312f2c;
+  --map-road: #45423e;
+  --map-label: #b4afa7;
+  --map-city: #8a857d;
+  --diagram-stroke: #b4afa7;
+  --diagram-idle: #4a4743;
+}
+
 html {
   background: var(--color-paper);
-  color: var(--color-ink);
+  color: var(--color-fg);
   -webkit-font-smoothing: antialiased;
 }
 

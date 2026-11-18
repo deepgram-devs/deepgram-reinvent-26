@@ -265,6 +265,13 @@ const de: Messages = {
     qrLabel: (address: string) => `QR-Code für ${address}`,
     scanToOpen: "Zum Öffnen scannen",
     scanHint: "Richten Sie die Kamera Ihres Telefons hierauf, um das Repo zu öffnen.",
+    appearance: "Darstellung",
+    themeDark: "Dunkel",
+    themeLight: "Hell",
+    themeSystem: "System",
+    themeNote: "Gilt für die Schadenfallseite und dieses Fenster. Die Anrufbildschirme bleiben dunkel.",
+    themeNoteSystemDark: "Folgt Ihrem Gerät, das gerade auf Dunkel eingestellt ist.",
+    themeNoteSystemLight: "Folgt Ihrem Gerät, das gerade auf Hell eingestellt ist.",
   },
 };
 

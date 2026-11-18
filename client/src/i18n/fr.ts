@@ -265,6 +265,13 @@ const fr: Messages = {
     qrLabel: (address: string) => `QR code de ${address}`,
     scanToOpen: "Scannez pour ouvrir",
     scanHint: "Pointez l’appareil photo de votre téléphone ici pour ouvrir le dépôt.",
+    appearance: "Apparence",
+    themeDark: "Sombre",
+    themeLight: "Clair",
+    themeSystem: "Système",
+    themeNote: "S’applique à la page du dossier et à ce panneau. Les écrans d’appel restent sombres.",
+    themeNoteSystemDark: "Suit votre appareil, actuellement en mode sombre.",
+    themeNoteSystemLight: "Suit votre appareil, actuellement en mode clair.",
   },
 };
 

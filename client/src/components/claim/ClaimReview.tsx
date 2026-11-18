@@ -91,9 +91,9 @@ function TopBar({ claim, live, onBack }: { claim: ClaimView; live: boolean; onBa
 }
 
 const STEP_DOT: Record<StepState, string> = {
-  done: "bg-ink text-white",
+  done: "bg-fg text-card",
   active: "bg-magenta text-ink ring-4 ring-magenta/25",
-  pending: "border-2 border-ink/25 text-muted bg-white",
+  pending: "border-2 border-fg/25 text-muted bg-card",
   stopped: "bg-red text-white",
 };
 
@@ -113,12 +113,12 @@ function ProgressStepper({ claim }: { claim: ClaimView }) {
               {i < steps.length - 1 && (
                 <span
                   className={`mx-3 hidden h-0 flex-1 border-t-2 md:block ${
-                    steps[i + 1].state === "pending" ? "border-dashed border-ink/20" : "border-ink"
+                    steps[i + 1].state === "pending" ? "border-dashed border-fg/20" : "border-fg"
                   }`}
                 />
               )}
             </div>
-            <p className={`mt-3 font-semibold ${step.state === "active" ? "text-violet" : step.state === "stopped" ? "text-red" : ""}`}>
+            <p className={`mt-3 font-semibold ${step.state === "active" ? "text-violet dark:text-violet-3" : step.state === "stopped" ? "text-red" : ""}`}>
               {step.title}
             </p>
             <p className="mt-0.5 text-sm text-muted">{step.detail}</p>
@@ -199,7 +199,7 @@ function ClaimHeader({ claim }: { claim: ClaimView }) {
   return (
     <FocusCard id="claim-header" as="div">
       <nav aria-label={t.review.breadcrumbLabel} className="label text-muted">
-        {t.review.breadcrumb} <span className="text-ink">{claim.claim_id}</span>
+        {t.review.breadcrumb} <span className="text-fg">{claim.claim_id}</span>
       </nav>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <h1 className="mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{t.review.title}</h1>
@@ -207,7 +207,7 @@ function ClaimHeader({ claim }: { claim: ClaimView }) {
         <ViewOnlyPill />
       </div>
       <p className="mt-3 text-muted">
-        {t.review.claim} <span className="tabular-nums font-medium text-ink">{claim.claim_id}</span>
+        {t.review.claim} <span className="tabular-nums font-medium text-fg">{claim.claim_id}</span>
         <span className="mx-3">{t.review.lastUpdated(formatDate(updated, locale))}</span>
       </p>
     </FocusCard>

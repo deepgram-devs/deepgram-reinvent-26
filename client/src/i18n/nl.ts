@@ -264,6 +264,13 @@ const nl: Messages = {
     qrLabel: (address: string) => `QR-code voor ${address}`,
     scanToOpen: "Scan om te openen",
     scanHint: "Richt de camera van uw telefoon hierop om de repo te openen.",
+    appearance: "Weergave",
+    themeDark: "Donker",
+    themeLight: "Licht",
+    themeSystem: "Systeem",
+    themeNote: "Geldt voor de claimpagina en dit paneel. De gespreksschermen blijven donker.",
+    themeNoteSystemDark: "Volgt uw apparaat, dat nu op donker staat.",
+    themeNoteSystemLight: "Volgt uw apparaat, dat nu op licht staat.",
   },
 };
 

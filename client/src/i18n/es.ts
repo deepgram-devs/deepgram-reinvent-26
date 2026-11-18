@@ -264,6 +264,13 @@ const es: Messages = {
     qrLabel: (address: string) => `Código QR de ${address}`,
     scanToOpen: "Escanee para abrir",
     scanHint: "Apunte aquí con la cámara de su teléfono para abrir el repositorio.",
+    appearance: "Apariencia",
+    themeDark: "Oscuro",
+    themeLight: "Claro",
+    themeSystem: "Sistema",
+    themeNote: "Cambia la página de la reclamación y este panel. Las pantallas de llamada siguen oscuras.",
+    themeNoteSystemDark: "Sigue a su dispositivo, que ahora usa el modo oscuro.",
+    themeNoteSystemLight: "Sigue a su dispositivo, que ahora usa el modo claro.",
   },
 };
 
