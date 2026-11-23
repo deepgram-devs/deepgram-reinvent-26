@@ -1,0 +1,1063 @@
+{
+  "$schema": "./catalog.schema.json",
+  "name": "@deepgram-devs/dg-brand-ui",
+  "description": "Every export of the kit: what it is, where it lives, its story and screenshot, and when to use it. The kit is domain-neutral; the fixtures hold example domains. `npm test` checks this file against src/index.ts.",
+  "surfaces": {
+    "paper": "Light record page",
+    "ink": "Dark landing, top bar, footers",
+    "stage": "Violet grain texture during the call, with frosted glass on it",
+    "violet": "The voice session panel and dock beside the paper record",
+    "magenta": "The highlight band",
+    "any": "Has tones for several surfaces",
+    "none": "Not visual"
+  },
+  "templates": {
+    "file": "stories/screens/templates.tsx",
+    "exports": [
+      "LandingScreen",
+      "SettingsScreen",
+      "ListeningScreen",
+      "SearchScreen",
+      "RecordScreen"
+    ],
+    "takes": "example: DemoExample",
+    "story": "screens-templates--landing",
+    "gallery": "screens-examples--gallery"
+  },
+  "entries": [
+    {
+      "name": "HeroLanding",
+      "kind": "layout",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/layouts/layouts.tsx",
+      "surface": "ink",
+      "useWhen": "The landing screen before a call: an optional hero photo (else the landing texture), persona toggle, kicker, title, intro, Start button, partner logos.",
+      "avoidWhen": "After the call starts; use StageLayout.",
+      "story": "screens-templates--landing",
+      "screenshot": "docs/screenshots/screens-templates--landing.png"
+    },
+    {
+      "name": "StageLayout",
+      "kind": "layout",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/layouts/layouts.tsx",
+      "surface": "stage",
+      "useWhen": "During the call before a record opens, and for staff search results. The violet texture runs edge to edge; the session panel floats beside the stage from lg up, frosted, and the dock is frosted below lg.",
+      "avoidWhen": "When a record is open; use RecordLayout.",
+      "story": "screens-templates--listening",
+      "screenshot": "docs/screenshots/screens-templates--listening.png"
+    },
+    {
+      "name": "StageCenter",
+      "kind": "layout",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/layouts/layouts.tsx",
+      "surface": "stage",
+      "useWhen": "The centered column on the stage for VoiceRing, CallStatus, and LiveCaption.",
+      "avoidWhen": "Search results, which use a wider left-aligned section.",
+      "story": "screens-templates--listening",
+      "screenshot": "docs/screenshots/screens-templates--listening.png"
+    },
+    {
+      "name": "RecordLayout",
+      "kind": "layout",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/layouts/layouts.tsx",
+      "surface": "paper",
+      "useWhen": "A record is open: paper page, sticky TopBar, the panel beside it, the dock and a transcript sheet on phones.",
+      "avoidWhen": "Before there's a record to show.",
+      "story": "screens-templates--record",
+      "screenshot": "docs/screenshots/screens-templates--record.png"
+    },
+    {
+      "name": "AsideNote",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/layouts/layouts.tsx",
+      "surface": "paper",
+      "useWhen": "A muted note with a lock under the session panel: what the caller can and can't do.",
+      "avoidWhen": "Errors; use Notice.",
+      "story": "screens-templates--record",
+      "screenshot": "docs/screenshots/screens-templates--record.png"
+    },
+    {
+      "name": "VoiceSessionPanel",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "any",
+      "useWhen": "The live transcript, function calls, prompts, and call controls. On every screen during a call (beside it on wide screens, in a sheet on phones). Frosted on the stage, violet beside the record: the layouts set it; pass surface=\"violet\" beside a record screen of your own. thinking shows three dots.",
+      "avoidWhen": "Outside a call; on the landing screen.",
+      "story": "voice-session-panel--with-record",
+      "screenshot": "docs/screenshots/voice-session-panel--with-record.png"
+    },
+    {
+      "name": "TurnBubble",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Transcript.tsx",
+      "surface": "any",
+      "useWhen": "One item of a custom transcript list, inside an <ol>.",
+      "avoidWhen": "Normally: VoiceSessionPanel renders these for you.",
+      "story": "voice-session-panel--bubbles",
+      "screenshot": "docs/screenshots/voice-session-panel--bubbles.png"
+    },
+    {
+      "name": "ThinkingDots",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Transcript.tsx",
+      "surface": "any",
+      "useWhen": "Three dots at the end of a custom transcript list while the agent works on an answer.",
+      "avoidWhen": "Normally: pass thinking to VoiceSessionPanel.",
+      "story": "voice-session-panel--frosted",
+      "screenshot": "docs/screenshots/voice-session-panel--frosted.png"
+    },
+    {
+      "name": "SessionSurfaceProvider",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/surface.tsx",
+      "surface": "none",
+      "useWhen": "Set the session surface (glass or violet) for the panel, dock, and bubbles inside it, in a layout of your own.",
+      "avoidWhen": "Inside StageLayout or RecordLayout, which set it."
+    },
+    {
+      "name": "useSessionSurface",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/surface.tsx",
+      "surface": "none",
+      "useWhen": "Read the session surface (glass or violet) in a custom transcript piece, to style it to match.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "FunctionCallRow",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Transcript.tsx",
+      "surface": "any",
+      "useWhen": "A tool call in a transcript: one mono line with timing, expands to the request JSON.",
+      "avoidWhen": "Showing results; the agent's answer says what it found.",
+      "story": "voice-session-panel--function-calls",
+      "screenshot": "docs/screenshots/voice-session-panel--function-calls.png"
+    },
+    {
+      "name": "callSummary",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Transcript.tsx",
+      "surface": "none",
+      "useWhen": "The one-line summary of a function call: short name and its main argument.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "clockTime",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Transcript.tsx",
+      "surface": "none",
+      "useWhen": "A turn's ISO time as h:mm:ss without AM/PM.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "PromptRail",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "any",
+      "useWhen": "TRY ASKING and quoted prompts, sent as if spoken: a sideways-scrolling row on violet, wrapping on the frosted panel.",
+      "avoidWhen": "More than about four prompts; on paper.",
+      "story": "voice-session-panel--prompts-and-controls",
+      "screenshot": "docs/screenshots/voice-session-panel--prompts-and-controls.png"
+    },
+    {
+      "name": "CallControls",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "any",
+      "useWhen": "The mute button and End conversation.",
+      "avoidWhen": "Normally: the panel and the dock include it.",
+      "story": "voice-session-panel--prompts-and-controls",
+      "screenshot": "docs/screenshots/voice-session-panel--prompts-and-controls.png"
+    },
+    {
+      "name": "SessionDock",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "any",
+      "useWhen": "Below lg: prompts and call controls fixed to the bottom. Pad the page by DOCK_CLEARANCE (the layouts do).",
+      "avoidWhen": "From lg up, where the panel shows; add className=\"lg:hidden\" or pass it to a layout's dock slot.",
+      "story": "voice-session-panel--dock-phone",
+      "screenshot": "docs/screenshots/voice-session-panel--dock-phone.png"
+    },
+    {
+      "name": "DockCaption",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "violet",
+      "useWhen": "The dock's top row on a record screen: live dot, caption, opens the transcript sheet.",
+      "avoidWhen": "On the stage, where LiveCaption shows the words.",
+      "story": "voice-session-panel--dock-phone",
+      "screenshot": "docs/screenshots/voice-session-panel--dock-phone.png"
+    },
+    {
+      "name": "DOCK_CLEARANCE",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/SessionPanel.tsx",
+      "surface": "none",
+      "useWhen": "Bottom padding class (pb-56) for a page that shows the SessionDock outside the kit's layouts.",
+      "avoidWhen": "Inside StageLayout or RecordLayout, which pad for you."
+    },
+    {
+      "name": "VoiceRing",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Stage.tsx",
+      "surface": "stage",
+      "useWhen": "Deepgram's glass voice ring on the stage, driven by turn state and a 0..1 level ref. Use ConnectedVoiceRing with Pipecat.",
+      "avoidWhen": "On paper or violet; more than one per screen.",
+      "story": "voice-session-panel--stage",
+      "screenshot": "docs/screenshots/voice-session-panel--stage.png"
+    },
+    {
+      "name": "deepgram-voice-ring",
+      "kind": "group",
+      "import": "@deepgram-devs/dg-brand-ui/ring-element",
+      "file": "src/ring-element/index.ts",
+      "surface": "stage",
+      "useWhen": "The voice ring on a page without React: a static HTML page, Vue, Svelte. Load assets/ring-element/deepgram-voice-ring.js with a plain <script> (npx vdui-assets copies it), then <deepgram-voice-ring state=\"listening\">; set ring.level (0..1) every frame and the state attribute (listening, thinking, speaking). Bundlers can import the ring-element entry instead. examples/static/index.html is a working page.",
+      "avoidWhen": "React apps: use VoiceRing or ConnectedVoiceRing. On paper or violet; more than one per screen.",
+      "story": "voice-ring-element--ring-element",
+      "screenshot": "docs/screenshots/voice-ring-element--ring-element.png"
+    },
+    {
+      "name": "brand.css",
+      "kind": "group",
+      "import": "@deepgram-devs/dg-brand-ui/assets/brand.css",
+      "file": "assets/brand.css",
+      "surface": "any",
+      "useWhen": "A page with no build step (plain HTML, Vue, Svelte) that needs the brand: <link> it for every token as a CSS variable (var(--color-magenta), var(--font-mono)), the fonts, base styles, the kit's utilities (label, card, glass, stage-glow, magenta-band, photo-scrim), and bg-/text-/border- classes for every color. No reset. npx vdui-assets copies it. examples/static/index.html uses it.",
+      "avoidWhen": "Apps with Tailwind 4: import theme.css instead. Pages whose own .card, .label, or .glass classes would clash."
+    },
+    {
+      "name": "useSimulatedLevel",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Stage.tsx",
+      "surface": "none",
+      "useWhen": "A fake speech level for VoiceRing in stories and fixture mode.",
+      "avoidWhen": "A live call; use useVoiceLevelRef."
+    },
+    {
+      "name": "CallStatus",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Stage.tsx",
+      "surface": "stage",
+      "useWhen": "The letter-spaced status line under the ring: LISTENING, SEARCHING…, PAUSED.",
+      "avoidWhen": "",
+      "story": "voice-session-panel--stage",
+      "screenshot": "docs/screenshots/voice-session-panel--stage.png"
+    },
+    {
+      "name": "LiveCaption",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Stage.tsx",
+      "surface": "stage",
+      "useWhen": "The caller's words, huge and quoted, on the stage. Shows a placeholder before anyone speaks.",
+      "avoidWhen": "On paper; use CaptionBar in the top bar.",
+      "story": "voice-session-panel--stage",
+      "screenshot": "docs/screenshots/voice-session-panel--stage.png"
+    },
+    {
+      "name": "CaptionBar",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/voice/Stage.tsx",
+      "surface": "ink",
+      "useWhen": "The record screen's top-bar pill: status dot, status word, the caller's words. md and up.",
+      "avoidWhen": "On the stage.",
+      "story": "voice-session-panel--top-bar-caption",
+      "screenshot": "docs/screenshots/voice-session-panel--top-bar-caption.png"
+    },
+    {
+      "name": "DataCard",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "A section of a record built by hand: white card, letter-spaced title, a FocusTarget the agent can point at. With a RecordView, RecordSectionCard makes these for you.",
+      "avoidWhen": "On the stage; use glass cards there.",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "Field",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "A label over a value inside a <dl>.",
+      "avoidWhen": "Amounts in a list; use LineItems.",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "LineItems",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "Label and amount rows with hairlines and an optional bold total: estimates, payments, coverage.",
+      "avoidWhen": "Prose or single facts.",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "NoteList",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "Dated notes or history, oldest first: a case log, order events, an adjuster's notes.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "PlaceholderGrid",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "Dashed tiles with captions where photos or documents would be.",
+      "avoidWhen": "Real images.",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "ProgressStepper",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "Where a process stands, in three to five steps: done, active, pending, stopped (Opened → Assigned → Working → Resolved).",
+      "avoidWhen": "More than five steps.",
+      "story": "records-building-blocks--stepper",
+      "screenshot": "docs/screenshots/records-building-blocks--stepper.png"
+    },
+    {
+      "name": "HighlightBand",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "The magenta band at the top of a record: two GlassTiles and the four key numbers. One per record.",
+      "avoidWhen": "Anywhere else; twice on a screen.",
+      "story": "records-building-blocks--band",
+      "screenshot": "docs/screenshots/records-building-blocks--band.png"
+    },
+    {
+      "name": "GlassTile",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "magenta",
+      "useWhen": "A frosted tile inside HighlightBand: who or what the record is about.",
+      "avoidWhen": "Outside HighlightBand.",
+      "story": "records-building-blocks--band",
+      "screenshot": "docs/screenshots/records-building-blocks--band.png"
+    },
+    {
+      "name": "PageHeader",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "The record's heading: breadcrumb, title with status and lock pills, meta line.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--header",
+      "screenshot": "docs/screenshots/records-building-blocks--header.png"
+    },
+    {
+      "name": "CardColumns",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/records.tsx",
+      "surface": "paper",
+      "useWhen": "DataCards of different heights balanced into 2 (md) or 3 (2xl) columns.",
+      "avoidWhen": "A card that must be full width; put it after.",
+      "story": "records-building-blocks--agent-points-at-cards",
+      "screenshot": "docs/screenshots/records-building-blocks--agent-points-at-cards.png"
+    },
+    {
+      "name": "SketchMap",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/SketchMap.tsx",
+      "surface": "paper",
+      "useWhen": "A drawn map from road names with a magenta pin: a delivery address, a visit, an incident location, when there's no map API.",
+      "avoidWhen": "When real coordinates and a map matter.",
+      "story": "records-building-blocks--primitives",
+      "screenshot": "docs/screenshots/records-building-blocks--primitives.png"
+    },
+    {
+      "name": "RecordBody",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/RecordView.tsx",
+      "surface": "paper",
+      "useWhen": "Draw a whole record screen (header, progress, highlight band, cards) from a RecordView: plain data for any domain, which the bot can send as JSON. The fastest way to a record screen.",
+      "avoidWhen": "When one part needs a custom layout; build from RecordSectionCard and the pieces instead.",
+      "story": "records-building-blocks--whole-record",
+      "screenshot": "docs/screenshots/records-building-blocks--whole-record.png"
+    },
+    {
+      "name": "RecordSectionCard",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/RecordView.tsx",
+      "surface": "paper",
+      "useWhen": "One RecordSection as a card: fields, amounts, text, notes, place, files, tags, or custom.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--section-types",
+      "screenshot": "docs/screenshots/records-building-blocks--section-types.png"
+    },
+    {
+      "name": "foundCardFor",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/RecordView.tsx",
+      "surface": "none",
+      "useWhen": "FoundCard props from a RecordView: id, status, tile, progress.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--found",
+      "screenshot": "docs/screenshots/records-building-blocks--found.png"
+    },
+    {
+      "name": "stepProgress",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/RecordView.tsx",
+      "surface": "none",
+      "useWhen": "The active step's title, number, and total from a record's steps.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "FoundCard",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/results.tsx",
+      "surface": "stage",
+      "useWhen": "Phones and tablets: the one record found, with progress and a magenta button to open it. foundCardFor(record, ...) builds its props from a RecordView.",
+      "avoidWhen": "Wide screens, which open the record directly.",
+      "story": "records-building-blocks--found",
+      "screenshot": "docs/screenshots/records-building-blocks--found.png"
+    },
+    {
+      "name": "ResultCard",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/results.tsx",
+      "surface": "stage",
+      "useWhen": "One match in a staff search, as a frosted button card, the whole card pressable; up to four, two by two from md. DemoExample.search.results holds its props.",
+      "avoidWhen": "A single found record; use FoundCard.",
+      "story": "records-building-blocks--results",
+      "screenshot": "docs/screenshots/records-building-blocks--results.png"
+    },
+    {
+      "name": "DataGrid",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/data/DataGrid.tsx",
+      "surface": "any",
+      "useWhen": "Many records to compare at once: a staff queue on paper (tone paper), or a search with more matches than ResultCards hold on the stage (tone stage). Sortable headers, rows that open with onRowOpen, rows the agent points at by rowId, and stacked cards with a Sort by select on phones.",
+      "avoidWhen": "Two or three search results; use ResultCards. One record's facts or amounts; use a DataCard with Field or LineItems.",
+      "story": "records-data-grid--queue",
+      "screenshot": "docs/screenshots/records-data-grid--queue.png"
+    },
+    {
+      "name": "deepgram-data-grid",
+      "kind": "group",
+      "import": "@deepgram-devs/dg-brand-ui/data-grid-element",
+      "file": "src/data-grid-element/index.ts",
+      "surface": "any",
+      "useWhen": "DataGrid on a static site or a page without React (plain HTML, Hugo, Astro, Vue, Svelte). Write a plain <table> inside <deepgram-data-grid>, so the rows are in the HTML and show without JavaScript; load assets/data-grid/deepgram-data-grid.js with a <script> tag (npx vdui-assets copies it), and optionally deepgram-data-grid.css for a styled first paint. th attributes: data-key, data-primary, data-numeric, data-sortable=\"false\", data-hide-on-phone, data-nowrap. tr: data-id (what grid.pointAt(ids) lights), data-href (rows become links). td: data-sort. Element: tone, sort=\"key:asc\", pointed, openable; events sort-change and row-open. examples/static/data-grid.html is a working page.",
+      "avoidWhen": "React apps: use DataGrid. Two or three results on the stage: use ResultCards.",
+      "story": "records-data-grid-element--queue",
+      "screenshot": "docs/screenshots/records-data-grid-element--queue.png"
+    },
+    {
+      "name": "FocusProvider",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/focus/Focus.tsx",
+      "surface": "none",
+      "useWhen": "Around the screen and the panel, so the agent (and the chips) can point at FocusTargets.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--agent-points-at-cards",
+      "screenshot": "docs/screenshots/records-building-blocks--agent-points-at-cards.png"
+    },
+    {
+      "name": "FocusTarget",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/focus/Focus.tsx",
+      "surface": "any",
+      "useWhen": "A part of the screen the agent can point at: glows once and scrolls into view. DataCard and friends already are.",
+      "avoidWhen": "",
+      "story": "records-building-blocks--agent-points-at-cards",
+      "screenshot": "docs/screenshots/records-building-blocks--agent-points-at-cards.png"
+    },
+    {
+      "name": "useFocus",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/focus/Focus.tsx",
+      "surface": "none",
+      "useWhen": "pointAt(ids) to light FocusTargets; highlight to read what's lit.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "CtaButton",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Button.tsx",
+      "surface": "any",
+      "useWhen": "The one magenta action on a screen: Start conversation, View details. size lg is full width with a glow; sm is the landing's compact pill.",
+      "avoidWhen": "A second action on the same screen; use PillButton.",
+      "story": "components-buttons--cta",
+      "screenshot": "docs/screenshots/components-buttons--cta.png"
+    },
+    {
+      "name": "CtaLink",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Button.tsx",
+      "surface": "any",
+      "useWhen": "A CtaButton that's a link, such as Open on GitHub.",
+      "avoidWhen": "",
+      "story": "components-buttons--cta-as-link",
+      "screenshot": "docs/screenshots/components-buttons--cta-as-link.png"
+    },
+    {
+      "name": "PillButton",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Button.tsx",
+      "surface": "any",
+      "useWhen": "Secondary actions: Back to results, End conversation (size lg on violet; tone solid, size md on the frosted panel).",
+      "avoidWhen": "The main action.",
+      "story": "components-buttons--pills",
+      "screenshot": "docs/screenshots/components-buttons--pills.png"
+    },
+    {
+      "name": "IconButton",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Button.tsx",
+      "surface": "any",
+      "useWhen": "Round icon-only buttons: settings, close, copy, mute. Always pass label.",
+      "avoidWhen": "Anything that needs words to be understood.",
+      "story": "components-buttons--icon-buttons",
+      "screenshot": "docs/screenshots/components-buttons--icon-buttons.png"
+    },
+    {
+      "name": "Spinner",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Button.tsx",
+      "surface": "any",
+      "useWhen": "A small busy indicator in currentColor.",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--small",
+      "screenshot": "docs/screenshots/components-controls-feedback--small.png"
+    },
+    {
+      "name": "StatusPill",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "any",
+      "useWhen": "A record's status in a filled pill with an icon for its tone (check, dashed circle, circled x), colored by meaning (Tone).",
+      "avoidWhen": "Actions.",
+      "story": "components-pills-chips--all-tones",
+      "screenshot": "docs/screenshots/components-pills-chips--all-tones.png"
+    },
+    {
+      "name": "toneFor",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "none",
+      "useWhen": "Map status text to a Tone by keyword. Defaults to DEFAULT_TONE_RULES; put domain rules first.",
+      "avoidWhen": "",
+      "story": "components-pills-chips--tone-from-text",
+      "screenshot": "docs/screenshots/components-pills-chips--tone-from-text.png"
+    },
+    {
+      "name": "DEFAULT_TONE_RULES",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "none",
+      "useWhen": "Keyword rules that map most domains' statuses to tones (resolved/delivered → good, declined/cancelled → bad, closed → done).",
+      "avoidWhen": "",
+      "story": "components-pills-chips--tone-from-text",
+      "screenshot": "docs/screenshots/components-pills-chips--tone-from-text.png"
+    },
+    {
+      "name": "LiveBadge",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "any",
+      "useWhen": "LIVE / ENDED in the session panel header.",
+      "avoidWhen": "",
+      "story": "components-pills-chips--live",
+      "screenshot": "docs/screenshots/components-pills-chips--live.png"
+    },
+    {
+      "name": "LockPill",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "any",
+      "useWhen": "VIEW ONLY, or another read-only label, with a lock on paper and an eye on dark screens: the app reads records but can't change them.",
+      "avoidWhen": "",
+      "story": "components-pills-chips--lock",
+      "screenshot": "docs/screenshots/components-pills-chips--lock.png"
+    },
+    {
+      "name": "Chip",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Pill.tsx",
+      "surface": "any",
+      "useWhen": "Small chips: the agent's focus chips (pointer, onClick), problems or flags (danger), tags (neutral).",
+      "avoidWhen": "Statuses; use StatusPill.",
+      "story": "components-pills-chips--chips",
+      "screenshot": "docs/screenshots/components-pills-chips--chips.png"
+    },
+    {
+      "name": "SegmentedControl",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/SegmentedControl.tsx",
+      "surface": "any",
+      "useWhen": "Two to four choices: the persona toggle (radio, glass), a card's view switch (tab, light), or a choice on paper like ThemePicker (radio, paper).",
+      "avoidWhen": "More than four options; use Select.",
+      "story": "components-controls-feedback--persona-toggle",
+      "screenshot": "docs/screenshots/components-controls-feedback--persona-toggle.png"
+    },
+    {
+      "name": "Select",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Select.tsx",
+      "surface": "paper",
+      "useWhen": "A native select in the kit's pill field.",
+      "avoidWhen": "Options with images; use ImageSelect.",
+      "story": "components-controls-feedback--selects",
+      "screenshot": "docs/screenshots/components-controls-feedback--selects.png"
+    },
+    {
+      "name": "ImageSelect",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/Select.tsx",
+      "surface": "paper",
+      "useWhen": "A select with an image per option, such as languages with flags. Full keyboard support.",
+      "avoidWhen": "Plain text options; use Select.",
+      "story": "components-controls-feedback--selects",
+      "screenshot": "docs/screenshots/components-controls-feedback--selects.png"
+    },
+    {
+      "name": "Avatar",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "any",
+      "useWhen": "Initials in a circle: the caller (ink) or the signed-in person (violet).",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--small",
+      "screenshot": "docs/screenshots/components-controls-feedback--small.png"
+    },
+    {
+      "name": "Notice",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "ink",
+      "useWhen": "A message on a dark screen: error (alert), warning, or info (status).",
+      "avoidWhen": "On paper.",
+      "story": "components-controls-feedback--notices",
+      "screenshot": "docs/screenshots/components-controls-feedback--notices.png"
+    },
+    {
+      "name": "Caret",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "any",
+      "useWhen": "A blinking caret after words that are still coming.",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--small",
+      "screenshot": "docs/screenshots/components-controls-feedback--small.png"
+    },
+    {
+      "name": "ProgressBar",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "stage",
+      "useWhen": "A thin magenta progress bar on a dark screen.",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--small",
+      "screenshot": "docs/screenshots/components-controls-feedback--small.png"
+    },
+    {
+      "name": "CopyField",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "paper",
+      "useWhen": "A value with a copy button: the app's repo link.",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--copy-and-qr",
+      "screenshot": "docs/screenshots/components-controls-feedback--copy-and-qr.png"
+    },
+    {
+      "name": "QrCode",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/primitives/misc.tsx",
+      "surface": "paper",
+      "useWhen": "A QR code as SVG, for booth screens: scan to open the repo.",
+      "avoidWhen": "",
+      "story": "components-controls-feedback--copy-and-qr",
+      "screenshot": "docs/screenshots/components-controls-feedback--copy-and-qr.png"
+    },
+    {
+      "name": "Wordmark",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "any",
+      "useWhen": "The app brand's mark and name: pill (over a landing photo), plain (the stage and the landing texture), stacked (top bar). Any fictional brand; see the example marks in the fixtures.",
+      "avoidWhen": "Deepgram's own logo; use PartnerLogos.",
+      "story": "chrome-frame--wordmarks",
+      "screenshot": "docs/screenshots/chrome-frame--wordmarks.png"
+    },
+    {
+      "name": "Wordmark examples",
+      "kind": "group",
+      "import": "@deepgram-devs/dg-brand-ui/fixtures",
+      "file": "src/fixtures/marks.tsx",
+      "surface": "any",
+      "useWhen": "Six example marks in one recipe (32×32, 3px outline, magenta and ring-blue accents): BrightwaveMark, WrecklessMark, NorthwindMark, CedarMark, KettleCrateMark, PlaceholderMark.",
+      "avoidWhen": "Shipping an app under an example brand; make its own.",
+      "story": "chrome-frame--brands",
+      "screenshot": "docs/screenshots/chrome-frame--brands.png"
+    },
+    {
+      "name": "PartnerLogos",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "ink",
+      "useWhen": "Deepgram | AWS | Pipecat (or a subset), with hairlines between: the bottom of the landing, the record's footer, and drawers. Needs npx vdui-assets.",
+      "avoidWhen": "On paper; the logos are white.",
+      "story": "chrome-frame--partners",
+      "screenshot": "docs/screenshots/chrome-frame--partners.png"
+    },
+    {
+      "name": "PARTNERS",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "none",
+      "useWhen": "The partner logos the kit ships, by key.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "SettingsButton",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "any",
+      "useWhen": "The gear that opens Settings: glass on dark screens, solid on the top bar.",
+      "avoidWhen": "",
+      "story": "chrome-frame--bar",
+      "screenshot": "docs/screenshots/chrome-frame--bar.png"
+    },
+    {
+      "name": "TopBar",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "ink",
+      "useWhen": "The record screen's sticky ink bar: brand, Back, CaptionBar, actions.",
+      "avoidWhen": "On the stage or landing.",
+      "story": "chrome-frame--bar",
+      "screenshot": "docs/screenshots/chrome-frame--bar.png"
+    },
+    {
+      "name": "Drawer",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "paper",
+      "useWhen": "A modal panel from the right: Settings / About this app. Focus trap, Escape, scroll lock.",
+      "avoidWhen": "Short confirmations.",
+      "story": "chrome-frame--settings-drawer",
+      "screenshot": "docs/screenshots/chrome-frame--settings-drawer.png"
+    },
+    {
+      "name": "Section",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/chrome/chrome.tsx",
+      "surface": "paper",
+      "useWhen": "A letter-spaced section title with content, inside a Drawer.",
+      "avoidWhen": "",
+      "story": "screens-templates--settings",
+      "screenshot": "docs/screenshots/screens-templates--settings.png"
+    },
+    {
+      "name": "ThemePicker",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/ThemePicker.tsx",
+      "surface": "paper",
+      "useWhen": "Dark / Light / System in the Settings drawer, in a Section titled strings.appearance. Needs ThemeProvider above it. Shows a note: what the pick changes, or the device's theme under System.",
+      "avoidWhen": "The ink or stage screens, which look the same in both themes; put it in the drawer instead.",
+      "story": "chrome-frame--settings-drawer",
+      "screenshot": "docs/screenshots/chrome-frame--settings-drawer.png"
+    },
+    {
+      "name": "ThemeProvider",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/ThemeProvider.tsx",
+      "surface": "none",
+      "useWhen": "At the app's root, with themeScript() in the layout's <head>. Keeps data-theme on <html> in step: follows the device under System, follows other tabs, works with storage blocked. storageKey and defaultPreference must match themeScript()'s.",
+      "avoidWhen": "Forcing a theme on one screen; the ink, stage, and violet surfaces already look the same in both."
+    },
+    {
+      "name": "useTheme",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/ThemeProvider.tsx",
+      "surface": "none",
+      "useWhen": "Read the pick and the resolved theme, or set the pick, in a custom control. ThemePicker uses it.",
+      "avoidWhen": "Styling: use the paper tokens (text-fg, bg-card, border-line) or the dark: variant, which follow data-theme without JavaScript."
+    },
+    {
+      "name": "themeScript",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/script.ts",
+      "surface": "none",
+      "useWhen": "The inline <head> script for the root layout: sets data-theme before the first paint, so a saved dark theme never flashes light. Add suppressHydrationWarning and data-theme=\"light\" to <html>.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "THEME_PREFERENCES",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/script.ts",
+      "surface": "none",
+      "useWhen": "The three picks in ThemePicker's order: dark, light, system.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "THEME_STORAGE_KEY",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/script.ts",
+      "surface": "none",
+      "useWhen": "The default localStorage key for the pick (vdui.theme).",
+      "avoidWhen": ""
+    },
+    {
+      "name": "DARK_QUERY",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/theme/script.ts",
+      "surface": "none",
+      "useWhen": "The media query System follows: (prefers-color-scheme: dark).",
+      "avoidWhen": ""
+    },
+    {
+      "name": "KitStringsProvider",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/strings.tsx",
+      "surface": "none",
+      "useWhen": "Translate or reword the kit's built-in strings.",
+      "avoidWhen": "Content strings; pass those as props."
+    },
+    {
+      "name": "useKitStrings",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/strings.tsx",
+      "surface": "none",
+      "useWhen": "Read the kit's strings in a component of your own.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "DEFAULT_STRINGS",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/strings.tsx",
+      "surface": "none",
+      "useWhen": "The English defaults: the list of what to translate.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "cx",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/lib/cx.ts",
+      "surface": "none",
+      "useWhen": "Join class names, skipping falsy ones.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "initials",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/lib/cx.ts",
+      "surface": "none",
+      "useWhen": "Two-letter initials for an Avatar.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useMediaQuery",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/hooks/useMediaQuery.ts",
+      "surface": "none",
+      "useWhen": "Whether a media query matches; with WIDE, whether the panel sits beside the screen.",
+      "avoidWhen": "Layout that CSS breakpoints can do."
+    },
+    {
+      "name": "WIDE",
+      "kind": "constant",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/hooks/useMediaQuery.ts",
+      "surface": "none",
+      "useWhen": "The media query (min-width: 1024px) where the panel moves beside the screen.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useCopied",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/hooks/useCopied.ts",
+      "surface": "none",
+      "useWhen": "Copy to the clipboard and show Copied for a moment.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useStickToBottom",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/hooks/useStickToBottom.ts",
+      "surface": "none",
+      "useWhen": "Keep a growing log scrolled to its newest item unless the reader scrolled up.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "Icons",
+      "kind": "icons",
+      "import": "@deepgram-devs/dg-brand-ui",
+      "file": "src/icons/index.tsx",
+      "surface": "any",
+      "useWhen": "Stroke icons in currentColor, sized by className. Controls: MicIcon, MicOffIcon, WaveIcon, LockIcon, GearIcon, CloseIcon, GitHubIcon, CopyIcon, CheckIcon, CodeIcon, ChevronIcon, ArrowRightIcon. Generic subjects for GlassTiles: UserIcon, CalendarIcon, PinIcon, DocumentIcon, CardIcon, BoxIcon, SearchIcon, ClockIcon.",
+      "avoidWhen": "Domain icons (a car, a plane): draw those in the app's own code, as the fixtures do with CarIcon.",
+      "story": "foundations-sheets--icon-set",
+      "screenshot": "docs/screenshots/foundations-sheets--icon-set.png"
+    },
+    {
+      "name": "usePipecatTurns",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "The live conversation as Turn[], the caption, the last call, and sendText for prompts.",
+      "avoidWhen": "Fixture mode; use the fixtures' turns."
+    },
+    {
+      "name": "toTurns",
+      "kind": "function",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "Convert Pipecat ConversationMessage[] to Turn[] yourself, with chips and call timings.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useMicToggle",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "micOn and setMic for CallControls.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useTurnState",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "listening / thinking / speaking from Pipecat's speaking events.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "useVoiceLevelRef",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "The live audio level of caller and agent as a ref, for VoiceRing.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "ConnectedVoiceRing",
+      "kind": "component",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "stage",
+      "useWhen": "VoiceRing driven by the live call.",
+      "avoidWhen": "Outside a PipecatClientProvider."
+    },
+    {
+      "name": "useServerMessage",
+      "kind": "hook",
+      "import": "@deepgram-devs/dg-brand-ui/pipecat",
+      "file": "src/pipecat/index.tsx",
+      "surface": "none",
+      "useWhen": "Handle the bot's server messages (RTVIServerMessageFrame): record-loaded, focus, search-results.",
+      "avoidWhen": ""
+    },
+    {
+      "name": "fixtures",
+      "kind": "data",
+      "import": "@deepgram-devs/dg-brand-ui/fixtures",
+      "file": "src/fixtures/index.tsx",
+      "surface": "none",
+      "useWhen": "Five example domains as DemoExample objects (support = default, insurance, banking, healthcare, retail): brand, personas, copy, a RecordView, search results, conversations. EXAMPLES, DEFAULT_EXAMPLE, getExample(id), each example, the marks, languageOptions(), and turn builders agent()/caller()/tool(). Copy the closest example to start a domain.",
+      "avoidWhen": "Shipping an app with fixture data on screen."
+    }
+  ]
+}

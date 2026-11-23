@@ -33,12 +33,12 @@ const FONT_STACKS = {
 } as CSSProperties;
 
 export const metadata: Metadata = {
-  title: "Wreckless Claims",
+  title: "Wreckless Auto Claims",
   description: "Look up an auto claim by voice. Built with Deepgram, AWS, and Pipecat.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1c1b1a",
+  themeColor: "#1d1d1d",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

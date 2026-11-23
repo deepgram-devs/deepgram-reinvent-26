@@ -64,7 +64,7 @@ export function buildFixture(id: string, screen: FixtureScreen): Fixture {
 
   const last = claim.policyholder.name.split(" ").at(-1) ?? "";
   const messages: ConversationMessage[] = [
-    assistant("Thanks for calling Wreckless Insurance auto claims. What's your claim number?"),
+    assistant("Thanks for calling Wreckless Auto claims. What's your claim number?"),
     user(`Pull up claim ${claim.claim_id}.`),
     assistant("Sure. What's the policyholder's last name?"),
   ];
@@ -137,7 +137,7 @@ export function buildSearchFixture(screen: FixtureScreen): Fixture {
   const question = "Which claims are being adjusted by Luis Ortega?";
   const matched = Object.values(ALL).filter((claim) => claim.adjuster.name === "Luis Ortega");
   const messages: ConversationMessage[] = [
-    assistant("Wreckless claims desk. What would you like to look up?"),
+    assistant("Wreckless Auto claims desk. What would you like to look up?"),
   ];
 
   if (screen === "listening") {

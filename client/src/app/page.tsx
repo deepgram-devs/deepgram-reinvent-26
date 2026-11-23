@@ -14,6 +14,7 @@ import { VoiceSessionPanel } from "@/components/voice/VoiceSessionPanel";
 import type { Fixture } from "@/fixtures/fixtures";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { DocumentLanguage, useT } from "@/i18n";
+import { KitLanguage } from "@/i18n/KitLanguage";
 import { FixtureConversation, LiveConversation } from "@/lib/conversation";
 import { isPersona, PersonaProvider, usePersona, type Persona } from "@/lib/persona";
 import { PreferencesProvider, usePreferences } from "@/lib/preferences";
@@ -115,26 +116,19 @@ function Screens({
       />
     );
   }
-  const aside = wide ? (
-    <aside className="w-[26rem] shrink-0 p-6">
-      {/* The panel fills the window's height, less the aside's p-6 above and
-          below, but keeps the height its controls need on short windows */}
-      <div className="sticky top-6 h-[calc(100dvh-3rem)] min-h-[34rem]">
-        <VoiceSessionPanel onEnd={onEnd} live={live || !!forced} />
-      </div>
-    </aside>
-  ) : null;
+  // The stage screens show it beside them from lg up, frosted; below lg the dock takes its place
+  const panel = <VoiceSessionPanel onEnd={onEnd} live={live || !!forced} />;
   // Staff screens follow the claim card they opened, kept in EmployeeSession.
   // The session's claim, which the agent sends when a card opens, only feeds
   // the review screen's focus and highlights, so it never moves the desk.
   if (persona === "employee") {
-    return <EmployeeSession live={live || !!forced} onEnd={onEnd} aside={aside} />;
+    return <EmployeeSession live={live || !!forced} onEnd={onEnd} panel={panel} />;
   }
   if (screen === "review" && claim) {
     return <ClaimReview claim={claim} live={live || !!forced} onEnd={onEnd} />;
   }
   return (
-    <Listening onOpenClaim={() => setDetails(true)} aside={aside} live={live || !!forced} onEnd={onEnd} />
+    <Listening onOpenClaim={() => setDetails(true)} panel={panel} live={live || !!forced} onEnd={onEnd} />
   );
 }
 
@@ -321,7 +315,10 @@ export default function Page() {
       <PreferencesProvider>
         <ThemeProvider>
           <DocumentLanguage />
-          <App />
+          {/* The UI kit's own labels follow the app's language */}
+          <KitLanguage>
+            <App />
+          </KitLanguage>
         </ThemeProvider>
       </PreferencesProvider>
     </Suspense>

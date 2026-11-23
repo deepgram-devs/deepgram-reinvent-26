@@ -1,0 +1,27 @@
+{
+  "$comment": "Written by scripts/sync-voice-hero.mjs. Don't edit the vendored files or this file by hand.",
+  "repo": "deepgram/deepgram-voice-hero",
+  "ref": "main",
+  "commit": "e0f4d41fc3182043fe27b0b8dce3769c554274ee",
+  "commitDate": "2026-10-15",
+  "entries": [
+    "components/Ring.ts",
+    "components/ForegroundRing.tsx",
+    "components/RingElement.tsx"
+  ],
+  "externals": [
+    "react",
+    "three"
+  ],
+  "files": {
+    "components/ForegroundRing.tsx": "64f46064573bd44567f065eb3649e757a35f788fc360071dbe915769d75c86e2",
+    "components/OrbClusterScene.tsx": "51e2c6057f47cee75ce55d53b9979577454ff42e6ae407745793b9c43fd97e7d",
+    "components/Ring.ts": "84eff4c41d4fc26bd801ed91ba3c730ad1ec3b96867d8cb2ff4420ba51b58b1a",
+    "components/RingElement.tsx": "d2b1070dbe41fdfee96b62572958470c2e2172503f6b219c60556357b70aa462",
+    "lib/auraTexture.ts": "f40d32b140c136060bcd97ff6d9ed5b12faba71c90727ec638eb41fec0bf44dd",
+    "lib/lattice.ts": "d20308fd86136f974c7b4d16804fe5c412e5763edc37a7e69e714492791b15ab",
+    "lib/motion.ts": "f6119efc9d4def455026d2c0d8c9049f701de0122a5e8aacfc988189ce1e66c6",
+    "lib/orbClusterRenderer.ts": "413e488dd33117d31abf5aaf42ee98d403a9b06661bd07bfa547983e08a9d5b8",
+    "lib/protocol.ts": "2c9af0098f0f099022f4e9a234e73f47f6b119e8c264d9dfd80d2a4112da5180"
+  }
+}

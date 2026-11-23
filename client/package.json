@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "postinstall": "vdui-assets public/vdui",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@daily-co/daily-js": "0.94.0",
+    "@deepgram-devs/dg-brand-ui": "file:vendor/dg-brand-ui",
     "@pipecat-ai/client-js": "1.15.0",
     "@pipecat-ai/client-react": "1.10.0",
     "@pipecat-ai/daily-transport": "1.7.1",

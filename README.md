@@ -1,6 +1,6 @@
 # Pipecat voice agent with Deepgram, AWS Bedrock, and AWS Strands
 
-Wreckless Claims is a voice agent for auto insurance claims. Policyholders call to hear where their claim stands, and Wreckless staff ask questions that search every claim at once. It's built with Deepgram Flux speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands, and a Next.js claims UI shows the claim on screen while the agent talks about it.
+Wreckless Auto Claims is a voice agent for auto insurance claims. Policyholders call to hear where their claim stands, and Wreckless staff ask questions that search every claim at once. It's built with Deepgram Flux speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands, and a Next.js claims UI shows the claim on screen while the agent talks about it.
 
 ### Built from the AWS and Deepgram workshop
 
@@ -124,7 +124,7 @@ Back in your `agent.py` file, we'll create a function called `run_bot`. This fun
 
 * The `transport` parameter describes how your bot should connect to the user. By passing in different transport objects and configurations, you can use this same `run_bot` logic through a direct WebRTC connection using a `SmallWebRTCTransport`, or through Daily's hosted WebRTC service using `DailyTransport`, or through a websocket to Twilio using a `WebsocketTransport`.
 * The `runner_args` parameter includes information unique to this bot session. For example, you can use `runner_args` to greet each user by name, or even pass the bot's system prompt in through `runner_args`.
-* The `persona` parameter says who's on the call: a policyholder or a Wreckless employee.
+* The `persona` parameter says who's on the call: a policyholder or a Wreckless Auto employee.
 
 ### Two personas
 
@@ -258,11 +258,11 @@ Each service takes its configuration through a `Settings` object. The LLM's `sys
 ```python
 GREETINGS = {
     POLICYHOLDER: (
-        "Thanks for calling Wreckless Insurance auto claims. I can look up the "
+        "Thanks for calling Wreckless Auto claims. I can look up the "
         "status, repair estimate, payments, or adjuster notes on an existing auto "
         "claim. What's your claim number?"
     ),
-    EMPLOYEE: "Wreckless claims desk. What would you like to look up?",
+    EMPLOYEE: "Wreckless Auto claims desk. What would you like to look up?",
 }
 
 
@@ -330,13 +330,13 @@ def build_system_instruction(
     """
     if persona == EMPLOYEE:
         role = (
-            "You are the internal claims assistant for Wreckless Insurance staff. "
+            "You are the internal claims assistant for Wreckless Auto staff. "
             "You answer questions across every auto claim on file: which claims "
             "match, their status, amounts, adjusters, and notes."
         )
     else:
         role = (
-            "You are the auto claims line voice agent for Wreckless Insurance. You "
+            "You are the auto claims line voice agent for Wreckless Auto. You "
             "help callers look up existing auto claims: status, repair estimates, "
             "payments, dates, the vehicle, and adjuster notes."
         )
@@ -396,7 +396,7 @@ def build_system_instruction(
         "PRIVACY:\n"
         "- Never read out a policyholder's address, phone number, or email, or "
         "a full VIN or license plate. You may say the last four characters. "
-        "Changes to contact details go through the policyholder's Wreckless agent.\n"
+        "Changes to contact details go through the policyholder's Wreckless Auto agent.\n"
         "- You may say the other driver's name and insurer, never their policy "
         "number, VIN, or plate.\n"
         "- Never read map coordinates or photo IDs. You may say how many photos "
@@ -541,7 +541,7 @@ Our main LLM, the one in the pipeline, is the one that talks to the caller. It r
             await params.result_callback(
                 {
                     "verified": False,
-                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Wreckless agent for help.",
+                    "response": "Too many failed verification attempts for this claim. Tell the caller you can't share details on this claim during this call, and that they can contact their Wreckless Auto agent for help.",
                 }
             )
             return
@@ -1065,7 +1065,7 @@ class ClaimsResearchAgent:
             # The answer goes back to the voice LLM; don't print it to the console
             callback_handler=None,
             system_prompt=(
-                "You research Wreckless Insurance auto claims for a staff "
+                "You research Wreckless Auto claims for a staff "
                 "member. Another assistant speaks your answer, so write plain "
                 "sentences: no markdown, bullet points, headings, or emoji. "
                 "Call search_claims to find claims. Search as many times as you "
@@ -1153,7 +1153,7 @@ CLAIM_SECTIONS = [
 search_function = FunctionSchema(
     name="search_knowledge_base",
     description=(
-        "Look up an existing Wreckless Insurance auto claim by its claim ID. Use "
+        "Look up an existing Wreckless Auto claim by its claim ID. Use "
         "this whenever the caller asks about a specific claim: its status, the "
         "vehicle, the accident, the other driver, the damage, the repair estimate, "
         "the deductible, rental, payments, the police report, the adjuster, or "
@@ -1235,7 +1235,7 @@ reset_voice_function = FunctionSchema(
 search_claims_function = FunctionSchema(
     name="search_claims",
     description=(
-        "Search every Wreckless auto claim to answer a staff member's question, "
+        "Search every Wreckless Auto claim to answer a staff member's question, "
         "e.g. 'which claims are waiting on a title?' or 'who is adjusting Daniel "
         "Mitchell's claim?'. A research agent runs as many searches as it needs "
         "and answers from the claim records."

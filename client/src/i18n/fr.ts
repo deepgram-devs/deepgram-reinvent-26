@@ -63,7 +63,7 @@ const fr: Messages = {
     ended: "Terminée",
     closeSettingsToTalk: "Fermez les paramètres pour continuer à parler",
     failed: "Ce numéro de dossier et ce nom ne correspondent pas à nos fichiers. Réessayez.",
-    locked: "Trop de tentatives pour ce dossier. Votre agent Wreckless peut vous aider.",
+    locked: "Trop de tentatives pour ce dossier. Votre agent Wreckless Auto peut vous aider.",
     error: "La recherche n’a pas abouti. Redemandez dans un instant.",
     foundOne: "1 dossier trouvé",
     viewDetails: "Voir le détail du dossier",
@@ -254,7 +254,7 @@ const fr: Messages = {
     voiceNoteConnecting: "Vous pourrez changer de voix une fois l’appel connecté.",
     whatItDoes: "Ce qu’elle fait",
     about:
-      "Wreckless Claims est un assistant vocal pour les sinistres automobiles. Les assurés demandent leur dossier par numéro et nom de famille, et il leur lit ce dont ils ont besoin. L’équipe Wreckless pose une question, et il cherche la réponse dans tous les dossiers.",
+      "Wreckless Auto Claims est un assistant vocal pour les sinistres automobiles. Les assurés demandent leur dossier par numéro et nom de famille, et il leur lit ce dont ils ont besoin. L’équipe Wreckless pose une question, et il cherche la réponse dans tous les dossiers.",
     viewOnly: "C’est en lecture seule. Vous pouvez trouver et écouter le détail des dossiers, mais pas les modifier.",
     builtWith: "Conçu avec la reconnaissance et la synthèse vocales de Deepgram, Pipecat, Amazon Bedrock et AWS Strands.",
     sourceCode: "Code source",

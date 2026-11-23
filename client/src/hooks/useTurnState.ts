@@ -4,7 +4,7 @@ import { RTVIEvent } from "@pipecat-ai/client-js";
 import { useRTVIClientEvent } from "@pipecat-ai/client-react";
 import { useCallback, useState } from "react";
 
-import type { TurnState } from "@/vendor/voice-hero/lib/protocol";
+import type { TurnState } from "@deepgram-devs/dg-brand-ui";
 
 /**
  * Whose turn it is, for the voice ring: listening while the caller talks or the floor is open,

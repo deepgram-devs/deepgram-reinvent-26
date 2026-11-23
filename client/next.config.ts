@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const BOT_URL = process.env.BOT_URL ?? "http://localhost:7860";
 
 const nextConfig: NextConfig = {
+  // The UI kit (vendor/dg-brand-ui) ships TypeScript source, so Next compiles it
+  transpilePackages: ["@deepgram-devs/dg-brand-ui"],
   // The browser posts its WebRTC offer to /api/offer on this app, and Next
   // passes it to the bot, so there's no CORS setup and no second origin.
   // The runner serves /start at its root, not under /api, so it gets its own
