@@ -39,6 +39,7 @@
   --color-yellow: #f7f300;
   --font-sans: var(--font-brand-sans, "Work Sans", ui-sans-serif, system-ui, sans-serif);
   --font-mono: var(--font-brand-mono, "Azeret Mono", ui-monospace, monospace);
+  --font-display: var(--font-brand-display, var(--font-sans));
   --radius-card: 1.25rem;
   --radius-panel: 1.75rem;
   --animate-caret: caret 1s steps(1) infinite;
@@ -291,6 +292,10 @@
   font-size: .75rem;
   font-weight: 500;
   line-height: 1rem;
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 .font-mono {

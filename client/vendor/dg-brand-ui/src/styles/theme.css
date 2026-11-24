@@ -53,11 +53,14 @@
   --color-yellow: #f7f300; /* brand Brass: numbers and timings in code */
 
   /* The brand's type: Work Sans for text, Azeret Mono for product surfaces, code, CTAs, and the
-     letter-spaced labels. (Perfektta, the brand's headline face, is for design teams only.)
-     An app can set --font-brand-sans and --font-brand-mono (next/font does) to add script
-     fallbacks; otherwise the families load by name. */
+     letter-spaced labels. An app can set --font-brand-sans and --font-brand-mono (next/font does)
+     to add script fallbacks; otherwise the families load by name.
+     font-display marks the big headlines (34px and up). It's Work Sans unless the app points
+     --font-brand-display at Perfektta, the brand's headline face. Perfektta is licensed, so the kit
+     never ships it, and only a site the license covers may load it. */
   --font-sans: var(--font-brand-sans, "Work Sans", ui-sans-serif, system-ui, sans-serif);
   --font-mono: var(--font-brand-mono, "Azeret Mono", ui-monospace, monospace);
+  --font-display: var(--font-brand-display, var(--font-sans));
 
   --radius-card: 1.25rem; /* paper cards */
   --radius-panel: 1.75rem; /* the voice session panel, the highlight band, drawers' inner cards */

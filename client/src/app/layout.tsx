@@ -27,9 +27,21 @@ const sizedArial = (font: Font) => font.style.fontFamily.split(",").slice(1).joi
 const stack = (primary: Font, script: Font[], generic: string) =>
   [face(primary), ...script.map(face), sizedArial(primary), generic].filter(Boolean).join(", ");
 
+const SANS = stack(workSans, [devanagari, notoSans], "ui-sans-serif, system-ui, sans-serif");
+
+// Perfektta, the brand's headline face, for the kit's font-display headlines. It's licensed, so it
+// never goes in this repo: the production Docker build downloads it and sets this path. Without
+// it (local runs, forks), the headlines stay Work Sans. Only SemiBold exists, the headlines' weight.
+const DISPLAY_FONT = process.env.NEXT_PUBLIC_DISPLAY_FONT;
+const DISPLAY_FACE = DISPLAY_FONT
+  ? `@font-face{font-family:"Perfektta";src:url("${DISPLAY_FONT}") format("woff2");font-weight:600;font-style:normal;font-display:swap}`
+  : null;
+
 const FONT_STACKS = {
-  "--font-brand-sans": stack(workSans, [devanagari, notoSans], "ui-sans-serif, system-ui, sans-serif"),
+  "--font-brand-sans": SANS,
   "--font-brand-mono": stack(azeretMono, [notoSansMono, devanagari], "ui-monospace, monospace"),
+  // Perfektta has Latin only, so other scripts fall through to the sans stack
+  ...(DISPLAY_FONT && { "--font-brand-display": `"Perfektta", ${SANS}` }),
 } as CSSProperties;
 
 export const metadata: Metadata = {
@@ -48,6 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Sets the theme before the first paint, so a saved dark theme never flashes light */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {DISPLAY_FACE && (
+          <>
+            <link rel="preload" href={DISPLAY_FONT} as="font" type="font/woff2" crossOrigin="anonymous" />
+            <style dangerouslySetInnerHTML={{ __html: DISPLAY_FACE }} />
+          </>
+        )}
       </head>
       <body>{children}</body>
     </html>

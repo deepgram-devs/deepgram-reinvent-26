@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # One image for both halves of the app: the Pipecat bot (Python) and the
 # claims UI (Next.js). start.sh runs them side by side in one Fly machine.
 
@@ -18,7 +20,29 @@ COPY client/package.json client/package-lock.json client/.npmrc ./
 COPY client/vendor ./vendor
 RUN npm ci
 COPY client/ ./
-RUN npm run build
+# Perfektta, the brand's headline face, is licensed, so it never goes in the repo. The Fly deploy
+# passes a private URL for it as the display_font_url build secret, and the build serves it from
+# /fonts/. Without the secret (local builds, forks), or if the download fails, headlines stay
+# Work Sans and the build goes on.
+RUN --mount=type=secret,id=display_font_url \
+    if [ -s /run/secrets/display_font_url ]; then \
+      if node -e ' \
+        const [url, out] = process.argv.slice(1); \
+        fetch(url).then(async (res) => { \
+          if (!res.ok) throw new Error(`HTTP ${res.status}`); \
+          const font = Buffer.from(await res.arrayBuffer()); \
+          if (font.subarray(0, 4).toString() !== "wOF2") throw new Error("not a woff2 file"); \
+          require("fs").mkdirSync("public/fonts", { recursive: true }); \
+          require("fs").writeFileSync(out, font); \
+        }).catch((err) => { console.error(`Perfektta download failed: ${err.message}`); process.exit(1); }); \
+      ' "$(cat /run/secrets/display_font_url)" public/fonts/perfektta-semibold.woff2; then \
+        export NEXT_PUBLIC_DISPLAY_FONT=/fonts/perfektta-semibold.woff2; \
+        echo "Headlines use Perfektta"; \
+      else \
+        echo "WARNING: headlines fall back to Work Sans"; \
+      fi; \
+    fi; \
+    npm run build
 
 # ---- Runtime: Python for the bot, plus the Node binary for the UI ----
 FROM python:3.12-slim-bookworm

@@ -7,6 +7,10 @@
 #
 # Needs one repository secret, FLY_API_TOKEN, a deploy token for this app only:
 #   fly tokens create deploy -a <app> -x 8760h | gh secret set FLY_API_TOKEN
+#
+# Optional: DISPLAY_FONT_URL, a URL the build downloads Perfektta SemiBold (woff2) from. The
+# brand's headline face is licensed, so it can't be in this public repo; with the secret, the
+# production site's big headlines use it. Without it they're Work Sans, as in local runs.
 
 name: Deploy to Fly
 
@@ -68,6 +72,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
-      - run: flyctl deploy --remote-only
+      # The font URL goes in as a build secret, so it's never in the image's layers or history
+      - run: |
+          args=()
+          if [ -n "$DISPLAY_FONT_URL" ]; then
+            args+=(--build-secret "display_font_url=$DISPLAY_FONT_URL")
+          fi
+          flyctl deploy --remote-only "${args[@]}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DISPLAY_FONT_URL: ${{ secrets.DISPLAY_FONT_URL }}
