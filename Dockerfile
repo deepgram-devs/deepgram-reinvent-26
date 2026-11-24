@@ -13,7 +13,9 @@ ENV BOT_URL=http://127.0.0.1:7860 \
     NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/client
-COPY client/package.json client/package-lock.json ./
+COPY client/package.json client/package-lock.json client/.npmrc ./
+# The UI kit is vendored in the repo and installed from this folder
+COPY client/vendor ./vendor
 RUN npm ci
 COPY client/ ./
 RUN npm run build

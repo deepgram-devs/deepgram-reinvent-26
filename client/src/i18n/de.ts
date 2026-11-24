@@ -63,7 +63,7 @@ const de: Messages = {
     ended: "Beendet",
     closeSettingsToTalk: "Einstellungen schließen, um weiterzusprechen",
     failed: "Schadennummer und Nachname stimmen nicht mit unseren Daten überein. Versuchen Sie es erneut.",
-    locked: "Zu viele Versuche für diesen Schadenfall. Ihr Wreckless-Vertreter hilft Ihnen weiter.",
+    locked: "Zu viele Versuche für diesen Schadenfall. Ihr Wreckless-Auto-Vertreter hilft Ihnen weiter.",
     error: "Die Abfrage ist fehlgeschlagen. Fragen Sie gleich noch einmal.",
     foundOne: "1 Schadenfall gefunden",
     viewDetails: "Details zum Schadenfall",
@@ -254,7 +254,7 @@ const de: Messages = {
     voiceNoteConnecting: "Sie können die Stimme ändern, sobald der Anruf verbunden ist.",
     whatItDoes: "Was sie kann",
     about:
-      "Wreckless Claims ist ein Sprachassistent für Kfz-Schadenfälle. Versicherte fragen mit Schadennummer und Nachnamen nach ihrem Fall, und er liest ihnen vor, was sie brauchen. Das Wreckless-Team stellt eine Frage, und er durchsucht alle Schadenfälle nach der Antwort.",
+      "Wreckless Auto Claims ist ein Sprachassistent für Kfz-Schadenfälle. Versicherte fragen mit Schadennummer und Nachnamen nach ihrem Fall, und er liest ihnen vor, was sie brauchen. Das Wreckless-Team stellt eine Frage, und er durchsucht alle Schadenfälle nach der Antwort.",
     viewOnly: "Nur zur Ansicht: Sie können Details zu Schadenfällen finden und anhören, aber nicht ändern.",
     builtWith: "Entwickelt mit Spracherkennung und Sprachsynthese von Deepgram, Pipecat, Amazon Bedrock und AWS Strands.",
     sourceCode: "Quellcode",

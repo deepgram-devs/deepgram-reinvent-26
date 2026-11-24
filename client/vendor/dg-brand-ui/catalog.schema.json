@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DG Brand UI catalog",
+  "type": "object",
+  "required": [
+    "name",
+    "entries"
+  ],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "import",
+          "file",
+          "surface",
+          "useWhen",
+          "avoidWhen"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The export's name, or a group name (Icons, fixtures)"
+          },
+          "kind": {
+            "enum": [
+              "component",
+              "layout",
+              "hook",
+              "function",
+              "constant",
+              "icons",
+              "data",
+              "group"
+            ]
+          },
+          "import": {
+            "type": "string",
+            "description": "The module to import it from"
+          },
+          "file": {
+            "type": "string",
+            "description": "Its source file, relative to the repo root"
+          },
+          "surface": {
+            "enum": [
+              "paper",
+              "ink",
+              "stage",
+              "violet",
+              "magenta",
+              "any",
+              "none"
+            ],
+            "description": "The background it's styled for"
+          },
+          "useWhen": {
+            "type": "string"
+          },
+          "avoidWhen": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string",
+            "description": "A Storybook story id that shows it"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "That story's PNG, from npm run screenshots"
+          }
+        }
+      }
+    }
+  }
+}

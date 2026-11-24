@@ -1,0 +1,272 @@
+/**
+ * The stylesheet for <deepgram-data-grid>. Pages without Tailwind have no kit utilities, so the
+ * element brings its own CSS, with the colors read from tokens/tokens.json at build time. A page
+ * that loads the kit's theme.css overrides them through the same --color-* variables.
+ *
+ * The paper tone flips with the kit's dark theme: data-theme="dark" on <html>, as brand.css and
+ * the React ThemeProvider set it. The stage tone looks the same in both.
+ *
+ * The element puts this in a <style> at the start of <head> when it first connects. For pages
+ * that should look right before scripts run (or with none), the build also writes it to
+ * assets/data-grid/deepgram-data-grid.css.
+ */
+import tokens from "../../tokens/tokens.json";
+
+const c = tokens.color;
+const dark = (token: { $value: string; $extensions?: { dark?: string } }) => token.$extensions?.dark ?? token.$value;
+const font = (stack: string[]) => stack.map((f) => (f.includes(" ") ? `"${f}"` : f)).join(", ");
+const rem = (r: { value: number; unit: string }) => `${r.value}${r.unit}`;
+
+export const DATA_GRID_CSS = /* css */ `
+deepgram-data-grid {
+  --dg-ink: var(--color-ink, ${c.neutral.ink.$value});
+  --dg-ink-3: var(--color-ink-3, ${c.neutral["ink-3"].$value});
+  --dg-fg-paper: var(--color-fg, ${c.neutral.fg.$value});
+  --dg-paper: var(--color-paper, ${c.neutral.paper.$value});
+  --dg-card: var(--color-card, ${c.neutral.card.$value});
+  --dg-line: var(--color-line, ${c.neutral.line.$value});
+  --dg-muted: var(--color-muted, ${c.neutral.muted.$value});
+  --dg-magenta: var(--color-magenta, ${c.brand.magenta.$value});
+  --dg-lime: var(--color-lime, ${c.signal.lime.$value});
+  --dg-orange: var(--color-orange, ${c.signal.orange.$value});
+  --dg-red: var(--color-red, ${c.signal.red.$value});
+  --dg-sans: var(--font-sans, ${font(tokens.font.sans.$value)});
+  --dg-mono: var(--font-mono, ${font(tokens.font.mono.$value)});
+  --dg-radius: var(--radius-card, ${rem(tokens.radius.card.$value)});
+
+  /* What changes with the tone */
+  --dg-fg: var(--dg-fg-paper);
+  --dg-fg-muted: var(--dg-muted);
+  --dg-rule: var(--dg-line);
+  --dg-hover: var(--dg-paper);
+  --dg-lit: color-mix(in srgb, var(--dg-magenta) 10%, var(--dg-card));
+  --dg-neutral: color-mix(in srgb, var(--dg-fg-paper) 6%, transparent);
+
+  display: block;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  color: var(--dg-fg);
+  background: var(--dg-card);
+  border: 1px solid var(--dg-rule);
+  border-radius: var(--dg-radius);
+  font-family: var(--dg-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The dark theme flips the paper surface. Pages with the kit's theme set --color-*; these are for pages without it */
+:root[data-theme="dark"] deepgram-data-grid {
+  --dg-fg-paper: var(--color-fg, ${dark(c.neutral.fg)});
+  --dg-paper: var(--color-paper, ${dark(c.neutral.paper)});
+  --dg-card: var(--color-card, ${dark(c.neutral.card)});
+  --dg-line: var(--color-line, ${dark(c.neutral.line)});
+  --dg-muted: var(--color-muted, ${dark(c.neutral.muted)});
+}
+
+/* Frosted glass on the stage */
+deepgram-data-grid[tone="stage"] {
+  --dg-fg: #fff;
+  --dg-fg-muted: rgb(255 255 255 / 0.7);
+  --dg-rule: rgb(255 255 255 / 0.15);
+  --dg-hover: rgb(255 255 255 / 0.1);
+  --dg-lit: color-mix(in srgb, var(--dg-magenta) 20%, transparent);
+  --dg-neutral: rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.05);
+  border-color: rgb(255 255 255 / 0.1);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(20px);
+}
+
+deepgram-data-grid table { width: 100%; border-collapse: collapse; text-align: left; }
+
+deepgram-data-grid caption,
+deepgram-data-grid .dg-sortbar label,
+deepgram-data-grid thead th,
+deepgram-data-grid .dg-status,
+deepgram-data-grid td.dg-go::before,
+deepgram-data-grid td::before {
+  font-family: var(--dg-mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+deepgram-data-grid caption {
+  padding: 1.5rem 1.5rem 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-align: left;
+  color: color-mix(in srgb, var(--dg-fg) 80%, transparent);
+}
+
+deepgram-data-grid thead :is(th, td) {
+  padding: 0.75rem 1rem;
+  font-size: 0.7rem;
+  line-height: 1rem;
+  white-space: nowrap;
+  color: var(--dg-fg-muted);
+  border-bottom: 1px solid var(--dg-rule);
+}
+deepgram-data-grid th[aria-sort] { color: var(--dg-fg); }
+deepgram-data-grid th:first-child,
+deepgram-data-grid td:first-child { padding-left: 1.5rem; }
+deepgram-data-grid th:last-child,
+deepgram-data-grid td:last-child { padding-right: 1.5rem; }
+
+deepgram-data-grid tbody td { padding: 0.875rem 1rem; vertical-align: middle; }
+deepgram-data-grid tbody tr + tr { border-top: 1px solid var(--dg-rule); }
+deepgram-data-grid [data-numeric] { text-align: right; font-variant-numeric: tabular-nums; }
+deepgram-data-grid td.dg-primary { font-weight: 600; white-space: nowrap; }
+deepgram-data-grid [data-nowrap] { white-space: nowrap; }
+
+deepgram-data-grid .dg-sort-button,
+deepgram-data-grid .dg-open {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+deepgram-data-grid .dg-sort-button { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 999px; }
+deepgram-data-grid th[data-numeric] .dg-sort-button { flex-direction: row-reverse; }
+deepgram-data-grid .dg-sort-button svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+deepgram-data-grid .dg-sort-button:hover svg { opacity: 0.5; }
+deepgram-data-grid th[aria-sort] .dg-sort-button svg { opacity: 1; }
+deepgram-data-grid th[aria-sort="descending"] .dg-sort-button svg { transform: rotate(180deg); }
+deepgram-data-grid .dg-open { border-radius: 0.125rem; }
+deepgram-data-grid :is(.dg-sort-button, .dg-open, select):focus-visible {
+  outline: 2px solid var(--dg-magenta);
+  outline-offset: 4px;
+}
+
+/* Rows that open */
+deepgram-data-grid tr.dg-openable { cursor: pointer; transition: background-color 0.15s; }
+deepgram-data-grid tr.dg-openable:hover { background-color: var(--dg-hover); }
+deepgram-data-grid tr.dg-openable:hover .dg-open { text-decoration: underline; text-underline-offset: 4px; }
+deepgram-data-grid td.dg-go { width: 2.5rem; text-align: right; color: var(--dg-fg-muted); transition: color 0.15s; }
+deepgram-data-grid tr:hover td.dg-go { color: var(--dg-magenta); }
+deepgram-data-grid td.dg-go::before { content: none; }
+
+/* Rows the agent points at: tinted, a magenta edge, and one glow */
+deepgram-data-grid tr.dg-lit { background-color: var(--dg-lit); animation: dg-glow 2.6s ease-out 1; }
+deepgram-data-grid tr.dg-lit > td:first-child { box-shadow: inset 3px 0 0 var(--dg-magenta); }
+@keyframes dg-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dg-magenta) 55%, transparent); }
+  25% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--dg-magenta) 35%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Status pills: <span class="dg-status" data-tone="good">Delivered</span> */
+deepgram-data-grid .dg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  white-space: nowrap;
+  color: var(--dg-fg);
+  background: var(--dg-neutral);
+}
+deepgram-data-grid .dg-status::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 999px; background: currentColor; }
+deepgram-data-grid .dg-status[data-tone="review"] { background: var(--dg-orange); color: var(--dg-ink); }
+deepgram-data-grid .dg-status[data-tone="good"] { background: var(--dg-lime); color: var(--dg-ink); }
+deepgram-data-grid .dg-status[data-tone="bad"] { background: var(--dg-red); color: #fff; }
+deepgram-data-grid .dg-status[data-tone="done"] { background: var(--dg-ink-3); color: #fff; }
+
+deepgram-data-grid .dg-empty { margin: 0; padding: 2rem 1.5rem; font-size: 1.125rem; color: var(--dg-fg-muted); }
+deepgram-data-grid .dg-sortbar { display: none; }
+
+/* Phones (below Tailwind's sm): no frame, each row a card, and a select for the sort */
+@media (width < 40rem) {
+  deepgram-data-grid,
+  deepgram-data-grid[tone="stage"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: visible;
+    padding: 0;
+    background: none;
+    border: 0;
+    backdrop-filter: none;
+  }
+  deepgram-data-grid table { display: contents; }
+  deepgram-data-grid caption { order: 0; display: block; padding: 0 0.25rem; }
+  deepgram-data-grid .dg-sortbar { order: 1; display: flex; align-items: center; gap: 0.75rem; padding: 0 0.25rem; }
+  deepgram-data-grid thead { display: none; }
+  deepgram-data-grid tbody { order: 2; display: flex; flex-direction: column; gap: 0.75rem; }
+  deepgram-data-grid .dg-empty { order: 2; padding: 0 0.25rem; }
+
+  deepgram-data-grid tbody tr,
+  deepgram-data-grid tbody tr + tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    padding: 1.25rem;
+    background-color: var(--dg-card);
+    border: 1px solid var(--dg-line);
+    border-radius: var(--dg-radius);
+  }
+  deepgram-data-grid[tone="stage"] tbody tr,
+  deepgram-data-grid[tone="stage"] tbody tr + tr {
+    background-color: rgb(255 255 255 / 0.1);
+    border-color: rgb(255 255 255 / 0.2);
+    border-radius: 1.5rem;
+    backdrop-filter: blur(12px);
+  }
+  deepgram-data-grid tbody tr.dg-lit { background-color: var(--dg-lit); box-shadow: 0 0 0 2px var(--dg-magenta); }
+  deepgram-data-grid tbody tr.dg-lit > td:first-child { box-shadow: none; }
+
+  deepgram-data-grid tbody td,
+  deepgram-data-grid tbody td:first-child,
+  deepgram-data-grid tbody td:last-child { display: block; max-width: 100%; min-width: 0; padding: 0; text-align: left; }
+  deepgram-data-grid tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.65rem;
+    line-height: 1rem;
+    color: var(--dg-fg-muted);
+  }
+  deepgram-data-grid tbody td.dg-primary { order: -1; flex-basis: 100%; font-size: 1.25rem; letter-spacing: -0.01em; white-space: normal; }
+  deepgram-data-grid tbody td.dg-primary::before { content: none; }
+  deepgram-data-grid tbody td[data-hide-on-phone] { display: none; }
+  deepgram-data-grid tbody td.dg-go {
+    order: 99;
+    flex-basis: 100%;
+    width: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--dg-rule);
+    text-align: right;
+    font-family: var(--dg-mono);
+    font-size: 0.7rem;
+    line-height: 1rem;
+  }
+  deepgram-data-grid tbody td.dg-go::before { content: attr(data-label) " "; display: inline; margin: 0; font-size: inherit; color: inherit; }
+
+  deepgram-data-grid .dg-sortbar label { flex-shrink: 0; font-size: 0.7rem; line-height: 1rem; color: var(--dg-fg-muted); }
+  deepgram-data-grid .dg-sortbar select {
+    flex: 1;
+    min-width: 0;
+    height: 3rem;
+    padding: 0 1rem;
+    font: inherit;
+    font-size: 1.05rem;
+    color: var(--dg-fg-paper);
+    background: var(--dg-card);
+    border: 1px solid var(--dg-line);
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  deepgram-data-grid tr.dg-lit { animation: none; }
+}
+`;

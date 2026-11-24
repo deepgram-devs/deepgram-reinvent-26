@@ -1,0 +1,207 @@
+/*
+ * DG Brand UI theme: Deepgram's tokens for voice agent apps.
+ *
+ * The colors and type follow the Deepgram Brand Starter Kit (2026). Each brand color keeps the
+ * kit's role name (magenta is the brand's Fuchsia, violet its LED, ...); tokens/tokens.json records
+ * the brand name of each. Colors marked "derived" aren't in the brand palette: they're tints and
+ * shades the UI needs for borders and secondary text.
+ *
+ * Use it after Tailwind in the app's global stylesheet:
+ *
+ *   @import "tailwindcss";
+ *   @import "@deepgram-devs/dg-brand-ui/theme.css";
+ *
+ * Every token becomes a Tailwind utility (bg-ink, text-magenta, rounded-card, animate-rise, ...).
+ *
+ * Dark theme: set data-theme="dark" on <html> (THEME_SCRIPT and ThemeProvider do it) and the paper
+ * surface flips: fg, paper, card, line, muted, and faint. ink, the brand colors, and the ink, stage,
+ * and violet surfaces look the same in both themes. On paper, write text as text-fg, not text-ink.
+ * tokens/tokens.json holds the same values in Design Tokens (DTCG) format, for tools and agents;
+ * `npm test` fails when the two disagree. Change a value in both places.
+ */
+
+/* The kit's components live in src/, which Tailwind doesn't scan inside node_modules on its own */
+@source "../";
+
+/* dark: utilities follow data-theme on <html>, which already resolves "system" */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  /* Neutrals. Brand primaries Off-black and Off-white; Pure white for cards */
+  --color-ink: #1d1d1d; /* brand Off-black: dark surfaces, text on fixed light things (white pills, the band) */
+  --color-ink-2: #2a2927; /* derived */
+  --color-ink-3: #3a3835; /* derived: "done" status, diagram strokes */
+  --color-fg: #1d1d1d; /* brand Off-black: text on paper and cards. Flips in the dark theme */
+  --color-paper: #fcfaf8; /* brand Off-white: light page background */
+  --color-card: #ffffff; /* brand Pure white: cards on paper */
+  --color-line: #e8e5e0; /* derived: hairlines and card borders on paper */
+  --color-muted: #6b6862; /* derived: secondary text on paper */
+  --color-faint: #a19d96; /* derived: tertiary text, disabled */
+
+  /* Brand */
+  --color-violet: #7f39ff; /* brand LED: the voice session (panel, dock, avatar) */
+  --color-violet-2: #9152f6; /* derived */
+  --color-violet-3: #a874ff; /* derived */
+  --color-magenta: #e042ff; /* brand Fuchsia, the hero color: the primary action, the agent's focus */
+  --color-magenta-2: #c42fe0; /* derived: deeper Fuchsia */
+
+  /* Signals: the brand's supporting colors */
+  --color-lime: #7cd941; /* brand Phosphor: live, good, found, string values in code */
+  --color-orange: #fa8100; /* brand Bakelite: needs review, warning, booleans in code */
+  --color-red: #eb2a2e; /* brand Clay: bad, damage, errors */
+  --color-ring-blue: #00b2ff; /* brand Glass: keys in code, the open function call */
+  --color-yellow: #f7f300; /* brand Brass: numbers and timings in code */
+
+  /* The brand's type: Work Sans for text, Azeret Mono for product surfaces, code, CTAs, and the
+     letter-spaced labels. (Perfektta, the brand's headline face, is for design teams only.)
+     An app can set --font-brand-sans and --font-brand-mono (next/font does) to add script
+     fallbacks; otherwise the families load by name. */
+  --font-sans: var(--font-brand-sans, "Work Sans", ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-brand-mono, "Azeret Mono", ui-monospace, monospace);
+
+  --radius-card: 1.25rem; /* paper cards */
+  --radius-panel: 1.75rem; /* the voice session panel, the highlight band, drawers' inner cards */
+
+  --animate-caret: caret 1s steps(1) infinite;
+  --animate-glow: glow 2.6s ease-out 1;
+  --animate-rise: rise 0.45s ease-out both;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-slide: slide 0.25s ease-out both;
+
+  @keyframes caret {
+    50% { opacity: 0; }
+  }
+  @keyframes glow {
+    0% { box-shadow: 0 0 0 0 rgb(224 66 255 / 0.55); }
+    25% { box-shadow: 0 0 0 6px rgb(224 66 255 / 0.35); }
+    100% { box-shadow: 0 0 0 0 rgb(224 66 255 / 0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide {
+    from { transform: translateX(100%); }
+    to { transform: none; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+/*
+ * The dark theme: only the paper surface changes. tokens/tokens.json lists these values as each
+ * token's $extensions.dark; `npm test` fails when the two disagree.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-fg: #fcfaf8;
+  --color-paper: #141413;
+  --color-card: #201f1e;
+  --color-line: #353331;
+  --color-muted: #a19d96;
+  --color-faint: #6b6862;
+}
+
+/* SVG art on paper (SketchMap), which can't use utilities. Not tokens: only the art reads them */
+:root {
+  color-scheme: light;
+  --map-ground: #f1eee9;
+  --map-grid: #e2ded7;
+  --map-block: #e6e1d9;
+  --map-road: #ffffff;
+  --map-label: #6b6862;
+  --map-city: #8a857d;
+}
+:root[data-theme="dark"] {
+  --map-ground: #262422;
+  --map-grid: #2f2d2a;
+  --map-block: #312f2c;
+  --map-road: #45423e;
+  --map-label: #b4afa7;
+  --map-city: #8a857d;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-fg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+  }
+}
+
+/* Letter-spaced uppercase labels: kickers, section titles, buttons, pills. Azeret Mono, as the
+   brand sets its labels and CTAs */
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A white card on paper */
+@utility card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+/* Frosted glass over the dark screens: the session panel, result cards, pills on the stage */
+@utility glass {
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.05);
+  backdrop-filter: blur(20px);
+}
+
+/*
+ * Textures: grain photographed for the brand, already darkened for white text. The images ship in
+ * assets/textures, and `npx vdui-assets public/vdui` copies them where these URLs point. Each is
+ * listed in tokens/tokens.json under "texture".
+ */
+
+/* The landing's backdrop when the app has no photo: teal grain */
+@utility landing-texture {
+  background: var(--color-ink) url("/vdui/textures/landing.webp") center / cover no-repeat;
+}
+
+/* The stage during a call (listening, search): violet grain, edge to edge under the frosted panel */
+@utility stage-glow {
+  background: var(--color-ink) url("/vdui/textures/stage.webp") center / cover no-repeat;
+}
+
+/*
+ * Gradients. These two are the only ones in the design: don't write a gradient anywhere else
+ * (`npm test` fails on one). Each is listed in tokens/tokens.json under "gradient".
+ */
+
+/* The record's highlight band: Fuchsia, light to deep */
+@utility magenta-band {
+  background: linear-gradient(120deg, #ea74ff 0%, #e042ff 45%, #c42fe0 100%);
+}
+
+/* Over the landing photo, so white text reads: a fade to ink below the photo on phones, a heavier
+   wash over the whole photo from lg up, where the text sits on it */
+@utility photo-scrim {
+  background: linear-gradient(to bottom, transparent, rgb(29 29 29 / 0.1), var(--color-ink));
+  @media (width >= 64rem) {
+    background: linear-gradient(to bottom, rgb(29 29 29 / 0.7), rgb(29 29 29 / 0.6), var(--color-ink));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

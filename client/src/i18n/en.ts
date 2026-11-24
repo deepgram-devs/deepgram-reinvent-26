@@ -70,7 +70,7 @@ const en = {
     ended: "Ended",
     closeSettingsToTalk: "Close settings to keep talking",
     failed: "That claim number and last name don't match our records. Try again.",
-    locked: "Too many tries for that claim. Your Wreckless agent can help.",
+    locked: "Too many tries for that claim. Your Wreckless Auto agent can help.",
     error: "The lookup didn't go through. Ask again in a moment.",
     foundOne: "Found 1 claim",
     viewDetails: "View claim details",
@@ -268,7 +268,7 @@ const en = {
     voiceNoteConnecting: "You can change the voice once the call connects.",
     whatItDoes: "What it does",
     about:
-      "Wreckless Claims is a voice assistant for auto insurance claims. Policyholders ask for their claim by number and last name, and it reads back what they need. Wreckless staff ask a question, and it searches every claim for the answer.",
+      "Wreckless Auto Claims is a voice assistant for auto insurance claims. Policyholders ask for their claim by number and last name, and it reads back what they need. Wreckless staff ask a question, and it searches every claim for the answer.",
     viewOnly: "It’s view only. You can find and hear claim details, but not change them.",
     builtWith: "Built with Deepgram speech-to-text and text-to-speech, Pipecat, Amazon Bedrock, and AWS Strands.",
     sourceCode: "Source code",

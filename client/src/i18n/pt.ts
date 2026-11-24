@@ -62,7 +62,7 @@ const pt: Messages = {
     ended: "Encerrada",
     closeSettingsToTalk: "Feche as configurações para continuar falando",
     failed: "Esse número de sinistro e sobrenome não conferem com nossos registros. Tente de novo.",
-    locked: "Tentativas demais para esse sinistro. Seu corretor Wreckless pode ajudar.",
+    locked: "Tentativas demais para esse sinistro. Seu corretor Wreckless Auto pode ajudar.",
     error: "A consulta não foi concluída. Pergunte de novo em instantes.",
     foundOne: "1 sinistro encontrado",
     viewDetails: "Ver detalhes do sinistro",
@@ -253,7 +253,7 @@ const pt: Messages = {
     voiceNoteConnecting: "Você pode trocar a voz quando a ligação conectar.",
     whatItDoes: "O que ele faz",
     about:
-      "Wreckless Claims é um assistente de voz para sinistros de automóveis. Segurados pedem o sinistro pelo número e sobrenome, e ele lê o que precisam. A equipe da Wreckless faz uma pergunta, e ele pesquisa a resposta em todos os sinistros.",
+      "Wreckless Auto Claims é um assistente de voz para sinistros de automóveis. Segurados pedem o sinistro pelo número e sobrenome, e ele lê o que precisam. A equipe da Wreckless faz uma pergunta, e ele pesquisa a resposta em todos os sinistros.",
     viewOnly: "É somente leitura. Você pode encontrar e ouvir os detalhes de um sinistro, mas não alterá-los.",
     builtWith:
       "Feito com a conversão de fala em texto e de texto em fala da Deepgram, Pipecat, Amazon Bedrock e AWS Strands.",

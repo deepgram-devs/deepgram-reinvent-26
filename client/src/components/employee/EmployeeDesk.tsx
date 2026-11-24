@@ -1,59 +1,30 @@
 "use client";
 
 import { usePipecatClient } from "@pipecat-ai/client-react";
+import { CallStatus, ResultCard, StageCenter, StageLayout } from "@deepgram-devs/dg-brand-ui";
 import { useState, type ReactNode } from "react";
 
-import { StatusPill, ViewOnlyPill } from "@/components/chrome/Pills";
-import { PartnerFooter } from "@/components/chrome/PartnerFooter";
+import { ViewOnlyPill } from "@/components/chrome/Pills";
 import { SettingsButton } from "@/components/chrome/SettingsButton";
-import { WrecklessMark } from "@/components/chrome/WrecklessMark";
+import { WrecklessWordmark } from "@/components/chrome/WrecklessMark";
 import { ClaimReview } from "@/components/claim/ClaimReview";
 import { LiveCaption, ListeningOrb } from "@/components/listening/Listening";
-import { DOCK_CLEARANCE, SessionDock } from "@/components/voice/VoiceSessionPanel";
+import { SessionDock } from "@/components/voice/VoiceSessionPanel";
 import { useT } from "@/i18n";
-import { vehicleName, type ClaimView } from "@/lib/claim";
+import { statusTone, vehicleName, type ClaimView } from "@/lib/claim";
 import { useConversationTurns } from "@/lib/conversation";
 import { useSession } from "@/lib/session";
 import { useSettings } from "@/lib/settings";
 
-function ResultCard({ claim, onOpen }: { claim: ClaimView; onOpen: () => void }) {
-  const t = useT();
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="block h-full w-full animate-rise rounded-3xl border border-white/20 bg-white/10 p-5 text-left backdrop-blur-md transition hover:border-white/40 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-magenta"
-    >
-      <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <span className="tabular-nums font-medium whitespace-nowrap">{claim.claim_id}</span>
-        <StatusPill status={claim.status} />
-      </span>
-      <span className="mt-3 block text-2xl font-semibold tracking-tight">{claim.policyholder.name}</span>
-      <span className="mt-1 block text-white/75">
-        {vehicleName(claim)} · {claim.claim_type}
-      </span>
-      <span className="mt-4 flex items-center justify-between gap-3 border-t border-white/20 pt-3">
-        <span>
-          <span className="label block text-[0.65rem] text-white/70">{t.claim.adjuster}</span>
-          <span className="mt-0.5 block">{claim.adjuster.name || "—"}</span>
-        </span>
-        <span className="label text-[0.7rem] text-white/85">
-          {t.desk.open} <span aria-hidden="true">→</span>
-        </span>
-      </span>
-    </button>
-  );
-}
-
-/** Staff on a call: what they asked, and the claims the answer names. */
+/** Staff on a call: what they asked, and the claims the answer names, two by two. */
 function Desk({
   onOpenClaim,
-  aside,
+  panel,
   live,
   onEnd,
 }: {
   onOpenClaim: (claim: ClaimView) => void;
-  aside?: ReactNode;
+  panel: ReactNode;
   live: boolean;
   onEnd: () => void;
 }) {
@@ -64,78 +35,62 @@ function Desk({
   const t = useT();
 
   return (
-    <main className="flex min-h-dvh bg-ink text-white">
-      <div
-        className={`relative flex min-h-dvh flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_25%,#7a2c9e_0%,#3b1f4a_45%,var(--color-ink)_80%)] px-5 pt-5 sm:px-8 ${aside ? "pb-6" : DOCK_CLEARANCE}`}
-      >
-        <header className="flex items-center justify-between">
-          <span className="flex items-center gap-2.5">
-            <WrecklessMark className="size-8" />
-            <span className="text-xl font-semibold tracking-tight">Wreckless</span>
-            <span className="label ml-1 hidden text-white/70 sm:inline">{t.desk.title}</span>
-          </span>
-          <div className="flex items-center gap-3">
+    <StageLayout
+      brand={<WrecklessWordmark tagline={t.desk.title} />}
+      actions={
+        <>
+          {/* Phones have room for the brand and the gear only; the claim page says it's view only */}
+          <span className="hidden sm:contents">
             <ViewOnlyPill tone="dark" />
-            <SettingsButton />
+          </span>
+          <SettingsButton />
+        </>
+      }
+      panel={panel}
+      dock={<SessionDock onEnd={onEnd} live={live} />}
+    >
+      {results ? (
+        <section className="mx-auto mt-8 w-full max-w-[47rem] flex-1" aria-live="polite">
+          <p className="label inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/5 px-3 py-1.5 text-white">
+            <span className={`size-1.5 rounded-full ${searching ? "animate-caret bg-magenta" : "bg-lime"}`} aria-hidden="true" />
+            {searching ? `${t.call.searching}…` : t.desk.claims(results.claims.length)}
+          </p>
+          <h1 className="mt-6 text-3xl leading-tight font-semibold tracking-tight text-balance">&ldquo;{results.query}&rdquo;</h1>
+          {results.claims.length ? (
+            <ul className="mt-6 grid gap-5 md:grid-cols-2">
+              {results.claims.map((claim) => (
+                <li key={claim.claim_id}>
+                  <ResultCard
+                    recordId={claim.claim_id}
+                    status={{ label: claim.status.split(",")[0], tone: statusTone(claim.status) }}
+                    title={claim.policyholder.name}
+                    subtitle={`${vehicleName(claim)} · ${claim.claim_type}`}
+                    meta={{ label: t.claim.adjuster, value: claim.adjuster.name }}
+                    actionLabel={t.desk.open}
+                    onOpen={() => onOpenClaim(claim)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="glass mt-6 rounded-xl px-5 py-4 text-lg text-white/80">{t.desk.noMatches}</p>
+          )}
+          <div className="mt-10 border-t border-white/25 pt-6 text-left" aria-live="polite">
+            <LiveCaption />
           </div>
-        </header>
-
-        {results ? (
-          <section className="mx-auto mt-10 w-full max-w-4xl flex-1" aria-live="polite">
-            <p className="label flex items-center gap-2.5 text-white/90">
-              <span className={`size-2.5 rounded-full ${searching ? "animate-caret bg-magenta" : "bg-lime"}`} />
-              {searching ? `${t.call.searching}…` : t.desk.claims(results.claims.length)}
-            </p>
-            <h1 className="mt-3 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
-              &ldquo;{results.query}&rdquo;
-            </h1>
-            {results.claims.length ? (
-              <ul className="mt-8 grid gap-4 md:grid-cols-2">
-                {results.claims.map((claim) => (
-                  <li key={claim.claim_id}>
-                    <ResultCard claim={claim} onOpen={() => onOpenClaim(claim)} />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-8 rounded-2xl border border-white/15 bg-white/5 px-5 py-4 text-lg text-white/80">
-                {t.desk.noMatches}
-              </p>
-            )}
-            <div className="mt-10 border-t border-white/15 pt-6 text-left" aria-live="polite">
-              <LiveCaption />
-            </div>
-          </section>
-        ) : (
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center pt-8 text-center">
-            <ListeningOrb paused={paused} busy={searching} />
-            <p className="label mt-6 text-white/90" aria-live="polite">
-              {paused ? (
-                t.call.paused
-              ) : searching ? (
-                <>
-                  {t.call.searching}
-                  <span className="animate-caret">…</span>
-                </>
-              ) : (
-                t.call.listening
-              )}
-            </p>
-            <div className="mt-5 min-h-28" aria-live="polite">
-              <LiveCaption />
-            </div>
+        </section>
+      ) : (
+        <StageCenter className="justify-center pb-16">
+          <ListeningOrb paused={paused} busy={searching} />
+          <CallStatus className="mt-8" busy={!paused && searching}>
+            {paused ? t.call.paused : searching ? t.call.searching : t.call.listening}
+          </CallStatus>
+          <div className="mt-8 min-h-28" aria-live="polite">
+            <LiveCaption />
           </div>
-        )}
-
-        <div className="mx-auto mt-6 w-full max-w-2xl border-t border-white/15 pt-6">
-          <PartnerFooter />
-        </div>
-      </div>
-      {aside ?? (
-        // Narrow screens have no session panel: its prompts and controls dock at the bottom
-        <SessionDock onEnd={onEnd} live={live} />
+        </StageCenter>
       )}
-    </main>
+    </StageLayout>
   );
 }
 
@@ -146,11 +101,12 @@ function Desk({
 export function EmployeeSession({
   live,
   onEnd,
-  aside,
+  panel,
 }: {
   live: boolean;
   onEnd: () => void;
-  aside?: ReactNode;
+  /** The session panel, beside the desk from lg up */
+  panel: ReactNode;
 }) {
   const client = usePipecatClient();
   // The claim itself, so a new search doesn't close the one being read
@@ -169,5 +125,5 @@ export function EmployeeSession({
   if (open) {
     return <ClaimReview claim={open} live={live} onEnd={onEnd} onBack={() => show(null)} />;
   }
-  return <Desk onOpenClaim={show} aside={aside} live={live} onEnd={onEnd} />;
+  return <Desk onOpenClaim={show} panel={panel} live={live} onEnd={onEnd} />;
 }

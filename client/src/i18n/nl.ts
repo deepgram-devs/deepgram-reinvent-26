@@ -62,7 +62,7 @@ const nl: Messages = {
     ended: "Beëindigd",
     closeSettingsToTalk: "Sluit de instellingen om verder te praten",
     failed: "Dat claimnummer en die achternaam komen niet overeen met onze gegevens. Probeer het opnieuw.",
-    locked: "Te veel pogingen voor die claim. Uw Wreckless-agent kan u helpen.",
+    locked: "Te veel pogingen voor die claim. Uw Wreckless Auto-agent kan u helpen.",
     error: "Het opzoeken is mislukt. Vraag het zo nog eens.",
     foundOne: "1 claim gevonden",
     viewDetails: "Claimdetails bekijken",
@@ -253,7 +253,7 @@ const nl: Messages = {
     voiceNoteConnecting: "U kunt de stem wijzigen zodra het gesprek verbonden is.",
     whatItDoes: "Wat het doet",
     about:
-      "Wreckless Claims is een spraakassistent voor autoschadeclaims. Verzekerden vragen hun claim op met claimnummer en achternaam, en de assistent leest voor wat ze nodig hebben. Wreckless-medewerkers stellen een vraag, en de assistent doorzoekt alle claims naar het antwoord.",
+      "Wreckless Auto Claims is een spraakassistent voor autoschadeclaims. Verzekerden vragen hun claim op met claimnummer en achternaam, en de assistent leest voor wat ze nodig hebben. Wreckless-medewerkers stellen een vraag, en de assistent doorzoekt alle claims naar het antwoord.",
     viewOnly: "Het is alleen-lezen. U kunt claimgegevens vinden en beluisteren, maar niet wijzigen.",
     builtWith: "Gemaakt met spraak-naar-tekst en tekst-naar-spraak van Deepgram, Pipecat, Amazon Bedrock en AWS Strands.",
     sourceCode: "Broncode",

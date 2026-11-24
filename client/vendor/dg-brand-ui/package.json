@@ -1,0 +1,57 @@
+{
+  "name": "@deepgram-devs/dg-brand-ui",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Deepgram's UI kit for voice agent demos in any domain: tokens, components, screen templates, a record data model, and agent skills.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": [
+    "**/*.css",
+    "./src/ring-element/index.ts",
+    "./src/data-grid-element/index.ts"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./pipecat": "./src/pipecat/index.tsx",
+    "./fixtures": "./src/fixtures/index.tsx",
+    "./ring-element": "./src/ring-element/index.ts",
+    "./data-grid-element": "./src/data-grid-element/index.ts",
+    "./theme.css": "./src/styles/theme.css",
+    "./tokens.json": "./tokens/tokens.json",
+    "./catalog.json": "./catalog.json",
+    "./assets/*": "./assets/*"
+  },
+  "files": [
+    "LICENSE",
+    "src",
+    "assets",
+    "tokens",
+    "catalog.json",
+    "catalog.schema.json",
+    "scripts/copy-assets.mjs"
+  ],
+  "bin": {
+    "vdui-assets": "scripts/copy-assets.mjs"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "three": "0.182.0"
+  },
+  "peerDependencies": {
+    "@pipecat-ai/client-js": ">=1.10.0",
+    "@pipecat-ai/client-react": ">=1.8.0",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "peerDependenciesMeta": {
+    "@pipecat-ai/client-js": {
+      "optional": true
+    },
+    "@pipecat-ai/client-react": {
+      "optional": true
+    }
+  }
+}

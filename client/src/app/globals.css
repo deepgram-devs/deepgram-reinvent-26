@@ -1,137 +1,19 @@
 @import "tailwindcss";
 
-/* dark: utilities follow the theme on <html>, not the OS alone (see src/lib/theme-script.ts) */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Deepgram's UI kit (vendor/dg-brand-ui): the brand's colors, fonts, and radii as Tailwind utilities,
+   the label, card, glass, and texture utilities, the dark theme, and a scan of the kit's components.
+   Its theme also sets the map colors the incident sketch uses, in both themes. */
+@import "@deepgram-devs/dg-brand-ui/theme.css";
 
-/* Wreckless design tokens, taken from the claims UI mockups.
-   ink and the brand colors are the same in both themes: ink is the dark surfaces (top bars, footers,
-   the voice panel, the stage) and text on fixed light things (white pills, the magenta band).
-   The paper tokens below flip in the dark theme. */
-@theme {
-  --color-ink: #1c1b1a;
-  --color-ink-2: #2a2927;
-  --color-ink-3: #3a3835;
-  /* Paper: the claim review page, its cards, and the Settings drawer. fg is the text on them. */
-  --color-fg: #1c1b1a;
-  --color-paper: #f8f7f5;
-  --color-card: #ffffff;
-  --color-line: #e8e5e0;
-  --color-muted: #6b6862;
-  --color-faint: #a19d96;
-
-  --color-violet: #7a2cf2;
-  --color-violet-2: #9152f6;
-  --color-violet-3: #a874ff;
-  --color-magenta: #d946ef;
-  --color-magenta-2: #c13be0;
-  --color-orange: #f97316;
-  --color-lime: #7ed957;
-  --color-red: #ef4444;
-  --color-ring-blue: #38bdf8;
-  --color-yellow: #ffe600;
-
-  /* Set on <html> in layout.tsx: the brand face, then Noto for the scripts it lacks (Devanagari for
-     Hindi, Cyrillic for Russian), then a size-matched Arial and the system fonts */
-  --font-sans: var(--font-brand-sans);
-  /* Code only, such as the function-call blocks */
-  --font-mono: var(--font-brand-mono);
-
-  --radius-card: 1.25rem;
-
-  --animate-caret: caret 1s steps(1) infinite;
-  --animate-glow: glow 2.6s ease-out 1;
-  --animate-rise: rise 0.45s ease-out both;
-  --animate-fade: fade 0.2s ease-out both;
-  --animate-slide: slide 0.25s ease-out both;
-
-  @keyframes caret {
-    50% { opacity: 0; }
-  }
-  @keyframes glow {
-    0% { box-shadow: 0 0 0 0 rgb(217 70 239 / 0.55); }
-    25% { box-shadow: 0 0 0 6px rgb(217 70 239 / 0.35); }
-    100% { box-shadow: 0 0 0 0 rgb(217 70 239 / 0); }
-  }
-  @keyframes fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slide {
-    from { transform: translateX(100%); }
-    to { transform: none; }
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: none; }
-  }
-}
-
-/* The incident map and the car diagram, which aren't Tailwind utilities */
+/* The car diagram on the claim page, which isn't a Tailwind utility */
 :root {
   color-scheme: light;
-  --map-ground: #f1eee9;
-  --map-grid: #e2ded7;
-  --map-block: #e6e1d9;
-  --map-road: #ffffff;
-  --map-label: #6b6862;
-  --map-city: #8a857d;
   --diagram-stroke: #3a3835;
   --diagram-idle: #d6d2cb;
 }
 
 /* Set on <html> before the first paint (src/lib/theme-script.ts) */
 :root[data-theme="dark"] {
-  color-scheme: dark;
-  --color-fg: #f3f1ee;
-  --color-paper: #141312;
-  --color-card: #1f1e1c;
-  --color-line: #34322f;
-  --color-muted: #a19d96;
-  --color-faint: #6b6862;
-
-  --map-ground: #262422;
-  --map-grid: #2f2d2a;
-  --map-block: #312f2c;
-  --map-road: #45423e;
-  --map-label: #b4afa7;
-  --map-city: #8a857d;
   --diagram-stroke: #b4afa7;
   --diagram-idle: #4a4743;
-}
-
-html {
-  background: var(--color-paper);
-  color: var(--color-fg);
-  -webkit-font-smoothing: antialiased;
-}
-
-body {
-  min-height: 100dvh;
-  font-family: var(--font-sans);
-}
-
-/* Letter-spaced uppercase labels, as in the mockups */
-@utility label {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-@utility card {
-  background: var(--color-card);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-  }
 }
