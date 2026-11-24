@@ -725,6 +725,33 @@ def tools_for(persona: str) -> ToolsSchema:
     return ToolsSchema(standard_tools=[*claim_tools, *VOICE_TOOLS])
 
 
+class FluxSTT(DeepgramFluxSTTService):
+    """Flux STT that sends language hints only to a connection that accepts them.
+
+    Only flux-general-multi accepts hints. Pipecat holds a model change's
+    reconnect until the caller stops speaking, but sends a hints Configure
+    right away, checked against the model in settings, which has already
+    changed. So a switch out of English while the caller is talking would send
+    hints to the flux-general-en connection that's still open. This checks the
+    model the open connection was made with instead, and leaves the hints to
+    the reconnect, whose URL carries them.
+    """
+
+    _connected_model: str | None = None
+
+    def _build_query_string(self) -> str:
+        # Built for each new connection, so it records the open connection's model
+        self._connected_model = self._settings.model
+        return super()._build_query_string()
+
+    async def _send_configure(self, fields: set[str]):
+        if self._connected_model != self._MULTILINGUAL_MODEL:
+            fields = fields - {"language_hints"}
+            if not fields:
+                return
+        await super()._send_configure(fields)
+
+
 class MicGate(FrameProcessor):
     """Sends speech-to-text silence for the first moment the microphone is open.
 
@@ -776,7 +803,7 @@ async def run_bot(
     # in Settings, English by default.
     current_voice = voice
 
-    stt = DeepgramFluxSTTService(
+    stt = FluxSTT(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         settings=DeepgramFluxSTTService.Settings(**voices.listen_settings(current_voice)),
     )
@@ -1170,7 +1197,8 @@ async def run_bot(
         )
         # A model change reconnects Flux STT; a hints change is a Configure on
         # the open connection. listen_steps orders them so a Configure only
-        # ever reaches a flux-general-multi connection.
+        # ever reaches a flux-general-multi connection, and FluxSTT holds the
+        # hints back while a reconnect to it waits for the caller to finish.
         for step in voices.listen_steps(old_voice, voice):
             await stt.queue_frame(
                 STTUpdateSettingsFrame(delta=DeepgramFluxSTTService.Settings(**step))

@@ -225,7 +225,9 @@ If you try to run this botfile right now, you'd get an error, because none of th
     # in Settings, English by default.
     current_voice = voice
 
-    stt = DeepgramFluxSTTService(
+    # FluxSTT is DeepgramFluxSTTService with one guard for language switches;
+    # see "Applying a switch" below
+    stt = FluxSTT(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         settings=DeepgramFluxSTTService.Settings(**voices.listen_settings(current_voice)),
     )
@@ -783,7 +785,8 @@ Both claim tools can take long enough that the caller deserves a hold line, so t
         )
         # A model change reconnects Flux STT; a hints change is a Configure on
         # the open connection. listen_steps orders them so a Configure only
-        # ever reaches a flux-general-multi connection.
+        # ever reaches a flux-general-multi connection, and FluxSTT holds the
+        # hints back while a reconnect to it waits for the caller to finish.
         for step in voices.listen_steps(old_voice, voice):
             await stt.queue_frame(
                 STTUpdateSettingsFrame(delta=DeepgramFluxSTTService.Settings(**step))
@@ -1002,7 +1005,32 @@ The wording comes from measurements on another Deepgram project, a voice device 
 
 Because the updates are queued before the result, the confirmation the LLM speaks next ("Sí, ahora hablo español") is the first turn in the new voice. The result asks for it in the new language: `Done: you are now Carmen, a Spanish voice. Say so briefly, in Spanish.`
 
-The order of the listen steps matters. Only `flux-general-multi` accepts language hints, so `listen_steps()` sets hints after reconnecting to it and clears them before leaving it. That way a `Configure` never reaches a `flux-general-en` connection. The TTS update waits, for up to three seconds, for any speech still streaming in the old voice, because reconnecting Flux TTS would cut it off mid-word. The prompt also tells the LLM to call `set_voice` before saying anything about the switch.
+The order of the listen steps matters. Only `flux-general-multi` accepts language hints, so `listen_steps()` sets hints after reconnecting to it and clears them before leaving it. That way a `Configure` never reaches a `flux-general-en` connection.
+
+Ordering alone isn't quite enough. Pipecat holds a model change's reconnect until the caller stops speaking, but it sends a hints `Configure` right away, checked against the model in settings, which has already changed. So a switch out of English while the caller is still talking would send hints to the `flux-general-en` connection that's still open. `FluxSTT`, defined next to `MicGate` in `agent.py`, checks the model the open connection was made with instead, and leaves the hints to the reconnect, whose URL carries them:
+
+```python
+class FluxSTT(DeepgramFluxSTTService):
+    """Flux STT that sends language hints only to a connection that accepts them."""
+
+    _connected_model: str | None = None
+
+    def _build_query_string(self) -> str:
+        # Built for each new connection, so it records the open connection's model
+        self._connected_model = self._settings.model
+        return super()._build_query_string()
+
+    async def _send_configure(self, fields: set[str]):
+        if self._connected_model != self._MULTILINGUAL_MODEL:
+            fields = fields - {"language_hints"}
+            if not fields:
+                return
+        await super()._send_configure(fields)
+```
+
+It overrides two of Pipecat's private methods, so `tests/test_flux_stt.py` checks it against the pinned Pipecat version: rerun it when you upgrade.
+
+The TTS update waits, for up to three seconds, for any speech still streaming in the old voice, because reconnecting Flux TTS would cut it off mid-word. The prompt also tells the LLM to call `set_voice` before saying anything about the switch.
 
 #### Picking a voice in Settings
 
@@ -1025,7 +1053,7 @@ The picker reads the catalog from [client/src/lib/voices.json](client/src/lib/vo
 
 #### Testing it
 
-`tests/test_voices.py` checks the catalog: unique names, the `flux-<name>-<lang>` pattern, one featured voice per language, and that every voice's language can be heard. It also checks that `client/src/lib/voices.json` matches `voices.py`, that `voice_from_body` falls back to the default, and the greeting instruction for each language. `scripts/probe_flux_languages.py` checks the live API: for each language it synthesises a sentence with Flux TTS and streams it back through `flux-general-multi`. `scripts/switch_test.py` drives the whole agent through a series of switches with synthesised speech and reports the voice and pitch of every reply.
+`tests/test_voices.py` checks the catalog: unique names, the `flux-<name>-<lang>` pattern, one featured voice per language, and that every voice's language can be heard. It also checks that `client/src/lib/voices.json` matches `voices.py`, that `voice_from_body` falls back to the default, and the greeting instruction for each language. `tests/test_flux_stt.py` holds a reconnect, as a caller who's still talking does, and checks that hints wait for it. `scripts/probe_flux_languages.py` checks the live API: for each language it synthesises a sentence with Flux TTS and streams it back through `flux-general-multi`. `scripts/switch_test.py` drives the whole agent through a series of switches with synthesised speech and reports the voice and pitch of every reply.
 
 ```bash
 .venv/bin/python -m unittest discover tests
