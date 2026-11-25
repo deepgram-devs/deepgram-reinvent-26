@@ -225,9 +225,7 @@ If you try to run this botfile right now, you'd get an error, because none of th
     # in Settings, English by default.
     current_voice = voice
 
-    # FluxSTT is DeepgramFluxSTTService with one guard for language switches;
-    # see "Applying a switch" below
-    stt = FluxSTT(
+    stt = DeepgramFluxSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         settings=DeepgramFluxSTTService.Settings(**voices.listen_settings(current_voice)),
     )
@@ -1013,22 +1011,61 @@ Ordering alone isn't quite enough. Pipecat holds a model change's reconnect unti
 class FluxSTT(DeepgramFluxSTTService):
     """Flux STT that sends language hints only to a connection that accepts them."""
 
+    # The model of the open connection, None while there isn't one
     _connected_model: str | None = None
 
-    def _build_query_string(self) -> str:
-        # Built for each new connection, so it records the open connection's model
-        self._connected_model = self._settings.model
-        return super()._build_query_string()
+    def _connection_url(self) -> str:
+        return f"{self._url}?{self._build_query_string()}"
+
+    async def _connect_websocket(self):
+        if self._transport_is_active():
+            return
+        # Pipecat builds the URL once per settings reconnect and reuses it
+        # when a dropped connection reconnects, by when the hints may differ
+        model = self._settings.model
+        self._websocket_url = self._connection_url()
+        self._connected_model = None
+        await super()._connect_websocket()
+        if self._transport_is_active():
+            self._connected_model = model
 
     async def _send_configure(self, fields: set[str]):
-        if self._connected_model != self._MULTILINGUAL_MODEL:
+        # Both models: the open connection has to accept hints, and Pipecat
+        # leaves them out, sending an empty Configure, unless the settings do
+        multilingual = (
+            self._connected_model == self._settings.model == self._MULTILINGUAL_MODEL
+        )
+        if "language_hints" in fields and not multilingual:
+            logger.debug(
+                f"{self}: holding language hints back (connected to "
+                f"{self._connected_model}, settings are {self._settings.model})"
+            )
             fields = fields - {"language_hints"}
             if not fields:
                 return
         await super()._send_configure(fields)
+
+    async def _update_settings(self, delta: DeepgramFluxSTTService.Settings) -> dict:
+        changed = await super()._update_settings(delta)
+        if (
+            self._need_reconnect
+            and self._transport_is_active()
+            and self._connection_url() == self._websocket_url
+        ):
+            logger.debug(f"{self}: settings match the open connection again, not reconnecting")
+            self._need_reconnect = False
+        return changed
 ```
 
-It overrides two of Pipecat's private methods, so `tests/test_flux_stt.py` checks it against the pinned Pipecat version: rerun it when you upgrade.
+Each method closes one gap between the settings and the connection that's open:
+
+- `_connect_websocket` builds the URL from the settings as they are now. Pipecat builds it once for a settings reconnect and reuses it when a dropped connection reconnects on its own, so without this a network blip after a switch to Spanish would bring the connection back with no hints, or with the last language's.
+- `_send_configure` holds the hints back unless both the open connection and the settings are on `flux-general-multi`.
+- `_update_settings` drops a reconnect that's still waiting when a second switch puts the settings back to what the open connection already has, such as English to Spanish and back before the caller finishes a sentence.
+
+With the class in place, change the `stt = DeepgramFluxSTTService(...)` line from [Starting the Botfile](#starting-the-botfile) to `stt = FluxSTT(...)`. The arguments stay the same.
+
+It overrides three of Pipecat's private methods, so `tests/test_flux_stt.py` runs it through Pipecat's own connect and reconnect, with only the socket faked, against the pinned Pipecat version: rerun it when you upgrade.
 
 The TTS update waits, for up to three seconds, for any speech still streaming in the old voice, because reconnecting Flux TTS would cut it off mid-word. The prompt also tells the LLM to call `set_voice` before saying anything about the switch.
 
