@@ -735,21 +735,58 @@ class FluxSTT(DeepgramFluxSTTService):
     hints to the flux-general-en connection that's still open. This checks the
     model the open connection was made with instead, and leaves the hints to
     the reconnect, whose URL carries them.
+
+    Two more things keep the connection and the settings in step. Every
+    connection is made from the settings as they are now, so a reconnect
+    after a dropped connection carries the current hints too. And a reconnect
+    that's waiting is dropped when a second switch puts the settings back to
+    what the open connection already has.
     """
 
+    # The model of the open connection, None while there isn't one
     _connected_model: str | None = None
 
-    def _build_query_string(self) -> str:
-        # Built for each new connection, so it records the open connection's model
-        self._connected_model = self._settings.model
-        return super()._build_query_string()
+    def _connection_url(self) -> str:
+        return f"{self._url}?{self._build_query_string()}"
+
+    async def _connect_websocket(self):
+        if self._transport_is_active():
+            return
+        # Pipecat builds the URL once per settings reconnect and reuses it
+        # when a dropped connection reconnects, by when the hints may differ
+        model = self._settings.model
+        self._websocket_url = self._connection_url()
+        self._connected_model = None
+        await super()._connect_websocket()
+        if self._transport_is_active():
+            self._connected_model = model
 
     async def _send_configure(self, fields: set[str]):
-        if self._connected_model != self._MULTILINGUAL_MODEL:
+        # Both models: the open connection has to accept hints, and Pipecat
+        # leaves them out, sending an empty Configure, unless the settings do
+        multilingual = (
+            self._connected_model == self._settings.model == self._MULTILINGUAL_MODEL
+        )
+        if "language_hints" in fields and not multilingual:
+            logger.debug(
+                f"{self}: holding language hints back (connected to "
+                f"{self._connected_model}, settings are {self._settings.model})"
+            )
             fields = fields - {"language_hints"}
             if not fields:
                 return
         await super()._send_configure(fields)
+
+    async def _update_settings(self, delta: DeepgramFluxSTTService.Settings) -> dict:
+        changed = await super()._update_settings(delta)
+        if (
+            self._need_reconnect
+            and self._transport_is_active()
+            and self._connection_url() == self._websocket_url
+        ):
+            logger.debug(f"{self}: settings match the open connection again, not reconnecting")
+            self._need_reconnect = False
+        return changed
 
 
 class MicGate(FrameProcessor):
