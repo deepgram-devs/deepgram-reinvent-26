@@ -202,7 +202,7 @@ function ClaimHeader({ claim }: { claim: ClaimView }) {
         {t.review.breadcrumb} <span className="text-fg">{claim.claim_id}</span>
       </nav>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <h1 className="mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{t.review.title}</h1>
+        <h1 className="font-display mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{t.review.title}</h1>
         <StatusPill status={claim.status} />
         <ViewOnlyPill />
       </div>

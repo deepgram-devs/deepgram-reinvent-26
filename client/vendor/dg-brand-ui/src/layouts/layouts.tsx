@@ -77,7 +77,7 @@ export function HeroLanding({ image, brand, actions, toggle, kicker, title, intr
       <div className="relative z-10 -mt-6 flex w-full flex-1 flex-col items-center px-5 pb-6 text-center sm:px-8 lg:mx-auto lg:mt-0 lg:max-w-xl lg:justify-center lg:px-0 lg:pt-28">
         {toggle}
         <p className={cx("label text-[0.8125rem] text-white", toggle ? "mt-10" : "")}>{kicker}</p>
-        <h1 className="mt-3 text-[2.6rem] leading-none font-semibold tracking-[-0.02em] text-balance sm:text-5xl lg:text-[4.5rem]">{title}</h1>
+        <h1 className="font-display mt-3 text-[2.6rem] leading-none font-semibold tracking-[-0.02em] text-balance sm:text-5xl lg:text-[4.5rem]">{title}</h1>
         <p className="mt-6 text-lg leading-[1.3] tracking-[-0.02em] text-white/95 text-balance lg:text-[1.625rem]">{intro}</p>
 
         <div className="mt-auto flex w-full flex-col items-center pt-10 lg:mt-14">

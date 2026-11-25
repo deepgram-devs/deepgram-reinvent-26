@@ -8,6 +8,8 @@
 .ruff_cache/
 .pytest_cache/
 client/node_modules/
+# A local copy of the licensed headline font: the deploy fetches its own
+client/public/fonts/
 client/.next/
 client/tsconfig.tsbuildinfo
 

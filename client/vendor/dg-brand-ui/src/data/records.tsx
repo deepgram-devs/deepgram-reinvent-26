@@ -205,7 +205,7 @@ export function PageHeader({ breadcrumb, recordId, title, pills, meta, id = "hea
         </nav>
       )}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <h1 className="mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
+        <h1 className="font-display mr-2 text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
         {pills}
       </div>
       {meta && <p className="mt-3 text-muted">{meta}</p>}

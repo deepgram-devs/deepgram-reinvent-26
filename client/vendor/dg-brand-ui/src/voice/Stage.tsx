@@ -92,7 +92,7 @@ export function LiveCaption({ text, live = false, placeholder, className }: Live
     return <p className={cx("text-2xl leading-tight font-semibold tracking-tight text-balance text-white/90 sm:text-[2rem]", className)}>{placeholder}</p>;
   }
   return (
-    <p className={cx("text-[2rem] leading-tight font-semibold tracking-tight text-balance text-white sm:text-4xl", className)}>
+    <p className={cx("font-display text-[2rem] leading-tight font-semibold tracking-tight text-balance text-white sm:text-4xl", className)}>
       &ldquo;{text}
       {live && <Caret className="h-[0.9em] w-[0.45em] translate-y-[0.12em] bg-white" />}
       &rdquo;

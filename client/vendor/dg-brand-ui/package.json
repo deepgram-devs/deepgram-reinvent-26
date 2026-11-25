@@ -1,6 +1,6 @@
 {
   "name": "@deepgram-devs/dg-brand-ui",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "Deepgram's UI kit for voice agent demos in any domain: tokens, components, screen templates, a record data model, and agent skills.",
   "type": "module",

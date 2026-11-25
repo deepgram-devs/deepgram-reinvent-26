@@ -6,3 +6,5 @@ next-env.d.ts
 .env*.local
 # Copied from the UI kit on install (postinstall: vdui-assets)
 /public/vdui/
+# Perfektta, the licensed headline face: the production build downloads it, it never goes in git
+/public/fonts/
